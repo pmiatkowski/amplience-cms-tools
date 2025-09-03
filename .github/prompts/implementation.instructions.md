@@ -1,85 +1,80 @@
-Twoim zadaniem jest zaimplementowanie widoku frontendu w oparciu o podany plan
-implementacji i zasady implementacji. Twoim celem jest stworzenie szczegółowej i
-dokładnej implementacji, która jest zgodna z dostarczonym planem, poprawnie
-reprezentuje strukturę komponentów, integruje się z API i obsługuje wszystkie
-określone interakcje użytkownika.
+Your task is to implement a frontend view based on the provided implementation
+plan and implementation rules. Your goal is to create a detailed and accurate
+implementation that aligns with the provided plan, correctly represents the
+component structure, integrates with the API, and handles all specified user
+interactions.
 
-Najpierw przejrzyj plan implementacji:
+First, review the implementation plan:
 
-<implementation_plan> {{implementation-plan}} <- zamień na referencję do planu
-implementacji widoku (np. @generations-view-implementation-plan.md)
+<implementation_plan> {{implementation-plan}} <- replace with a reference to the
 </implementation_plan>
 
-Teraz przejrzyj zasady implementacji:
+Now, review the implementation rules:
 
-<implementation_rules> {{frontend-rules}} <- zamień na referencję do reguł
-frontendowych (np. @shared.mdc, @frontend.mdc, @astro.mdc, @react.mdc,
+<implementation_rules> {{frontend-rules}} <- replace with a reference to the
+frontend rules (e.g., @shared.mdc, @frontend.mdc, @astro.mdc, @react.mdc,
 @ui-shadcn-helper.mdc) </implementation_rules>
 
-Przejrzyj zdefiniowane typy:
+Review the defined types:
 
 <types>
-{{types}} <- zamień na referencję do definicji DTOsów (np. @types.ts)
+  {{types}} <- replace with a reference to the DTO definitions (e.g., @types.ts)
 </types>
 
-Wdrażaj plan zgodnie z następującym podejściem:
+Implement the plan according to the following approach:
 
-<implementation_approach> Realizuj maksymalnie 3 kroki planu implementacji,
-podsumuj krótko co zrobiłeś i opisz plan na 3 kolejne działania - zatrzymaj w
-tym momencie pracę i czekaj na mój feedback. </implementation_approach>
+<implementation_approach> Implement a maximum of 3 steps of the implementation
+plan, briefly summarize what you have done, and describe the plan for the next 3
+actions - stop at this point and wait for my feedback.
+</implementation_approach>
 
-Dokładnie przeanalizuj plan wdrożenia i zasady. Zwróć szczególną uwagę na
-strukturę komponentów, wymagania dotyczące integracji API i interakcje
-użytkownika opisane w planie.
+Carefully analyze the implementation plan and rules. Pay close attention to the
+component structure, API integration requirements, and user interactions
+described in the plan.
 
-Wykonaj następujące kroki, aby zaimplementować widok frontendu:
+Follow these steps to implement the frontend view:
 
-1. Struktura komponentów:
-   - Zidentyfikuj wszystkie komponenty wymienione w planie wdrożenia.
-   - Utwórz hierarchiczną strukturę tych komponentów.
-   - Upewnij się, że obowiązki i relacje każdego komponentu są jasno
-     zdefiniowane.
+1. Functions Structure
 
-2. Integracja API:
-   - Zidentyfikuj wszystkie endpointy API wymienione w planie.
-   - Wdróż niezbędne wywołania API dla każdego endpointa.
-   - Obsłuż odpowiedzi z API i odpowiednio aktualizacji stan komponentów.
+- Identify all components listed in the implementation plan.
+- Create a hierarchical structure for these components.
+- Ensure that the responsibilities and relationships of each component are
+  clearly defined.
 
-3. Interakcje użytkownika:
-   - Wylistuj wszystkie interakcje użytkownika określone w planie wdrożenia.
-   - Wdróż obsługi zdarzeń dla każdej interakcji.
-   - Upewnij się, że każda interakcja wyzwala odpowiednią akcję lub zmianę
-     stanu.
+2. API Integration Identify all API endpoints mentioned in the plan.
 
-4. Zarządzanie stanem:
-   - Zidentyfikuj wymagany stan dla każdego komponentu.
-   - Zaimplementuj zarządzanie stanem przy użyciu odpowiedniej metody (stan
-     lokalny, custom hook, stan współdzielony).
-   - Upewnij się, że zmiany stanu wyzwalają niezbędne ponowne renderowanie.
+- Implement the necessary API calls for each endpoint.
+- Handle the API responses and update the component state accordingly.
 
-5. Stylowanie i layout:
-   - Zastosuj określone stylowanie i layout, jak wspomniano w planie wdrożenia.
-   - Zapewnienie responsywności, jeśli wymaga tego plan.
+3. User Interactions List all user interactions specified in the implementation
+   plan.
 
-6. Obsługa błędów i przypadki brzegowe:
-   - Wdrożenie obsługi błędów dla wywołań API i interakcji użytkownika.
-   - Rozważ i obsłuż potencjalne edge case'y wymienione w planie.
+- Implement event handlers for each interaction.
+- Ensure that each interaction triggers the appropriate action or state change.
 
-7. Optymalizacja wydajności:
-   - Wdrożenie wszelkich optymalizacji wydajności określonych w planie lub
-     zasadach.
-   - Zapewnienie wydajnego renderowania i minimalnej liczby niepotrzebnych
-     ponownych renderowań.
+4. Styling and Layout Apply the specified styling and layout as mentioned in the
+   implementation plan.
 
-8. Testowanie:
-   - Jeśli zostało to określone w planie, zaimplementuj testy jednostkowe dla
-     komponentów i funkcji.
-   - Dokładnie przetestuj wszystkie interakcje użytkownika i integracje API.
+- Ensure responsiveness if required by the plan.
 
-W trakcie całego procesu implementacji należy ściśle przestrzegać dostarczonych
-zasad implementacji. Zasady te mają pierwszeństwo przed wszelkimi ogólnymi
-najlepszymi praktykami, które mogą być z nimi sprzeczne.
+5. Error Handling and Edge Cases Implement error handling for API calls and user
+   interactions.
 
-Upewnij się, że twoja implementacja dokładnie odzwierciedla dostarczony plan
-implementacji i przestrzega wszystkich określonych zasad. Zwróć szczególną uwagę
-na strukturę komponentów, integrację API i obsługę interakcji użytkownika.
+- Consider and handle potential edge cases mentioned in the plan.
+
+6. Performance Optimization Implement any performance optimizations specified in
+   the plan or rules.
+
+- Ensure efficient rendering and minimize unnecessary re-renders.
+
+78. Testing If specified in the plan, implement unit tests for components and
+    functions.
+
+- Thoroughly test all user interactions and API integrations.
+- Throughout the entire implementation process, you must strictly adhere to the
+  provided implementation rules. These rules take precedence over any general
+  best practices that may conflict with them.
+
+Ensure that your implementation accurately reflects the provided implementation
+plan and adheres to all specified rules. Pay close attention to the component
+structure, API integration, and handling of user interactions.

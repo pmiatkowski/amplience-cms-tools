@@ -115,10 +115,41 @@ export async function runSyncContentTypes(): Promise<void> {
 
       if (syncMissingSchemas) {
         console.log('\n🔄 Syncing missing schemas...');
+
+        const syncContext = {
+          sourceHub,
+          targetHub,
+          specificSchemas: validation.missingSchemas, // Use known missing schemas
+          skipConfirmations: true, // User already confirmed
+          skipValidation: false, // Still validate for safety
+        };
+
         try {
-          // Note: This would need the sync-content-type-schemas to be refactored
-          // to accept a specific list of schemas to sync
-          await syncContentTypeSchemas();
+          const result = await syncContentTypeSchemas({ context: syncContext });
+
+          if (result.failedSchemas.length > 0) {
+            console.log(`❌ ${result.failedSchemas.length} schemas failed to sync:`);
+            result.failedSchemas.forEach(failed => {
+              console.log(`  • ${failed.schemaId}: ${failed.error}`);
+            });
+
+            const continueAnyway = await promptForConfirmation(
+              'Some schemas failed to sync. Continue with content type sync for successful schemas?'
+            );
+
+            if (!continueAnyway) {
+              console.log('Operation cancelled.');
+
+              return;
+            }
+          }
+
+          if (result.processedSchemas.length > 0) {
+            console.log(`✅ Successfully synced ${result.processedSchemas.length} schemas`);
+            console.log(`  • Created: ${result.createdCount}`);
+            console.log(`  • Updated: ${result.updatedCount}`);
+          }
+
           console.log('✅ Missing schemas sync completed.');
 
           // Wait a moment for schema indexing to complete

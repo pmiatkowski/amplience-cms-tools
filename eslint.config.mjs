@@ -126,10 +126,6 @@ export default [
             },
             {
               from: 'src/prompts',
-              target: 'src/services',
-            },
-            {
-              from: 'src/prompts',
               target: 'src/utils',
             },
           ],

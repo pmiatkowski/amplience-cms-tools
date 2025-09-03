@@ -309,3 +309,14 @@ For issues, feature requests, or questions:
 - [Amplience Documentation](https://amplience.com/docs)
 - [Amplience DC-CLI Documentation](https://github.com/amplience/dc-cli)
 - Individual command documentation in the `docs/` folder
+
+## TODO
+
+- Simplify environment configuration and management - Drop `AMP_HUBS` and
+  instead use `AMP_HUB_<HUB_NAME>` pattern to auto-detect hubs.
+- In hierarchy synchronization, when item needs to be removed, it should be
+  removed as in the clean-repository procedure - including removing delivery
+  key, dropping from hierarchy, unpublishing, moving to deleted folder,
+  archiving.
+- Refactor files structure (put in separate folders) and add tests in
+  `__tests__` folder in each module.

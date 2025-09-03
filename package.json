@@ -10,8 +10,8 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "lint": "eslint src/ --ext .ts,.js",
-    "lint:fix": "eslint src/ --ext .ts,.js --fix",
+    "lint": "eslint src/ --ext .ts,.js,.json",
+    "lint:fix": "eslint src/ --ext .ts,.js,.json --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json,md}\"",
     "test": "vitest",
@@ -19,7 +19,8 @@
     "test:coverage": "vitest --coverage",
     "type-check": "tsc --noEmit",
     "build": "tsc --noEmit && echo Success: build completed",
-    "update-delivery-keys": "tsx src/index.ts"
+    "update-delivery-keys": "tsx src/index.ts",
+    "prepare": "husky"
   },
   "keywords": [
     "amplience",
@@ -36,6 +37,12 @@
     "inquirer": "^10.2.2",
     "winston": "^3.14.2"
   },
+  "lint-staged": {
+    "src/**/*.{ts,js,json,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
     "@types/node": "^22.7.5",
@@ -48,6 +55,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-sort-exports": "^0.9.1",
     "eslint-plugin-unicorn": "^56.0.0",
+    "lint-staged": "^16.1.6",
     "prettier": "^3.3.3",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",

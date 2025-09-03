@@ -8,7 +8,7 @@ export async function promptForCommand(): Promise<CommandChoice> {
       message: 'Select a command to run:',
       choices: [
         {
-          name: 'Synchronize content-type schemas (Recreates non-archived content-type schema)',
+          name: 'Synchronize content-type-schemas (Recreates non-archived content-type schema)',
           value: 'sync-content-type-schemas',
         },
         {
@@ -16,13 +16,13 @@ export async function promptForCommand(): Promise<CommandChoice> {
           value: 'sync-content-types',
         },
         {
-          name: 'Synchronize hierarchy (recreates missing items based on source hierarchy)',
+          name: 'Synchronize content-item hierarchy (recreates missing items based on source hierarchy)',
           value: 'sync-hierarchy',
         },
-        { name: 'Copy folder with its content', value: 'copy-folder-with-content' },
+        { name: 'Copy folder with its content-items', value: 'copy-folder-with-content' },
         { name: 'Copy content-items (including hierarchies)', value: 'recreate-content-items' },
         {
-          name: 'Copy folders tree structure (without content items)',
+          name: 'Copy folders tree structure (without content-items)',
           value: 'recreate-folder-structure',
         },
         {
@@ -31,7 +31,7 @@ export async function promptForCommand(): Promise<CommandChoice> {
         },
         { name: 'Remove content-items (Archive)', value: 'clean-repo' },
         {
-          name: 'Remove content-type schemas (Archive with content-types and content-items binded items)',
+          name: 'Remove content-type-schemas (Archive with content-types and content-items binded items)',
           value: 'archive-content-type-schemas',
         },
         { name: 'List folder tree structure', value: 'list-folder-tree' },

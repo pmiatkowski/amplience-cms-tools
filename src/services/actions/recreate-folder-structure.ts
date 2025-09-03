@@ -1,14 +1,13 @@
 import { AmplienceService } from '../amplience-service';
 import { FolderTreeNode } from './list-nested-subfolders';
 
-
 /**
  * Interface for folder creation errors
  */
 export type FolderCreationError = {
   folderName: string;
   error: string;
-}
+};
 
 /**
  * Recursively creates folders in the target location
@@ -82,8 +81,6 @@ function countTotalFolders(folderNodes: FolderTreeNode[]): number {
   return count;
 }
 
-
-
 /**
  * Recreates a folder structure in a target location based on a source folder tree
  * @param targetService - The Amplience service instance for the target hub
@@ -132,7 +129,6 @@ export async function recreateFolderStructure(
   return result;
 }
 
-
 /**
  * Result interface for the recreate folder structure operation
  */
@@ -142,4 +138,4 @@ export type RecreateStructureResult = {
   failedFolders: number;
   errors: FolderCreationError[];
   folderMapping: Map<string, string>; // Map source folder ID → target folder ID
-}
+};

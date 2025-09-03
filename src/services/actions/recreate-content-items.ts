@@ -585,7 +585,7 @@ type NewObject = {
   label: string;
   folderId?: string | undefined;
   locale?: string | undefined;
-}
+};
 
 /**
  * Determine if a content item should be published based on its status and publishing status

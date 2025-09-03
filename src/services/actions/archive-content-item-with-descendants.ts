@@ -61,7 +61,6 @@ async function detachFromHierarchy(
   }
 }
 
-
 /**
  * Archives a content item along with all its hierarchy descendants
  * @param service - The Amplience service instance
@@ -184,13 +183,12 @@ export async function archiveContentItemWithDescendants(
   return results;
 }
 
-
 /**
  * Extended cleanup result that includes hierarchy detachment information
  */
 export type ExtendedItemCleanupResult = {
   hierarchyDetachResult: { success: boolean; error?: string };
-} & ItemCleanupResult
+} & ItemCleanupResult;
 
 /**
  * Checks if a content item is likely to be a hierarchy root or have descendants

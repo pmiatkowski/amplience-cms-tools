@@ -444,4 +444,4 @@ function transformDeliveryKey(body: Amplience.Body, strategy: LocaleStrategy): A
 type LocaleStrategy = {
   strategy: 'keep' | 'remove' | 'replace';
   targetLocale?: string;
-}
+};

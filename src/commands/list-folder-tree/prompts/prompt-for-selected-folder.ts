@@ -20,7 +20,6 @@ export function createHierarchicalFolderChoices(
   return choices;
 }
 
-
 export async function promptForSelectedFolder(
   folderChoices: Array<{ name: string; value: string }>
 ): Promise<string> {

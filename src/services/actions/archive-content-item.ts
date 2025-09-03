@@ -175,7 +175,7 @@ export async function archiveContentItem(
 type CleanupStepResult = {
   success: boolean;
   error?: string;
-}
+};
 
 export type ArchiveContentItemOptions = {
   clearDeliveryKey?: boolean;
@@ -184,7 +184,7 @@ export type ArchiveContentItemOptions = {
   moveToRoot?: boolean;
   moveToDeletedFolder?: boolean;
   deletedFolderId?: string;
-}
+};
 
 export type ItemCleanupResult = {
   itemId: string;
@@ -195,4 +195,4 @@ export type ItemCleanupResult = {
   unpublishResult: CleanupStepResult;
   archiveResult: CleanupStepResult;
   overallSuccess: boolean;
-}
+};

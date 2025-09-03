@@ -209,7 +209,6 @@ async function getFolderById(
   }
 }
 
-
 // Interfaces
 export type CleanupFolderOptions = {
   /** Name of the deleted folder (default: '__deleted') */
@@ -220,7 +219,7 @@ export type CleanupFolderOptions = {
   unpublishIfNeeded?: boolean;
   /** Whether to unarchive items if needed during archive (default: true) */
   unarchiveIfNeeded?: boolean;
-}
+};
 
 /**
  * Moves content items to the __deleted folder
@@ -450,8 +449,6 @@ async function deleteFoldersInReverseOrder(
   }
 }
 
-
-
 /**
  * Ensures the __deleted folder exists, creating it if necessary
  * This function is exported so it can be used by other cleanup operations
@@ -488,7 +485,7 @@ export async function ensureDeletedFolder(
 type ContentItemWithFolder = {
   sourceFolderId: string | null;
   sourceFolderName: string;
-} & Amplience.ContentItem
+} & Amplience.ContentItem;
 
 type ProcessedContentItem = {
   itemId: string;
@@ -502,7 +499,7 @@ type ProcessedContentItem = {
     updatedItem?: Amplience.ContentItemWithDetails; // Store the updated item from move operation
   };
   archiveResult?: ItemCleanupResult; // From archive-content-item.ts
-}
+};
 
 type ProcessedFolder = {
   folderId: string;
@@ -510,14 +507,14 @@ type ProcessedFolder = {
   itemCount: number;
   success: boolean;
   error?: string;
-}
+};
 
 type DeletedFolder = {
   folderId: string;
   folderName: string;
   success: boolean;
   error?: string;
-}
+};
 
 export type FolderCleanupResult = {
   targetFolderId: string;
@@ -528,4 +525,4 @@ export type FolderCleanupResult = {
   foldersDeleted: DeletedFolder[];
   overallSuccess: boolean;
   errors: string[];
-}
+};

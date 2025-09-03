@@ -1,6 +1,5 @@
 import { AmplienceService } from '../amplience-service';
 
-
 /**
  * Tree node representing a folder with its children
  */
@@ -9,7 +8,7 @@ export type FolderTreeNode = {
   name: string;
   children: FolderTreeNode[];
   _links: Amplience.Folder['_links'];
-}
+};
 
 /**
  * Gets all folders from a repository and builds parent-child relationships
@@ -177,9 +176,7 @@ function buildFolderTree(
 type FoldersWithParents = {
   folders: Amplience.Folder[];
   parentChildMap: Map<string, string[]>;
-}
-
-
+};
 
 /**
  * Lists all nested subfolders in a hierarchical structure
@@ -215,7 +212,6 @@ export async function listNestedSubfolders(
   return result;
 }
 
-
 /**
  * Result interface for nested subfolders operation
  */
@@ -224,4 +220,4 @@ export type NestedSubfoldersResult = {
   raw: Amplience.Folder[];
   /** Hierarchical tree structure of folders */
   tree: FolderTreeNode[];
-}
+};

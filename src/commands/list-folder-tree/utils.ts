@@ -1,6 +1,5 @@
 import { FolderTreeNode } from '~/services/actions/list-nested-subfolders';
 
-
 /**
  * Calculate maximum depth of the tree
  */
@@ -21,9 +20,6 @@ export function calculateMaxDepth(nodes: FolderTreeNode[]): number {
   return maxDepth;
 }
 
-
-
-
 /**
  * Count folders that have children
  */
@@ -40,9 +36,6 @@ export function countFoldersWithChildren(node: FolderTreeNode): number {
   return count;
 }
 
-
-
-
 /**
  * Display folder tree with ASCII art indentation
  */
@@ -58,7 +51,6 @@ export function displayFolderTree(nodes: FolderTreeNode[], depth: number = 0): v
     }
   });
 }
-
 
 /**
  * Find a node by ID in the tree

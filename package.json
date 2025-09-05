@@ -9,7 +9,6 @@
   },
   "scripts": {
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
     "lint": "eslint src/ --ext .ts,.js,.json",
     "lint:fix": "eslint src/ --ext .ts,.js,.json --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",

@@ -96,12 +96,6 @@ If you're upgrading from a previous version that used `AMP_HUBS`, simply:
 
 ## 🚀 Usage
 
-### Development Mode
-
-```bash
-npm run dev
-```
-
 ### Production Mode
 
 ```bash
@@ -111,7 +105,6 @@ npm start
 ### Available Scripts
 
 - `npm start` - Run the CLI tool
-- `npm run dev` - Run in development mode with hot-reloading
 - `npm test` - Run the test suite
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Generate test coverage report
@@ -301,40 +294,6 @@ This project uses:
 - `npm run format:check` - Check if code is properly formatted
 - `npm run type-check` - Run TypeScript type checking
 
-## 🗂️ Project Structure
-
-```text
-amplience-cms-tools/
-├── src/
-│   ├── commands/                    # Command orchestrators (UI layer)
-│   │   ├── clean-repository/        # Repository cleanup command
-│   │   ├── cleanup-folder/          # Folder cleanup command
-│   │   ├── copy-folder-with-content/# Cross-hub content duplication command
-│   │   ├── list-folder-tree/        # Folder structure visualization command
-│   │   ├── recreate-content-items/  # Content item recreation command
-│   │   ├── recreate-folder-structure/# Folder structure duplication command
-│   │   ├── sync-content-type-schemas/# Schema synchronization command
-│   │   ├── sync-content-types/      # Content type synchronization command
-│   │   ├── sync-hierarchy/          # Hierarchy synchronization command
-│   │   └── update-delivery-keys-locale/# Delivery key locale updates command
-│   ├── services/
-│   │   ├── actions/                 # Business logic executors (action layer)
-│   │   │   ├── clean-repository.ts  # Repository cleanup action
-│   │   │   ├── cleanup-folder.ts    # Folder cleanup action
-│   │   │   ├── sync-hierarchy.ts    # Hierarchy synchronization action
-│   │   │   └── ...                  # Other action implementations
-│   │   ├── amplience-service.ts     # Amplience API service
-│   │   ├── cache-service.ts         # Caching service
-│   │   └── report-service.ts        # Report generation service
-│   ├── prompts/                     # Shared interactive prompts
-│   └── utils/                       # Utility functions and helpers
-├── types/                          # TypeScript type definitions
-├── tests/                          # Test files
-├── reports/                        # Generated operation reports
-├── docs/                           # Detailed command documentation
-└── temp_export_*/                  # Temporary export directories
-```
-
 ## 🤝 Contributing
 
 1. Follow the established code style and conventions
@@ -342,11 +301,6 @@ amplience-cms-tools/
 3. Update documentation as needed
 4. Use conventional commit messages
 5. Ensure all commands include comprehensive documentation in `docs/`
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for
-details.
 
 ## 🆘 Support
 
@@ -361,6 +315,11 @@ For issues, feature requests, or questions:
 - [Amplience Documentation](https://amplience.com/docs)
 - [Amplience DC-CLI Documentation](https://github.com/amplience/dc-cli)
 - Individual command documentation in the `docs/` folder
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for
+details.
 
 ## TODO
 

@@ -1,4 +1,4 @@
-# Amplience CLI Tool
+# Amplience CMS Tools
 
 A comprehensive command-line interface tool for automating bulk operations
 within Amplience CMS. This tool provides efficient content management operations

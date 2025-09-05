@@ -9,7 +9,6 @@ export { promptForHub } from './prompt-for-hub';
 export { promptForIncludeArchived } from './prompt-for-include-archived';
 export { promptForItemsToClean } from './prompt-for-items-to-clean';
 export { promptForLocale } from './prompt-for-locale';
-export { promptForLocaleStrategy } from './prompt-for-locale-strategy';
 export { promptForRepository } from './prompt-for-repository';
 export { promptForSchemaIdFilter } from './prompt-for-schema-id-filter';
 export { promptForSchemasToArchive } from './prompt-for-schemas-to-archive';

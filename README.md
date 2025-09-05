@@ -9,8 +9,10 @@ prompts, advanced filtering, and detailed reporting.
 
 - **Multi-Hub Support**: Work with multiple Amplience environments (DEV,
   PLAYGROUND, PROD)
-- **Comprehensive Bulk Operations**: 9 specialized commands for different
+- **Comprehensive Bulk Operations**: 11 specialized commands for different
   content management tasks
+- **Two-Layer Architecture**: Clean separation between user interface (commands)
+  and business logic (actions)
 - **Advanced Filtering**: Filter content items by schema ID, status, publication
   state, and delivery key patterns
 - **Safe Operations**: Built-in dry-run mode with explicit confirmation for live
@@ -122,7 +124,7 @@ npm start
 
 ## 🎯 Available Commands
 
-The CLI tool provides 9 specialized commands for different bulk operations:
+The CLI tool provides 11 specialized commands for different bulk operations:
 
 ### 1. Clean Repository
 
@@ -180,7 +182,16 @@ perfect for environment setup and structural consistency.
 Synchronizes content type schemas between hubs using Amplience DC-CLI, ensuring
 consistent content models across environments.
 
-### 8. Sync Content Types
+### 8. Archive Content Type Schemas
+
+**Command**: Archive Content Type Schemas  
+**Documentation**: [archive-content-type-schemas.md](docs/archive-content-type-schemas.md)
+
+Archives content type schemas and their dependencies (content types and content
+items) in the correct dependency order to maintain data integrity and prevent
+orphaned content.
+
+### 9. Sync Content Types
 
 **Command**: Sync Content Types  
 **Documentation**: [sync-content-types.md](docs/sync-content-types.md)
@@ -188,7 +199,16 @@ consistent content models across environments.
 Compares and creates missing content types between hubs with proper schema
 validation and repository assignments.
 
-### 9. Update Delivery Keys Locale
+### 10. Sync Hierarchy
+
+**Command**: Sync Hierarchy  
+**Documentation**: [sync-hierarchy.md](docs/sync-hierarchy.md)
+
+Synchronizes content item hierarchies between hubs, comparing source and target
+hierarchical structures to create, remove, or update items while preserving
+parent-child relationships and handling locale strategies for delivery keys.
+
+### 11. Update Delivery Keys Locale
 
 **Command**: Update Delivery Keys Locale  
 **Documentation**: [update-delivery-keys-locale.md](docs/update-delivery-keys-locale.md)
@@ -251,6 +271,7 @@ npm run test:coverage
 
 - **Runtime Environment**: Node.js v22+
 - **Programming Language**: TypeScript v5+
+- **Architecture**: Command-Action pattern with clear separation of concerns
 - **CLI Interaction**: Inquirer.js
 - **Progress Indicators**: cli-progress
 - **Logging**: Winston
@@ -285,18 +306,27 @@ This project uses:
 ```text
 amplience-cms-tools/
 ├── src/
-│   ├── commands/                    # Command implementations
-│   │   ├── clean-repository/        # Repository cleanup
-│   │   ├── cleanup-folder/          # Folder cleanup
-│   │   ├── copy-folder-with-content/# Cross-hub content duplication
-│   │   ├── list-folder-tree/        # Folder structure visualization
-│   │   ├── recreate-content-items/  # Content item recreation
-│   │   ├── recreate-folder-structure/# Folder structure duplication
-│   │   ├── sync-content-type-schemas/# Schema synchronization
-│   │   ├── sync-content-types/      # Content type synchronization
-│   │   └── update-delivery-keys-locale/# Delivery key locale updates
+│   ├── commands/                    # Command orchestrators (UI layer)
+│   │   ├── clean-repository/        # Repository cleanup command
+│   │   ├── cleanup-folder/          # Folder cleanup command
+│   │   ├── copy-folder-with-content/# Cross-hub content duplication command
+│   │   ├── list-folder-tree/        # Folder structure visualization command
+│   │   ├── recreate-content-items/  # Content item recreation command
+│   │   ├── recreate-folder-structure/# Folder structure duplication command
+│   │   ├── sync-content-type-schemas/# Schema synchronization command
+│   │   ├── sync-content-types/      # Content type synchronization command
+│   │   ├── sync-hierarchy/          # Hierarchy synchronization command
+│   │   └── update-delivery-keys-locale/# Delivery key locale updates command
+│   ├── services/
+│   │   ├── actions/                 # Business logic executors (action layer)
+│   │   │   ├── clean-repository.ts  # Repository cleanup action
+│   │   │   ├── cleanup-folder.ts    # Folder cleanup action
+│   │   │   ├── sync-hierarchy.ts    # Hierarchy synchronization action
+│   │   │   └── ...                  # Other action implementations
+│   │   ├── amplience-service.ts     # Amplience API service
+│   │   ├── cache-service.ts         # Caching service
+│   │   └── report-service.ts        # Report generation service
 │   ├── prompts/                     # Shared interactive prompts
-│   ├── services/                    # Business logic and API services
 │   └── utils/                       # Utility functions and helpers
 ├── types/                          # TypeScript type definitions
 ├── tests/                          # Test files

@@ -1,6 +1,4 @@
-#!/usr/bin/env node
-
-// Main entry point for the Amplience CLI Tool
+import { runArchiveContentTypeSchemas } from './commands/archive-content-type-schemas';
 import { runCleanRepository } from './commands/clean-repository';
 import { runCleanupFolderCommand } from './commands/cleanup-folder';
 import { runCopyFolderWithContent } from './commands/copy-folder-with-content';
@@ -9,14 +7,12 @@ import { runRecreateContentItems } from './commands/recreate-content-items';
 import { runRecreateFolderStructure } from './commands/recreate-folder-structure';
 import { syncContentTypeSchemas } from './commands/sync-content-type-schemas';
 import { runSyncContentTypes } from './commands/sync-content-types';
+import { runSyncHierarchy } from './commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from './commands/update-delivery-keys-locale';
 import { promptForCommand } from './prompts';
-import { archiveContentTypeSchemas } from './services/actions/archive-content-type-schemas';
-import { syncHierarchy } from './services/actions/sync-hierarchy';
 
 async function main(): Promise<void> {
   try {
-    // Get command selection from user
     const command = await promptForCommand();
 
     switch (command) {
@@ -27,10 +23,10 @@ async function main(): Promise<void> {
         await runSyncContentTypes();
         break;
       case 'archive-content-type-schemas':
-        await archiveContentTypeSchemas();
+        await runArchiveContentTypeSchemas();
         break;
       case 'sync-hierarchy':
-        await syncHierarchy();
+        await runSyncHierarchy();
         break;
       case 'update-locale':
         await runUpdateDeliveryKeysLocale();

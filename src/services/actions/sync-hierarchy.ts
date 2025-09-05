@@ -1,131 +1,35 @@
-import { getHubConfigs } from '~/app-config';
-import {
-  promptForHub,
-  promptForRepository,
-  promptForContentItem,
-  promptForLocaleStrategy,
-  promptForDryRun,
-  promptForConfirmation,
-} from '~/prompts';
 import { createProgressBar } from '~/utils';
 import { AmplienceService } from '../amplience-service';
 import { HierarchyService } from '../hierarchy-service';
 
 /**
- * Main function to orchestrate hierarchy synchronization
+ * Interface for locale transformation strategy
  */
-export async function syncHierarchy(): Promise<void> {
-  console.log('🔄 Starting Hierarchy Synchronization');
-  console.log('=====================================\n');
+export type LocaleStrategy = {
+  strategy: 'keep' | 'remove' | 'replace';
+  targetLocale?: string;
+};
+
+/**
+ * Execute hierarchy synchronization action
+ */
+export async function syncHierarchy(options: SyncHierarchyOptions): Promise<void> {
+  const {
+    sourceService,
+    targetService,
+    targetRepositoryId,
+    sourceTree,
+    targetTree,
+    updateContent,
+    localeStrategy,
+    publishAfterSync,
+    isDryRun,
+  } = options;
 
   try {
-    // Load available hubs
-    const hubConfigs = getHubConfigs();
-    if (hubConfigs.length === 0) {
-      console.error('❌ No hub configurations found. Please check your .env file.');
-
-      return;
-    }
-
-    // Step 1: Source Selection
-    console.log('📍 Step 1: Select SOURCE hierarchy');
-    const sourceHub = await promptForHub(hubConfigs);
-    if (!sourceHub) {
-      console.log('❌ No source hub selected. Aborting.');
-
-      return;
-    }
-
-    const sourceService = new AmplienceService(sourceHub);
-    const sourceRepos = await sourceService.getRepositories();
-
-    if (sourceRepos.length === 0) {
-      console.log('❌ No repositories found in source hub. Aborting.');
-
-      return;
-    }
-
-    const sourceRepo = await promptForRepository(sourceRepos);
-    console.log(`✅ Selected source: ${sourceHub.name} / ${sourceRepo.label}`);
-
-    const sourceRootItem = await promptForContentItem(sourceService, sourceRepo.id);
-    if (!sourceRootItem) {
-      console.log('❌ No source root item selected. Aborting.');
-
-      return;
-    }
-    console.log(`✅ Selected source root: ${sourceRootItem.label}\n`);
-
-    // Step 2: Target Selection
-    console.log('🎯 Step 2: Select TARGET hierarchy');
-    const targetHub = await promptForHub(hubConfigs);
-    if (!targetHub) {
-      console.log('❌ No target hub selected. Aborting.');
-
-      return;
-    }
-
-    const targetService = new AmplienceService(targetHub);
-    const targetRepos = await targetService.getRepositories();
-
-    if (targetRepos.length === 0) {
-      console.log('❌ No repositories found in target hub. Aborting.');
-
-      return;
-    }
-
-    const targetRepo = await promptForRepository(targetRepos);
-    console.log(`✅ Selected target: ${targetHub.name} / ${targetRepo.label}`);
-
-    const targetRootItem = await promptForContentItem(targetService, targetRepo.id);
-    if (!targetRootItem) {
-      console.log('❌ No target root item selected. Aborting.');
-
-      return;
-    }
-    console.log(`✅ Selected target root: ${targetRootItem.label}\n`);
-
-    // Step 3: Configuration Options
-    console.log('⚙️  Step 3: Configuration Options');
-
-    const updateContent = await promptForConfirmation(
-      'Update content of existing items (body comparison)?',
-      false
-    );
-
-    const localeStrategy: LocaleStrategy = await promptForLocaleStrategy(
-      targetService,
-      targetRepo.id
-    );
-
-    const publishAfterSync = await promptForConfirmation(
-      'Publish content items after synchronization?',
-      true
-    );
-
-    const isDryRun = await promptForDryRun();
-
-    console.log(
-      `✅ Configuration: ${updateContent ? 'Update content' : 'Structure only'}, Locale: ${localeStrategy.strategy}${localeStrategy.targetLocale ? ` (${localeStrategy.targetLocale})` : ''}, ${publishAfterSync ? 'Publish after sync' : 'No publishing'}, ${isDryRun ? 'DRY RUN' : 'EXECUTE'}\n`
-    );
-
-    // Step 4: Build Hierarchies
-    console.log('🏗️  Step 4: Building Hierarchies');
-
-    const hierarchyService = new HierarchyService(sourceService);
-
-    console.log('Building source hierarchy...');
-    const sourceTree = await hierarchyService.buildHierarchyTree(sourceRootItem.id, sourceRepo.id);
-
-    console.log('Building target hierarchy...');
-    const targetHierarchyService = new HierarchyService(targetService);
-    const targetTree = await targetHierarchyService.buildHierarchyTree(
-      targetRootItem.id,
-      targetRepo.id
-    );
-
     // Step 5: Generate Sync Plan
     console.log('\n📋 Step 5: Generating Synchronization Plan');
+    const hierarchyService = new HierarchyService(sourceService);
     const syncPlan = await hierarchyService.generateSyncPlan(sourceTree, targetTree, updateContent);
 
     // Step 6: Display Plan and Confirm
@@ -143,24 +47,13 @@ export async function syncHierarchy(): Promise<void> {
       return;
     }
 
-    const shouldProceed = await promptForConfirmation(
-      'Do you want to proceed with these changes?',
-      false
-    );
-
-    if (!shouldProceed) {
-      console.log('❌ Operation cancelled by user.');
-
-      return;
-    }
-
-    // Step 7: Execute Plan
-    console.log('\n🚀 Step 7: Executing Synchronization Plan');
+    // Step 6: Execute Plan
+    console.log('\n🚀 Step 6: Executing Synchronization Plan');
     await executeSyncPlan(
       syncPlan,
       sourceService,
       targetService,
-      targetRepo.id,
+      targetRepositoryId,
       localeStrategy,
       publishAfterSync
     );
@@ -171,6 +64,21 @@ export async function syncHierarchy(): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Options for hierarchy synchronization
+ */
+export type SyncHierarchyOptions = {
+  sourceService: AmplienceService;
+  targetService: AmplienceService;
+  targetRepositoryId: string;
+  sourceTree: Amplience.HierarchyNode;
+  targetTree: Amplience.HierarchyNode;
+  updateContent: boolean;
+  localeStrategy: LocaleStrategy;
+  publishAfterSync: boolean;
+  isDryRun: boolean;
+};
 
 /**
  * Execute the synchronization plan
@@ -304,9 +212,9 @@ async function executeSyncPlan(
     `  📈 Success rate: ${((successCount / (successCount + failureCount)) * 100).toFixed(1)}%`
   );
 
-  // Step 8: Bulk Publishing (if enabled and items were created)
+  // Step 7: Bulk Publishing (if enabled and items were created)
   if (publishAfterSync && createdItemIds.length > 0) {
-    console.log(`\n📤 Step 8: Publishing ${createdItemIds.length} created items...`);
+    console.log(`\n📤 Step 7: Publishing ${createdItemIds.length} created items...`);
 
     const publishProgress = createProgressBar(createdItemIds.length, 'Publishing items');
     publishProgress.start(createdItemIds.length, 0);
@@ -437,11 +345,3 @@ function transformDeliveryKey(body: Amplience.Body, strategy: LocaleStrategy): A
 
   return transformedBody;
 }
-
-/**
- * Interface for locale transformation strategy
- */
-type LocaleStrategy = {
-  strategy: 'keep' | 'remove' | 'replace';
-  targetLocale?: string;
-};

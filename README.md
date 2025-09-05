@@ -55,20 +55,42 @@ prompts, advanced filtering, and detailed reporting.
 
 ## 🔧 Configuration
 
-The tool requires environment-specific configuration in the `.env` file:
+The tool requires environment-specific configuration in the `.env` file. The
+tool automatically discovers hub configurations using the following naming
+convention:
 
 ```env
-# Available hubs
-AMP_HUBS=DEV,PLAYGROUND,PROD
+# Hub Configuration Pattern: AMP_HUB_<HUBNAME>_<PROPERTY>
+# All four properties must be present for a hub to be recognized
 
-# Environment credentials
-AMP_DEV_CLIENT_ID=your_dev_client_id
-AMP_DEV_CLIENT_SECRET=your_dev_client_secret
-AMP_DEV_HUB_ID=your_dev_hub_id
-AMP_DEV_HUB_NAME=your_dev_hub_readable_name
+# Development Environment
+AMP_HUB_DEV_CLIENT_ID=your_dev_client_id
+AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
+AMP_HUB_DEV_HUB_ID=your_dev_hub_id
+AMP_HUB_DEV_HUB_NAME=DEV
 
-# Additional environments...
+# Production Environment
+AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
+AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
+AMP_HUB_PROD_HUB_ID=your_prod_hub_id
+AMP_HUB_PROD_HUB_NAME=PROD
+
+# You can add any number of hubs by following this pattern
 ```
+
+**Key Benefits of New Configuration:**
+
+- **Auto-Discovery**: No need to maintain a central list of hubs
+- **Simplified Setup**: Just add the four required variables for each hub
+- **Reduced Errors**: Misconfigurations are automatically detected
+
+**Migration from Previous Version:**
+
+If you're upgrading from a previous version that used `AMP_HUBS`, simply:
+
+1. Remove the `AMP_HUBS` variable from your `.env` file
+2. Rename your hub variables from `AMP_<HUBNAME>_*` to `AMP_HUB_<HUBNAME>_*`
+3. Ensure all four properties are present for each hub
 
 ## 🚀 Usage
 
@@ -312,8 +334,6 @@ For issues, feature requests, or questions:
 
 ## TODO
 
-- Simplify environment configuration and management - Drop `AMP_HUBS` and
-  instead use `AMP_HUB_<HUB_NAME>` pattern to auto-detect hubs.
 - In hierarchy synchronization, when item needs to be removed, it should be
   removed as in the clean-repository procedure - including removing delivery
   key, dropping from hierarchy, unpublishing, moving to deleted folder,

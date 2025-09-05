@@ -105,10 +105,11 @@ The main problems the application successfully addresses are:
   the duration of the session or until it expires.
 
 - `FR-002`: **Multi-Hub Support**: The system must allow configuration and work
-  with multiple Amplience hubs. The list of available environments (e.g., DEV,
-  PLAYGROUND) is defined in the `AMP_HUBS` variable in the `.env` file, and
-  access data for each hub is stored in dedicated variables (e.g.,
-  `AMP_DEV_CLIENT_ID`, `AMP_DEV_HUB_SECRET`).
+  with multiple Amplience hubs using auto-discovery. Hub configurations are
+  automatically detected by scanning environment variables following the pattern
+  `AMP_HUB_<HUBNAME>_*`. Each hub requires four variables: `CLIENT_ID`,
+  `CLIENT_SECRET`, `HUB_ID`, and `HUB_NAME`. Only fully configured hubs are
+  available for selection.
 
 - `FR-003`: **Interactive CLI Interface**: The user must be able to
   interactively select a hub, then a repository, and provide filtering criteria
@@ -425,8 +426,9 @@ The following functionalities are explicitly outside the scope of this tool:
   connection to the API.
 - Acceptance Criteria:
   1. After the user selects a hub, the application reads the corresponding
-     variables from the `.env` file (e.g., `AMP_DEV_CLIENT_ID`,
-     `AMP_DEV_HUB_SECRET`) based on the selected environment name.
+     variables from the `.env` file (e.g., `AMP_HUB_DEV_CLIENT_ID`,
+     `AMP_HUB_DEV_CLIENT_SECRET`, `AMP_HUB_DEV_HUB_ID`, `AMP_HUB_DEV_HUB_NAME`)
+     based on the selected environment name.
   2. The application sends a request for an access token using the obtained
      credentials.
   3. The received token is stored and used in the `Authorization` header of all
@@ -443,8 +445,9 @@ The following functionalities are explicitly outside the scope of this tool:
   a hub from an interactive list, and then a repository to work on, to ensure
   that all operations are performed in the correct context.
 - Acceptance Criteria:
-  1. Upon launch, the application reads the `AMP_HUBS` variable from the `.env`
-     file and generates a list of available environments for selection.
+  1. Upon launch, the application automatically discovers available hubs by
+     scanning environment variables for the `AMP_HUB_<HUBNAME>_*` pattern and
+     presents only fully configured hubs for selection.
   2. The user can select one hub using the keyboard.
   3. After successful authentication to the selected hub (according to US-001),
      the application fetches and displays a list of available repositories in

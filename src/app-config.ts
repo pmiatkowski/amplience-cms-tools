@@ -4,31 +4,42 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function getHubConfigs(): Amplience.HubConfig[] {
-  const hubsEnv = process.env.AMP_HUBS;
-  if (!hubsEnv) {
-    throw new Error('AMP_HUBS environment variable is missing.');
-  }
-  const hubNames = hubsEnv
-    .split(',')
-    .map(h => h.trim())
-    .filter(Boolean);
-  if (hubNames.length === 0) {
-    throw new Error('AMP_HUBS must contain at least one hub name.');
-  }
-  const configs: Amplience.HubConfig[] = hubNames.map(envName => {
-    const clientId = process.env[`AMP_${envName}_CLIENT_ID`];
-    const clientSecret = process.env[`AMP_${envName}_HUB_SECRET`];
-    const hubId = process.env[`AMP_${envName}_HUB_ID`];
-    const name = process.env[`AMP_${envName}_HUB_NAME`];
+  const configs: Amplience.HubConfig[] = [];
+  const hubNames = new Set<string>();
 
-    if (!clientId || !clientSecret || !hubId || !name) {
-      throw new Error(
-        `Missing credentials for hub: ${envName}. Expected AMP_${envName}_CLIENT_ID and AMP_${envName}_SECRET.`
+  // Scan environment variables for AMP_HUB_ prefixed variables
+  Object.keys(process.env).forEach(key => {
+    const match = key.match(/^AMP_HUB_([A-Z0-9_]+)_CLIENT_ID$/);
+    if (match) {
+      hubNames.add(match[1]);
+    }
+  });
+
+  // For each discovered hub name, check if all required variables are present
+  hubNames.forEach(hubName => {
+    const clientId = process.env[`AMP_HUB_${hubName}_CLIENT_ID`];
+    const clientSecret = process.env[`AMP_HUB_${hubName}_CLIENT_SECRET`];
+    const hubId = process.env[`AMP_HUB_${hubName}_HUB_ID`];
+    const name = process.env[`AMP_HUB_${hubName}_HUB_NAME`];
+
+    if (clientId && clientSecret && hubId && name) {
+      configs.push({ name, clientId, clientSecret, hubId });
+    } else {
+      console.warn(
+        `Incomplete configuration for hub "${hubName}". Missing one or more of: ` +
+          `AMP_HUB_${hubName}_CLIENT_ID, AMP_HUB_${hubName}_CLIENT_SECRET, ` +
+          `AMP_HUB_${hubName}_HUB_ID, AMP_HUB_${hubName}_HUB_NAME`
       );
     }
-
-    return { name, clientId, clientSecret, hubId };
   });
+
+  if (configs.length === 0) {
+    throw new Error(
+      'No complete hub configurations found. Please ensure you have configured at least one hub ' +
+        'with all required environment variables: AMP_HUB_<HUBNAME>_CLIENT_ID, ' +
+        'AMP_HUB_<HUBNAME>_CLIENT_SECRET, AMP_HUB_<HUBNAME>_HUB_ID, AMP_HUB_<HUBNAME>_HUB_NAME'
+    );
+  }
 
   return configs;
 }

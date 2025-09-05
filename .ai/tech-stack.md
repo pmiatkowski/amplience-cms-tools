@@ -135,7 +135,8 @@ amplience-tools/
 - **`src/index.ts`**: The main entry point of the application. Responsible for
   initializing the CLI.
 - **`src/app-config.ts`**: Handles loading and validation of environment
-  variables from `.env` files using `dotenv`.
+  variables from `.env` files using `dotenv`. Uses auto-discovery to detect hub
+  configurations based on the `AMP_HUB_<HUBNAME>_*` pattern.
 - **`src/commands/`**: Command modules organized in individual folders:
   - **`clean-repository/`**: Repository cleanup with hierarchy handling
   - **`cleanup-folder/`**: Folder cleanup operations

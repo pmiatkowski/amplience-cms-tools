@@ -1,14 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// Mock dotenv to prevent loading from .env files
+vi.mock('dotenv', () => ({
+  default: {
+    config: vi.fn(),
+  },
+  config: vi.fn(),
+}));
+
 // Mock process.env before importing the module
 const originalEnv = process.env;
 
 describe('app-config', () => {
   beforeEach(() => {
-    // Clear all environment variables before each test
+    // Clear all environment variables before each test and start with a clean slate
     process.env = {} as NodeJS.ProcessEnv;
     // Clear module cache to ensure fresh imports
     vi.resetModules();
+    // Clear all mocks
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -29,7 +39,7 @@ describe('app-config', () => {
       process.env.AMP_HUB_PROD_HUB_ID = 'prod-hub-id';
       process.env.AMP_HUB_PROD_HUB_NAME = 'Production';
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
       const configs = getHubConfigs();
 
       expect(configs).toHaveLength(2);
@@ -60,7 +70,7 @@ describe('app-config', () => {
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
 
       expect(() => getHubConfigs()).toThrow(
         'No complete hub configurations found. Please ensure you have configured at least one hub'
@@ -80,7 +90,7 @@ describe('app-config', () => {
       process.env.AMP_HUB_DEV_STAGING_HUB_ID = 'staging-hub-id';
       process.env.AMP_HUB_DEV_STAGING_HUB_NAME = 'Dev Staging';
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
       const configs = getHubConfigs();
 
       expect(configs).toHaveLength(1);
@@ -96,7 +106,7 @@ describe('app-config', () => {
       // No hub environment variables set
       process.env.SOME_OTHER_VAR = 'value';
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
 
       expect(() => getHubConfigs()).toThrow(
         'No complete hub configurations found. Please ensure you have configured at least one hub'
@@ -115,7 +125,7 @@ describe('app-config', () => {
       process.env.AMP_HUB_PROD_HUB_ID = 'prod-hub-id';
       process.env.AMP_HUB_PROD_HUB_NAME = 'Production';
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
       const configs = getHubConfigs();
 
       expect(configs).toHaveLength(1);
@@ -137,7 +147,7 @@ describe('app-config', () => {
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
       const configs = getHubConfigs();
 
       expect(configs).toHaveLength(1);
@@ -156,7 +166,7 @@ describe('app-config', () => {
       process.env.AMP_HUB_ENV1_HUB_ID = 'env1-hub-id';
       process.env.AMP_HUB_ENV1_HUB_NAME = 'Environment 1';
 
-      const { getHubConfigs } = await import('../src/app-config');
+      const { getHubConfigs } = await import('./app-config');
       const configs = getHubConfigs();
 
       expect(configs).toHaveLength(1);

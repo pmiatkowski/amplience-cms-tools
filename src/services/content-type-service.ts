@@ -171,9 +171,6 @@ export class ContentTypeService {
     const sourceRepositories = await sourceHub.getRepositories();
     const targetRepositories = await targetHub.getRepositories();
 
-    console.log('Debug: Source repositories count:', sourceRepositories.length);
-    console.log('Debug: Sample source repository:', JSON.stringify(sourceRepositories[0], null, 2));
-
     // Create a Map of target repositories by name for efficient lookup
     const targetReposByName = new Map<string, Amplience.ContentRepository>();
     targetRepositories.forEach((repo: Amplience.ContentRepository) => {

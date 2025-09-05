@@ -118,6 +118,10 @@ mode by default, and detailed Markdown reporting.
   top level of your test file, return typed mock implementations, and use
   `mockImplementation()` or `mockReturnValue()` for dynamic control during
   tests. Remember the factory runs before imports are processed
+- **Mock dotenv for environment variable testing** - When testing code that uses
+  dotenv, always mock it to prevent loading from actual .env files:
+  `vi.mock('dotenv', () => ({ config: vi.fn() }))`. This ensures test isolation
+  and prevents environment variable pollution between tests
 - **Follow Arrange-Act-Assert pattern** - Structure tests with clear phases:
   setup test data (Arrange), execute the function under test (Act), verify
   results (Assert)

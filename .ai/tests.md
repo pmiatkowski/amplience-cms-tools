@@ -223,7 +223,16 @@ vi.mock('~/services/amplience-service', () => ({
     authenticate: vi.fn().mockResolvedValue(true),
   })),
 }));
+
+// Mock dotenv to prevent loading from .env files during testing
+vi.mock('dotenv', () => ({
+  config: vi.fn(),
+}));
 ```
+
+**Important**: When testing code that uses `dotenv`, always mock it to prevent
+loading from actual `.env` files. This ensures test isolation and prevents
+environment variable pollution between tests.
 
 ### Testing Async Functions
 

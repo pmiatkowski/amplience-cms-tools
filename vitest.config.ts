@@ -9,13 +9,21 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'tests/', 'dist/', 'reports/'],
+      exclude: [
+        'node_modules/',
+        'tests/',
+        'dist/',
+        'reports/',
+        'types/',
+        'src/**/index.{ts,js}',
+        'src/**/*.{test,spec}.{ts,js}',
+        './*.{mjs,ts,js}',
+      ],
     },
   },
   resolve: {
     alias: {
       '~': resolve(__dirname, './src'),
-      '~types': resolve(__dirname, './types'),
     },
   },
 });

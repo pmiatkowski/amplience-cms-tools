@@ -340,3 +340,6 @@ For issues, feature requests, or questions:
   archiving.
 - Refactor files structure (put in separate folders) and add tests in
   `__tests__` folder in each module.
+- Add reporting for each action
+- Add task feature for predefined operations (actions will require context
+  parameters first)

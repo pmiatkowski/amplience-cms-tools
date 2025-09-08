@@ -36,6 +36,8 @@ amplience-cms-tools/
 ├── reports/
 ├── src/
 │   ├── commands/
+│   │   ├── shared/              # Shared command utilities
+│   │   └── {command-name}/      # Individual command directories
 │   ├── prompts/
 │   ├── services/
 │   │   ├── actions/
@@ -98,12 +100,38 @@ src/commands/{command-name}/
 ├── prompts/                   # Command-specific prompts (optional)
 └── utils.ts                   # Command-specific utilities (optional)
 
+src/commands/shared/            # Shared command utilities
+├── index.ts                   # Barrel export (mandatory)
+├── location-selection.ts      # Common location selection logic
+├── content-operations.ts      # Shared content operations
+└── {other-shared-utilities}.ts # Additional shared utilities
+
 src/services/actions/
 ├── index.ts                   # Barrel export (mandatory)
 └── {action-name}.ts          # Action executor (mandatory)
 ```
 
-### 4.3. File Naming Convention
+### 4.3. Shared Utilities Pattern
+
+To reduce code duplication, common functionality used across multiple commands
+should be extracted into shared utilities:
+
+- **Location Selection**: Hub, repository, and folder selection logic shared via
+  `commands/shared/location-selection.ts`
+- **Content Operations**: Common content fetching and hierarchy analysis
+  patterns shared via `commands/shared/content-operations.ts`
+- **Folder Tree Operations**: Folder tree manipulation utilities in
+  `utils/folder-tree.ts`
+- **Progress Tracking**: Shared progress bar and display utilities in `utils/`
+
+**Import Strategy for Shared Code:**
+
+- Use `../shared` imports for command-level shared utilities
+- Use `~/utils` imports for general-purpose utilities
+- Follow the project's architectural constraints (utils layer cannot import from
+  services)
+
+### 4.4. File Naming Convention
 
 - **Command Directory**: Use `kebab-case` (e.g., `sync-hierarchy`,
   `cleanup-folder`)
@@ -117,7 +145,7 @@ src/services/actions/
 - **Prompt Files**: Use `prompt-for-{descriptive-name}.ts` pattern
 - **Utility Files**: Use `{descriptive-name}.ts` pattern
 
-### 4.4. Integration Requirements
+### 4.5. Integration Requirements
 
 New commands must be integrated by:
 
@@ -126,7 +154,7 @@ New commands must be integrated by:
 3. Creating documentation in `docs/{command-name}.md`
 4. Updating main README.md
 
-### 4.5. Best Practices
+### 4.6. Best Practices
 
 - **Clear Separation**: Commands handle UI/UX, actions handle business logic
 - **Error Handling**: Commands show user-friendly messages, actions throw
@@ -136,6 +164,11 @@ New commands must be integrated by:
 - **Dry Run Support**: Both commands and actions must support dry-run mode
 - **Context Passing**: Pass complete context objects to actions, not individual
   parameters
+- **Code Reuse**: Extract common functionality into shared utilities to avoid
+  duplication:
+  - Common UI patterns → `commands/shared/`
+  - General utilities → `utils/`
+  - Respect architectural constraints when placing shared code
 
 ## 5. Global Types
 
@@ -181,6 +214,7 @@ re-exports all public APIs:
 - **`src/services/index.ts`**: Exports all service classes
 - **`src/utils/index.ts`**: Exports utility functions
 - **`src/commands/index.ts`**: Exports all command handlers
+- **`src/commands/shared/index.ts`**: Exports shared command utilities
 - **`src/prompts/index.ts`**: Exports all shared prompt functions
 
 This allows for clean grouped imports using the `~/` path alias, reducing import

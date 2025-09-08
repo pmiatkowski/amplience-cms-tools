@@ -1,15 +1,18 @@
 import { getHubConfigs } from '~/app-config';
 import {
-  promptForHub,
-  promptForRepository,
-  promptForFolder,
-  promptForConfirmation,
-} from '~/prompts';
-import { listNestedSubfolders, FolderTreeNode } from '~/services/actions/list-nested-subfolders';
+  listNestedSubfolders,
+  type FolderTreeNode,
+} from '~/services/actions/list-nested-subfolders';
 import { recreateContentItems } from '~/services/actions/recreate-content-items';
 import { recreateFolderStructure } from '~/services/actions/recreate-folder-structure';
-import { AmplienceService } from '~/services/amplience-service';
-import { createProgressBar } from '~/utils';
+import { countTotalFolders, createProgressBar, getAllSubfolderIds } from '~/utils';
+import {
+  confirmOperation,
+  createFolderMapping,
+  selectSourceLocation,
+  selectTargetLocation,
+  type OperationSummary,
+} from '../shared';
 
 /**
  * Main command function to copy a folder and its content items between hubs
@@ -30,59 +33,21 @@ export async function runCopyFolderWithContent(): Promise<void> {
     }
 
     // === SOURCE SELECTION ===
-    console.log('📂 Select Source Location:');
-
-    // Prompt for source hub
-    const sourceHub = await promptForHub(hubConfigs);
-    const sourceService = new AmplienceService(sourceHub);
-
-    // Get source repositories
-    const sourceRepositories = await sourceService.getRepositories();
-    if (sourceRepositories.length === 0) {
-      console.error('No repositories found in the source hub.');
-
-      return;
-    }
-
-    // Prompt for source repository
-    const sourceRepository = await promptForRepository(sourceRepositories);
-
-    // Prompt for source folder
-    const sourceFolder = await promptForFolder(
-      sourceService,
-      sourceRepository.id,
+    const source = await selectSourceLocation(
+      hubConfigs,
       'Select source folder to copy:',
       false // Don't allow none - we need a specific folder to copy
     );
 
-    if (!sourceFolder) {
+    if (!source.folder) {
       console.log('❌ No folder selected. Operation cancelled.');
 
       return;
     }
 
     // === TARGET SELECTION ===
-    console.log('\n🎯 Select Target Location:');
-
-    // Prompt for target hub
-    const targetHub = await promptForHub(hubConfigs);
-    const targetService = new AmplienceService(targetHub);
-
-    // Get target repositories
-    const targetRepositories = await targetService.getRepositories();
-    if (targetRepositories.length === 0) {
-      console.error('No repositories found in the target hub.');
-
-      return;
-    }
-
-    // Prompt for target repository
-    const targetRepository = await promptForRepository(targetRepositories);
-
-    // Prompt for target parent folder (where the copied folder will be placed)
-    const targetParentFolder = await promptForFolder(
-      targetService,
-      targetRepository.id,
+    const target = await selectTargetLocation(
+      hubConfigs,
       'Select target parent folder (where to place the copied folder):',
       true // Allow none - can be placed at repository root
     );
@@ -94,9 +59,9 @@ export async function runCopyFolderWithContent(): Promise<void> {
     let folderStructure: FolderTreeNode[];
     try {
       const folderResult = await listNestedSubfolders(
-        sourceService,
-        sourceRepository.id,
-        sourceFolder.id
+        source.service,
+        source.repository.id,
+        source.folder.id
       );
       folderStructure = folderResult.tree;
       console.log(`✓ Found folder structure with ${countTotalFolders(folderStructure)} subfolders`);
@@ -115,22 +80,22 @@ export async function runCopyFolderWithContent(): Promise<void> {
       const progressBar = createProgressBar(1, 'Fetching content items');
 
       // Get items from the main folder
-      const mainFolderItems = await sourceService.getAllContentItems(
-        sourceRepository.id,
-        (fetched, total) => {
+      const mainFolderItems = await source.service.getAllContentItems(
+        source.repository.id,
+        (fetched: number, total: number) => {
           if (total > 0) {
             progressBar.setTotal(total);
             progressBar.update(fetched);
           }
         },
-        { folderId: sourceFolder.id }
+        { folderId: source.folder.id }
       );
 
       progressBar.stop();
 
       // Add main folder items with their source folder ID
-      mainFolderItems.forEach(item => {
-        allContentItemsWithFolders.push({ item, sourceFolderId: sourceFolder.id });
+      mainFolderItems.forEach((item: Amplience.ContentItem) => {
+        allContentItemsWithFolders.push({ item, sourceFolderId: source.folder!.id });
       });
 
       // Get items from all subfolders
@@ -146,14 +111,14 @@ export async function runCopyFolderWithContent(): Promise<void> {
         for (let i = 0; i < allSubfolderIds.length; i++) {
           const subfolderId = allSubfolderIds[i];
           try {
-            const subfolderItems = await sourceService.getAllContentItems(
-              sourceRepository.id,
+            const subfolderItems = await source.service.getAllContentItems(
+              source.repository.id,
               () => {}, // no-op callback for individual folder progress
               { folderId: subfolderId }
             );
 
             // Add subfolder items with their source folder ID
-            subfolderItems.forEach(item => {
+            subfolderItems.forEach((item: Amplience.ContentItem) => {
               allContentItemsWithFolders.push({ item, sourceFolderId: subfolderId });
             });
           } catch (error) {
@@ -173,16 +138,20 @@ export async function runCopyFolderWithContent(): Promise<void> {
     }
 
     // === CONFIRMATION ===
-    console.log('\n📊 Copy Operation Summary:');
-    console.log(`Source: ${sourceHub.name} > ${sourceRepository.name} > ${sourceFolder.name}`);
-    console.log(
-      `Target: ${targetHub.name} > ${targetRepository.name}${targetParentFolder ? ` > ${targetParentFolder.name}` : ' > Root'}`
-    );
-    console.log(`Folder to copy: ${sourceFolder.name}`);
-    console.log(`Subfolders: ${countTotalFolders(folderStructure)}`);
-    console.log(`Content items: ${allContentItemsWithFolders.length}`);
+    const operationSummary: OperationSummary = {
+      sourceHub: source.hub.name,
+      sourceRepository: source.repository.name,
+      sourceFolder: source.folder!.name,
+      targetHub: target.hub.name,
+      targetRepository: target.repository.name,
+      targetFolder: target.folder?.name || 'Root',
+      'Folder to copy': source.folder!.name,
+      Subfolders: countTotalFolders(folderStructure),
+      'Content items': allContentItemsWithFolders.length,
+    };
 
-    const confirmed = await promptForConfirmation(
+    const confirmed = await confirmOperation(
+      operationSummary,
       'Do you want to proceed with copying the folder and all its content?',
       true
     );
@@ -197,15 +166,12 @@ export async function runCopyFolderWithContent(): Promise<void> {
     console.log('\n🚀 Starting folder and content copy operation...');
 
     // Step 1: Create the main folder in target
-    console.log(`\n📁 Creating main folder "${sourceFolder.name}" in target...`);
+    console.log(`\n📁 Creating main folder "${source.folder!.name}" in target...`);
     let createdMainFolder: Amplience.Folder | null = null;
 
     try {
-      if (targetParentFolder) {
-        const result = await targetService.createSubFolder(
-          targetParentFolder.id,
-          sourceFolder.name
-        );
+      if (target.folder) {
+        const result = await target.service.createSubFolder(target.folder.id, source.folder!.name);
         if (result.success && result.updatedItem) {
           createdMainFolder = result.updatedItem;
           console.log(`✓ Created main folder: ${createdMainFolder.name} (${createdMainFolder.id})`);
@@ -213,7 +179,7 @@ export async function runCopyFolderWithContent(): Promise<void> {
           throw new Error(result.error || 'Failed to create main folder');
         }
       } else {
-        const result = await targetService.createFolder(targetRepository.id, sourceFolder.name);
+        const result = await target.service.createFolder(target.repository.id, source.folder!.name);
         if (result.success && result.updatedItem) {
           createdMainFolder = result.updatedItem;
           console.log(`✓ Created main folder: ${createdMainFolder.name} (${createdMainFolder.id})`);
@@ -234,10 +200,10 @@ export async function runCopyFolderWithContent(): Promise<void> {
     }
 
     // Step 2: Recreate subfolder structure
-    const folderMapping = new Map<string, string>();
+    const folderMapping = createFolderMapping(source.folder, createdMainFolder);
 
     // Add the main folder mapping (source folder ID → target folder ID)
-    folderMapping.set(sourceFolder.id, createdMainFolder.id);
+    folderMapping.set(source.folder!.id, createdMainFolder.id);
 
     if (folderStructure.length > 0) {
       console.log('\n📂 Recreating subfolder structure...');
@@ -248,8 +214,8 @@ export async function runCopyFolderWithContent(): Promise<void> {
       );
 
       const structureResult = await recreateFolderStructure(
-        targetService,
-        targetRepository.id,
+        target.service,
+        target.repository.id,
         createdMainFolder.id,
         folderStructure,
         (name: string, success: boolean, error?: string) => {
@@ -298,10 +264,10 @@ export async function runCopyFolderWithContent(): Promise<void> {
         }));
 
         await recreateContentItems(
-          sourceService,
-          targetService,
+          source.service,
+          target.service,
           itemsWithFolders,
-          targetRepository.id,
+          target.repository.id,
           folderMapping,
           contentProgressBar
         );
@@ -318,49 +284,9 @@ export async function runCopyFolderWithContent(): Promise<void> {
 
     console.log('\n🎉 Folder copy operation completed successfully!');
     console.log(
-      `📁 Copied folder "${sourceFolder.name}" with ${allContentItemsWithFolders.length} items to target hub.`
+      `📁 Copied folder "${source.folder!.name}" with ${allContentItemsWithFolders.length} items to target hub.`
     );
   } catch (error) {
     console.error('❌ Unexpected error during folder copy operation:', error);
   }
-}
-
-/**
- * Count total number of folders in a folder tree structure
- */
-function countTotalFolders(folderTree: FolderTreeNode[]): number {
-  let count = 0;
-
-  function countRecursively(nodes: FolderTreeNode[]): void {
-    for (const node of nodes) {
-      count++;
-      if (node.children && node.children.length > 0) {
-        countRecursively(node.children);
-      }
-    }
-  }
-
-  countRecursively(folderTree);
-
-  return count;
-}
-
-/**
- * Get all subfolder IDs from a folder tree structure
- */
-function getAllSubfolderIds(folderTree: FolderTreeNode[]): string[] {
-  const ids: string[] = [];
-
-  function collectIds(nodes: FolderTreeNode[]): void {
-    for (const node of nodes) {
-      ids.push(node.id);
-      if (node.children && node.children.length > 0) {
-        collectIds(node.children);
-      }
-    }
-  }
-
-  collectIds(folderTree);
-
-  return ids;
 }

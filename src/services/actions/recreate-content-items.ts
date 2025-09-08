@@ -3,11 +3,12 @@ import { AmplienceService } from '../amplience-service';
 
 /**
  * Core logic for recreating content items from source to target hub
+ * Note: This action assumes hierarchy analysis has already been done by the caller
  */
 export async function recreateContentItems(
   sourceService: AmplienceService,
   targetService: AmplienceService,
-  itemsWithFolders: Array<{ itemId: string; sourceFolderId: string }>, // Changed to include folder info
+  itemsWithFolders: Array<{ itemId: string; sourceFolderId: string }>,
   targetRepositoryId: string,
   folderMapping: Map<string, string>, // Map of source folder ID → target folder ID
   progressBar?: cliProgress.SingleBar,
@@ -38,165 +39,6 @@ export async function recreateContentItems(
     throw verificationError;
   }
 
-  // Step 0: Collect all hierarchy descendants for selected root items
-  console.log(`\n🌳 Analyzing hierarchy structure...`);
-
-  // First, get the source repository ID and all items for hierarchy analysis
-  let sourceRepositoryId: string | undefined;
-  let allSourceItems: Amplience.ContentItem[] = [];
-
-  if (itemIds.length > 0) {
-    console.log(`  🔍 Getting repository information...`);
-    const firstItemDetails = await sourceService.getContentItemWithDetails(itemIds[0]);
-    if (firstItemDetails && firstItemDetails.contentRepositoryId) {
-      sourceRepositoryId = firstItemDetails.contentRepositoryId;
-      console.log(`  🔍 Using source repository: ${sourceRepositoryId}`);
-
-      // Fetch all content items from the repository once for efficient hierarchy analysis
-      console.log(`  📦 Fetching all content items from repository for hierarchy analysis...`);
-      allSourceItems = await sourceService.getAllContentItems(
-        sourceRepositoryId,
-        (fetched, total) =>
-          console.log(`    📊 Loading repository items: ${fetched}/${total} items processed`),
-        { size: 100 } // Use larger page size for efficiency
-      );
-      console.log(`  ✓ Loaded ${allSourceItems.length} items from source repository`);
-    }
-  }
-
-  // Create a map of item ID to basic item info for quick hierarchy lookup
-  const itemHierarchyMap = new Map<string, { hierarchy?: Amplience.Hierarchy }>();
-  allSourceItems.forEach(item => {
-    itemHierarchyMap.set(item.id, item.hierarchy ? { hierarchy: item.hierarchy } : {});
-  });
-
-  // Find root items (items that don't have parents or are explicitly root)
-  const rootItems: string[] = [];
-  const nonRootItems: string[] = [];
-
-  for (const itemId of itemIds) {
-    const itemInfo = itemHierarchyMap.get(itemId);
-    if (itemInfo && itemInfo.hierarchy) {
-      if (itemInfo.hierarchy.root) {
-        rootItems.push(itemId);
-      } else {
-        nonRootItems.push(itemId);
-      }
-    } else {
-      // If no hierarchy info, treat as standalone item
-      rootItems.push(itemId);
-    }
-  }
-
-  console.log(
-    `  📊 Found ${rootItems.length} root/standalone items and ${nonRootItems.length} child items`
-  );
-
-  // Collect all descendants for root items using the new efficient method
-  let allDescendants: string[] = [];
-  let hierarchyApiAvailable = true; // Flag to track if Hierarchy API is available
-
-  if (rootItems.length > 0 && sourceRepositoryId) {
-    // Collect descendants for all root items using the Hierarchy API with fallback
-    for (const rootId of rootItems) {
-      console.log(`  🔍 Fetching descendants for root item: ${rootId}`);
-
-      if (hierarchyApiAvailable) {
-        try {
-          // Try the new Hierarchy API first
-          console.log(
-            `🔎 Fetching hierarchy descendants for ${rootId} using Hierarchy API (depth: 14)`
-          );
-          const descendants = await sourceService.getHierarchyDescendantsByApi(
-            sourceRepositoryId,
-            rootId,
-            14, // Max depth
-            (fetched, total) =>
-              console.log(`    📊 Loading content items: ${fetched}/${total} items processed`)
-          );
-          allDescendants.push(...descendants.map(d => d.id));
-          console.log(
-            `  ✓ Found ${descendants.length} descendants for ${rootId} using Hierarchy API`
-          );
-          continue; // Success, move to next root item
-        } catch (error) {
-          // Check if this is a 404 error indicating API not available
-          if (error instanceof Error && error.message.includes('404')) {
-            console.log(
-              `  ℹ️ Hierarchy API not available, switching to repository scan method for all remaining items`
-            );
-            hierarchyApiAvailable = false; // Don't try Hierarchy API for remaining items
-          } else {
-            console.warn(
-              `  ⚠️ Hierarchy API failed for ${rootId}: ${error instanceof Error ? error.message : String(error)}`
-            );
-            // For non-404 errors, still try fallback for this item
-          }
-        }
-      }
-
-      // Use repository scan method (either as fallback or because Hierarchy API is unavailable)
-      try {
-        console.log(`    🔄 Using repository scan method for ${rootId}`);
-        const descendants = await sourceService.getAllHierarchyDescendants(
-          sourceRepositoryId,
-          rootId,
-          (fetched, total) =>
-            console.log(`    📊 Scanning repository items: ${fetched}/${total} items processed`)
-        );
-        allDescendants.push(...descendants.map(d => d.id));
-        console.log(
-          `  ✓ Found ${descendants.length} descendants for ${rootId} using repository scan method`
-        );
-      } catch (fallbackError) {
-        console.error(`  ❌ Repository scan also failed for ${rootId}:`, fallbackError);
-        // Continue with other root items
-      }
-    }
-
-    // Remove duplicates
-    allDescendants = [...new Set(allDescendants)];
-  }
-  console.log(`  📊 Found ${allDescendants.length} hierarchy descendants`);
-
-  // If no hierarchy descendants were found and we have items that appear to be hierarchy items,
-  // it might mean the items don't actually have hierarchy relationships despite the metadata
-  if (allDescendants.length === 0 && (rootItems.length > 0 || nonRootItems.length > 0)) {
-    console.log(
-      `  💡 No hierarchy descendants found. Items may be standalone or hierarchy relationships may not exist.`
-    );
-  }
-
-  // Create final processing list and sort by hierarchy depth to ensure parents are processed before children
-  const allItemsToProcess = [...rootItems, ...allDescendants, ...nonRootItems];
-  const uniqueItemsToProcess = [...new Set(allItemsToProcess)]; // Remove duplicates
-
-  // Sort items by hierarchy depth to ensure parents are processed before children
-  const sortedItemsToProcess = sortItemsByHierarchyDepth(uniqueItemsToProcess, itemHierarchyMap);
-
-  console.log(
-    `  📊 Total items to process: ${sortedItemsToProcess.length} (including discovered hierarchy children)`
-  );
-  console.log(`  📊 Items sorted by hierarchy depth for proper parent-child processing order`);
-
-  // Debug: Show processing order for hierarchy items
-  if (sortedItemsToProcess.length <= 20) {
-    // Only show for small lists to avoid spam
-    console.log(`  🔍 Processing order (first 20 items):`);
-    sortedItemsToProcess.slice(0, 20).forEach((itemId, index) => {
-      const itemInfo = itemHierarchyMap.get(itemId);
-      const hierarchyInfo = itemInfo?.hierarchy
-        ? itemInfo.hierarchy.root
-          ? 'root'
-          : `child of ${itemInfo.hierarchy.parentId}`
-        : 'standalone';
-      console.log(`    ${index + 1}. ${itemId} (${hierarchyInfo})`);
-    });
-    if (sortedItemsToProcess.length > 20) {
-      console.log(`    ... and ${sortedItemsToProcess.length - 20} more items`);
-    }
-  }
-
   let successCount = 0;
   let failureCount = 0;
   const results: Array<{
@@ -210,9 +52,9 @@ export async function recreateContentItems(
     [];
 
   // Phase 1: Create all content items without hierarchy relationships
-  console.log(`\n🏗️  Phase 1: Creating ${sortedItemsToProcess.length} content items...`);
+  console.log(`\n🏗️  Phase 1: Creating ${itemIds.length} content items...`);
 
-  for (const itemId of sortedItemsToProcess) {
+  for (const itemId of itemIds) {
     try {
       console.log(`\n📋 Processing item: ${itemId}`);
 
@@ -233,12 +75,16 @@ export async function recreateContentItems(
         // Use the folder mapping to get the target folder ID
         targetFolderId = folderMapping.get(itemWithFolder.sourceFolderId);
         if (targetFolderId) {
-          console.log(
-            `  📁 Target folder: ${targetFolderId} (mapped from source folder: ${itemWithFolder.sourceFolderId})`
-          );
+          const sourceDescription = itemWithFolder.sourceFolderId
+            ? `source folder: ${itemWithFolder.sourceFolderId}`
+            : 'repository root';
+          console.log(`  📁 Target folder: ${targetFolderId} (mapped from ${sourceDescription})`);
         } else {
+          const sourceDescription = itemWithFolder.sourceFolderId
+            ? `source folder: ${itemWithFolder.sourceFolderId}`
+            : 'repository root';
           console.log(
-            `  ⚠️  No target folder mapping found for source folder: ${itemWithFolder.sourceFolderId}, placing in repository root`
+            `  ⚠️  No target folder mapping found for ${sourceDescription}, placing in repository root`
           );
         }
       } else {
@@ -783,76 +629,6 @@ async function publishTargetItem(service: AmplienceService, itemId: string): Pro
     // Just log it as a warning since the content item was created successfully
     console.log(`  ⚠️  Content item was created but could not be published`);
   }
-}
-
-/**
- * Sort items by hierarchy depth to ensure parents are processed before children
- */
-function sortItemsByHierarchyDepth(
-  itemIds: string[],
-  itemHierarchyMap: Map<string, { hierarchy?: Amplience.Hierarchy }>
-): string[] {
-  // Calculate hierarchy depth for each item
-  const itemsWithDepth = itemIds.map(itemId => {
-    const itemInfo = itemHierarchyMap.get(itemId);
-    let depth = 0;
-
-    if (itemInfo?.hierarchy) {
-      if (itemInfo.hierarchy.root) {
-        depth = 0; // Root items have depth 0
-      } else {
-        // For child items, calculate depth by traversing up the hierarchy
-        depth = calculateHierarchyDepth(itemId, itemHierarchyMap, new Set());
-      }
-    }
-
-    return { itemId, depth };
-  });
-
-  // Sort by depth (ascending), so parents (lower depth) are processed before children (higher depth)
-  itemsWithDepth.sort((a, b) => a.depth - b.depth);
-
-  return itemsWithDepth.map(item => item.itemId);
-}
-
-/**
- * Calculate the hierarchy depth of an item by traversing up to the root
- */
-function calculateHierarchyDepth(
-  itemId: string,
-  itemHierarchyMap: Map<string, { hierarchy?: Amplience.Hierarchy }>,
-  visited: Set<string>
-): number {
-  // Prevent infinite loops in case of circular references
-  if (visited.has(itemId)) {
-    console.warn(`⚠️  Circular reference detected in hierarchy for item ${itemId}`);
-
-    return 0;
-  }
-
-  visited.add(itemId);
-
-  const itemInfo = itemHierarchyMap.get(itemId);
-  if (!itemInfo?.hierarchy) {
-    return 0; // No hierarchy info or not a hierarchy item
-  }
-
-  if (itemInfo.hierarchy.root) {
-    return 0; // Root item has depth 0
-  }
-
-  if (!itemInfo.hierarchy.parentId) {
-    return 0; // No parent, treat as root
-  }
-
-  // Recursively calculate parent depth + 1
-  const parentDepth = calculateHierarchyDepth(
-    itemInfo.hierarchy.parentId,
-    itemHierarchyMap,
-    visited
-  );
-
-  return parentDepth + 1;
 }
 
 /**

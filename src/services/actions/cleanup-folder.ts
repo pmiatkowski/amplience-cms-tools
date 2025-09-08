@@ -23,6 +23,7 @@ export async function cleanupFolder(
   const {
     deletedFolderName = '__deleted',
     clearDeliveryKey = true,
+    unpublishIfNeeded = true,
     unarchiveIfNeeded = true,
   } = options;
 
@@ -166,7 +167,7 @@ export async function cleanupFolder(
         result.contentItemsProcessed,
         {
           clearDeliveryKey: false, // Already cleared during move
-          unpublishIfNeeded: false, // Skip unpublish - items are in __deleted folder for cleanup
+          unpublishIfNeeded, // Use the user's setting - items must be unpublished before archiving
           unarchiveIfNeeded,
         },
         result

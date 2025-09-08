@@ -23,7 +23,6 @@ export async function cleanupFolder(
   const {
     deletedFolderName = '__deleted',
     clearDeliveryKey = true,
-    unpublishIfNeeded = true,
     unarchiveIfNeeded = true,
   } = options;
 
@@ -155,7 +154,7 @@ export async function cleanupFolder(
         allContentItems,
         deletedFolder.folderId!,
         result,
-        { unarchiveIfNeeded }
+        { unarchiveIfNeeded, clearDeliveryKey }
       );
     }
 
@@ -165,7 +164,11 @@ export async function cleanupFolder(
       await archiveMovedContentItems(
         service,
         result.contentItemsProcessed,
-        { clearDeliveryKey, unpublishIfNeeded, unarchiveIfNeeded },
+        {
+          clearDeliveryKey: false, // Already cleared during move
+          unpublishIfNeeded: false, // Skip unpublish - items are in __deleted folder for cleanup
+          unarchiveIfNeeded,
+        },
         result
       );
     }
@@ -222,7 +225,7 @@ export type CleanupFolderOptions = {
 };
 
 /**
- * Moves content items to the __deleted folder
+ * Moves content items to the __deleted folder with retry logic for version conflicts
  */
 async function moveContentItemsToDeletedFolder(
   service: AmplienceService,
@@ -231,83 +234,114 @@ async function moveContentItemsToDeletedFolder(
   result: FolderCleanupResult,
   options: CleanupFolderOptions = {}
 ): Promise<void> {
-  const { unarchiveIfNeeded = true } = options;
-  const batchSize = 10; // Process items in batches to avoid overwhelming the API
+  const { unarchiveIfNeeded = true, clearDeliveryKey = true } = options;
+  const batchSize = 5; // Reduced batch size to avoid overwhelming the API
+  const maxRetries = 3;
 
   for (let i = 0; i < contentItems.length; i += batchSize) {
     const batch = contentItems.slice(i, i + batchSize);
 
-    // Process batch items in parallel
-    const batchPromises = batch.map(async item => {
-      try {
-        let currentVersion = item.version;
+    // Process batch items sequentially to avoid version conflicts
+    for (const item of batch) {
+      let retryCount = 0;
+      let success = false;
 
-        // Step 1: Unarchive if needed
-        if (unarchiveIfNeeded && item.status === 'ARCHIVED') {
-          const unarchiveResult = await service.unarchiveContentItem(item.id, currentVersion);
-          if (!unarchiveResult.success) {
-            throw new Error(`Failed to unarchive before move: ${unarchiveResult.error}`);
+      while (retryCount < maxRetries && !success) {
+        try {
+          // Get the latest version of the item before processing
+          const latestItem = await service.getContentItemWithDetails(item.id);
+          if (!latestItem) {
+            throw new Error(`Failed to get latest version of item`);
           }
-          // Update version after unarchiving
-          currentVersion = unarchiveResult.updatedItem?.version || currentVersion + 1;
-        }
+          let currentVersion = latestItem.version;
 
-        // Step 2: Move to deleted folder and drop hierarchy
-        const model: Amplience.UpdateContentItemRequest = {
-          body: item.body,
-          label: item.label,
-          version: currentVersion,
-          folderId: deletedFolderId,
-        };
-        if (item.hierarchy?.parentId || item.hierarchy?.root === false) {
-          model.hierarchy = null;
-          if (model.body._meta) {
-            model.body._meta.hierarchy = null;
+          // Step 1: Unarchive if needed
+          if (unarchiveIfNeeded && latestItem.status === 'ARCHIVED') {
+            const unarchiveResult = await service.unarchiveContentItem(item.id, currentVersion);
+            if (!unarchiveResult.success) {
+              throw new Error(`Failed to unarchive before move: ${unarchiveResult.error}`);
+            }
+            // Update version after unarchiving
+            currentVersion = unarchiveResult.updatedItem?.version || currentVersion + 1;
           }
+
+          // Step 2: Move to deleted folder and drop hierarchy
+          const model: Amplience.UpdateContentItemRequest = {
+            body: latestItem.body,
+            label: latestItem.label,
+            version: currentVersion,
+            folderId: deletedFolderId,
+          };
+
+          // Drop hierarchy if it exists
+          if (latestItem.hierarchy?.parentId || latestItem.hierarchy?.root === false) {
+            model.hierarchy = null;
+            if (model.body._meta) {
+              model.body._meta.hierarchy = null;
+            }
+          }
+
+          // Clear delivery key during move if requested
+          if (clearDeliveryKey && model.body._meta?.deliveryKey) {
+            model.body._meta.deliveryKey = null;
+          }
+
+          const updateResult = await service.updateContentItem(item.id, model);
+
+          const processedItem: ProcessedContentItem = {
+            itemId: item.id,
+            label: item.label,
+            status: latestItem.status,
+            sourceFolderId: item.sourceFolderId,
+            sourceFolderName: item.sourceFolderName,
+            moveToDeletedResult: {
+              success: updateResult.success,
+              ...(updateResult.error && { error: updateResult.error }),
+              ...(updateResult.updatedItem && { updatedItem: updateResult.updatedItem }),
+            },
+          };
+
+          result.contentItemsProcessed.push(processedItem);
+
+          if (!updateResult.success) {
+            throw new Error(`Move failed: ${updateResult.error}`);
+          }
+
+          success = true;
+        } catch (error) {
+          retryCount++;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+          // Check if it's a version conflict error
+          if (errorMessage.includes('CONTENT_ITEM_VERSION_NOT_LATEST') && retryCount < maxRetries) {
+            console.log(
+              `  Retry ${retryCount}/${maxRetries} for item ${item.label} due to version conflict`
+            );
+            // Wait a short time before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+
+          // If we've exhausted retries or it's not a version conflict, record the failure
+          const processedItem: ProcessedContentItem = {
+            itemId: item.id,
+            label: item.label,
+            status: item.status,
+            sourceFolderId: item.sourceFolderId,
+            sourceFolderName: item.sourceFolderName,
+            moveToDeletedResult: {
+              success: false,
+              error: errorMessage,
+            },
+          };
+
+          result.contentItemsProcessed.push(processedItem);
+          result.errors.push(`Failed to move item ${item.label} (${item.id}): ${errorMessage}`);
+          break; // Exit retry loop
         }
-
-        const updateResult = await service.updateContentItem(item.id, model);
-
-        const processedItem: ProcessedContentItem = {
-          itemId: item.id,
-          label: item.label,
-          status: item.status,
-          sourceFolderId: item.sourceFolderId,
-          sourceFolderName: item.sourceFolderName,
-          moveToDeletedResult: {
-            success: updateResult.success,
-            ...(updateResult.error && { error: updateResult.error }),
-            ...(updateResult.updatedItem && { updatedItem: updateResult.updatedItem }),
-          },
-        };
-
-        result.contentItemsProcessed.push(processedItem);
-
-        if (!updateResult.success) {
-          result.errors.push(
-            `Failed to move item ${item.label} (${item.id}) to deleted folder: ${updateResult.error}`
-          );
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const processedItem: ProcessedContentItem = {
-          itemId: item.id,
-          label: item.label,
-          status: item.status,
-          sourceFolderId: item.sourceFolderId,
-          sourceFolderName: item.sourceFolderName,
-          moveToDeletedResult: {
-            success: false,
-            error: errorMessage,
-          },
-        };
-
-        result.contentItemsProcessed.push(processedItem);
-        result.errors.push(`Failed to move item ${item.label} (${item.id}): ${errorMessage}`);
       }
-    });
+    }
 
-    await Promise.all(batchPromises);
     console.log(
       `  Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(contentItems.length / batchSize)}`
     );

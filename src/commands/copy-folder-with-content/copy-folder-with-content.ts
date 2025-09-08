@@ -183,7 +183,8 @@ export async function runCopyFolderWithContent(): Promise<void> {
     console.log(`Content items: ${allContentItemsWithFolders.length}`);
 
     const confirmed = await promptForConfirmation(
-      'Do you want to proceed with copying the folder and all its content?'
+      'Do you want to proceed with copying the folder and all its content?',
+      true
     );
 
     if (!confirmed) {

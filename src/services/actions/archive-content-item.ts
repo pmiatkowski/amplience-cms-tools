@@ -108,24 +108,24 @@ export async function archiveContentItem(
       }
     }
 
-    // // Step 3: Clear delivery key if it exists and option is enabled
-    // if (clearDeliveryKey) {
-    //   // Check if the body has the expected structure with _meta.deliveryKey
-    //   const metaBody = item.body as Amplience.MetaObj;
-    //   if (metaBody?._meta?.deliveryKey) {
-    //     const clearKeyResult = await service.updateDeliveryKey(item.id, currentVersion, '');
-    //     itemResult.clearKeyResult = {
-    //       success: clearKeyResult.success,
-    //       ...(clearKeyResult.error && { error: clearKeyResult.error }),
-    //     };
+    // Step 3: Clear delivery key if it exists and option is enabled
+    if (clearDeliveryKey) {
+      // Check if the body has the expected structure with _meta.deliveryKey
+      const metaBody = item.body as Amplience.MetaObj;
+      if (metaBody?._meta?.deliveryKey) {
+        const clearKeyResult = await service.updateDeliveryKey(item.id, currentVersion, '');
+        itemResult.clearKeyResult = {
+          success: clearKeyResult.success,
+          ...(clearKeyResult.error && { error: clearKeyResult.error }),
+        };
 
-    //     if (!clearKeyResult.success) {
-    //       throw new Error(`Failed to clear delivery key: ${clearKeyResult.error}`);
-    //     }
-    //     // Use actual version from API response
-    //     currentVersion = clearKeyResult.updatedItem?.version || currentVersion + 1;
-    //   }
-    // }
+        if (!clearKeyResult.success) {
+          throw new Error(`Failed to clear delivery key: ${clearKeyResult.error}`);
+        }
+        // Use actual version from API response
+        currentVersion = clearKeyResult.updatedItem?.version || currentVersion + 1;
+      }
+    }
 
     // Step 4: Unpublish (only if item has been published and option is enabled)
     if (
@@ -139,7 +139,15 @@ export async function archiveContentItem(
       };
 
       if (!unpublishResult.success) {
-        throw new Error(`Failed to unpublish: ${unpublishResult.error}`);
+        // Check if it's a permission error
+        const errorMessage = unpublishResult.error || '';
+        if (errorMessage.includes('FORBIDDEN') || errorMessage.includes('Authorization required')) {
+          console.warn(`⚠️  Skipping unpublish for ${item.label} - insufficient permissions`);
+          // Don't throw error for permission issues, just mark as skipped
+          itemResult.unpublishResult.success = true; // Mark as successful to continue processing
+        } else {
+          throw new Error(`Failed to unpublish: ${unpublishResult.error}`);
+        }
       }
       // Unpublish doesn't return an updated item, so keep the current version
     }

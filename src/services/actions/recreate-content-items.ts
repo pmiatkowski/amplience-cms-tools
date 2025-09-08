@@ -199,9 +199,18 @@ export async function recreateContentItems(
 
   let successCount = 0;
   let failureCount = 0;
-  const results: Array<{ id: string; success: boolean; error?: string; newId?: string }> = [];
+  const results: Array<{
+    id: string;
+    success: boolean;
+    error?: string;
+    newId?: string;
+    sourceItem?: Amplience.ContentItemWithDetails;
+  }> = [];
   const itemsToPublish: Array<{ itemId: string; sourceItem: Amplience.ContentItemWithDetails }> =
     [];
+
+  // Phase 1: Create all content items without hierarchy relationships
+  console.log(`\n🏗️  Phase 1: Creating ${sortedItemsToProcess.length} content items...`);
 
   for (const itemId of sortedItemsToProcess) {
     try {
@@ -267,59 +276,186 @@ export async function recreateContentItems(
         );
       }
 
-      // Step 7: Handle hierarchy relationships (if applicable)
-      if (sourceItem.hierarchy && !sourceItem.hierarchy.root) {
-        // This is a child item - establish parent-child relationship
-        const parentSourceId = sourceItem.hierarchy.parentId;
-        console.log(`  🔗 Looking for parent item: ${parentSourceId}`);
-
-        const parentResult = results.find(r => r.id === parentSourceId && r.success && r.newId);
-
-        if (parentResult && parentResult.newId) {
-          console.log(`  ✓ Found parent in results: ${parentResult.newId}`);
-
-          const relationshipCreated = await createParentChildRelationship(
-            targetService,
-            targetRepositoryId,
-            newItem.id,
-            parentResult.newId
-          );
-
-          if (relationshipCreated) {
-            console.log(`  ✓ Established hierarchy relationship with parent ${parentResult.newId}`);
-            // Note: Publishing will happen in batch after all items are processed
-          } else {
-            console.warn(
-              `  ⚠️ Failed to establish hierarchy relationship with parent ${parentResult.newId}`
-            );
-          }
-        } else {
-          console.warn(
-            `  ⚠️ Parent item ${parentSourceId} not found in results - hierarchy relationship skipped`
-          );
-          console.warn(
-            `  📊 Current results: ${results
-              .filter(r => r.success)
-              .map(r => `${r.id}→${r.newId}`)
-              .join(', ')}`
-          );
-        }
-      } else if (sourceItem.hierarchy && sourceItem.hierarchy.root) {
-        console.log(`  ✓ Root hierarchy item - children will be processed separately`);
-      }
-
-      results.push({ id: itemId, success: true, newId: newItem.id });
+      results.push({ id: itemId, success: true, newId: newItem.id, sourceItem });
       successCount++;
-      console.log(`  ✅ Successfully recreated item`);
+      console.log(`  ✅ Successfully created item`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`  ❌ Failed to recreate item ${itemId}: ${errorMessage}`);
+      console.error(`  ❌ Failed to create item ${itemId}: ${errorMessage}`);
       results.push({ id: itemId, success: false, error: errorMessage });
       failureCount++;
     } finally {
       // Update progress bar if provided
       if (progressBar) {
         progressBar.increment();
+      }
+    }
+  }
+
+  // Phase 2: Establish hierarchy relationships
+  console.log(`\n🔗 Phase 2: Establishing hierarchy relationships...`);
+
+  const hierarchyItems = results.filter(r => r.success && r.sourceItem?.hierarchy);
+  const hierarchyRootItems = hierarchyItems.filter(r => r.sourceItem?.hierarchy?.root);
+  const hierarchyChildItems = hierarchyItems.filter(
+    r => r.sourceItem?.hierarchy && !r.sourceItem.hierarchy.root
+  );
+
+  console.log(
+    `  � Found ${hierarchyRootItems.length} root items and ${hierarchyChildItems.length} child items`
+  );
+
+  // First, ensure all root items are properly established as hierarchy nodes
+  if (hierarchyRootItems.length > 0) {
+    console.log(`  🌳 Establishing root hierarchy items...`);
+
+    for (const rootResult of hierarchyRootItems) {
+      if (rootResult.newId && rootResult.sourceItem?.hierarchy?.root) {
+        try {
+          console.log(`    🔧 Ensuring ${rootResult.newId} is properly set as hierarchy root...`);
+
+          // Verify the root item was created with proper hierarchy metadata
+          const createdRootItem = await targetService.getContentItemWithDetails(rootResult.newId);
+          if (!createdRootItem) {
+            console.warn(`    ⚠️  Could not fetch created root item ${rootResult.newId}`);
+            continue;
+          }
+
+          if (!createdRootItem.body._meta?.hierarchy?.root) {
+            console.log(
+              `    ⚠️  Root item ${rootResult.newId} missing hierarchy metadata, updating...`
+            );
+
+            // Update the item to ensure it has proper hierarchy root metadata
+            const updateData: Amplience.UpdateContentItemRequest = {
+              body: {
+                ...createdRootItem.body,
+                _meta: {
+                  ...createdRootItem.body._meta,
+                  hierarchy: {
+                    root: true,
+                    parentId: null,
+                  },
+                },
+              },
+              label: createdRootItem.label,
+              version: createdRootItem.version,
+              ...(createdRootItem.folderId && { folderId: createdRootItem.folderId }),
+              ...(createdRootItem.locale && { locale: createdRootItem.locale }),
+            };
+
+            const updateResult = await targetService.updateContentItem(
+              rootResult.newId,
+              updateData
+            );
+            if (updateResult.success) {
+              console.log(`    ✓ Updated root item with hierarchy metadata`);
+            } else {
+              console.warn(
+                `    ⚠️  Failed to update root item hierarchy metadata: ${updateResult.error}`
+              );
+            }
+          } else {
+            console.log(`    ✓ Root item already has proper hierarchy metadata`);
+          }
+
+          // Optionally publish root items to ensure they're properly established
+          // This might be required for the API to recognize them as valid hierarchy nodes
+          if (rootResult.sourceItem && shouldPublishItem(rootResult.sourceItem)) {
+            try {
+              console.log(
+                `    📤 Publishing root hierarchy item to establish it as valid hierarchy node...`
+              );
+              await publishTargetItem(targetService, rootResult.newId);
+              console.log(`    ✓ Root hierarchy item published successfully`);
+
+              // Small delay to ensure the published state is propagated
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } catch (publishError) {
+              console.warn(`    ⚠️  Failed to publish root hierarchy item: ${publishError}`);
+              console.warn(
+                `    💡 Continuing without publishing - hierarchy relationships may fail`
+              );
+            }
+          }
+        } catch (error) {
+          console.warn(`    ⚠️  Error verifying/updating root item ${rootResult.newId}:`, error);
+        }
+      }
+    }
+  }
+
+  // Now establish parent-child relationships
+  if (hierarchyChildItems.length > 0) {
+    console.log(`  👶 Establishing child-parent relationships...`);
+
+    for (const childResult of hierarchyChildItems) {
+      if (childResult.newId && childResult.sourceItem?.hierarchy?.parentId) {
+        try {
+          const parentSourceId = childResult.sourceItem.hierarchy.parentId;
+          console.log(`    🔗 Setting up child ${childResult.newId} with parent ${parentSourceId}`);
+
+          const parentResult = results.find(r => r.id === parentSourceId && r.success && r.newId);
+
+          if (parentResult && parentResult.newId) {
+            console.log(`    ✓ Found parent in results: ${parentResult.newId}`);
+
+            // Add a small delay to ensure parent item is fully committed
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Verify parent item exists and has hierarchy metadata before creating relationship
+            try {
+              const parentItem = await targetService.getContentItemWithDetails(parentResult.newId);
+              if (!parentItem) {
+                console.warn(
+                  `    ⚠️ Parent item ${parentResult.newId} not found, skipping relationship`
+                );
+                continue;
+              }
+
+              if (!parentItem.body._meta?.hierarchy) {
+                console.warn(
+                  `    ⚠️ Parent item ${parentResult.newId} missing hierarchy metadata, skipping relationship`
+                );
+                continue;
+              }
+
+              console.log(`    ✓ Parent item verified as valid hierarchy node`);
+            } catch (verifyError) {
+              console.warn(
+                `    ⚠️ Could not verify parent item ${parentResult.newId}:`,
+                verifyError
+              );
+              continue;
+            }
+
+            const relationshipCreated = await createParentChildRelationship(
+              targetService,
+              targetRepositoryId,
+              childResult.newId,
+              parentResult.newId
+            );
+
+            if (relationshipCreated) {
+              console.log(
+                `    ✓ Established hierarchy relationship with parent ${parentResult.newId}`
+              );
+            } else {
+              console.warn(
+                `    ⚠️ Failed to establish hierarchy relationship with parent ${parentResult.newId}`
+              );
+            }
+          } else {
+            console.warn(
+              `    ⚠️ Parent item ${parentSourceId} not found in results - hierarchy relationship skipped`
+            );
+          }
+        } catch (error) {
+          console.warn(
+            `    ⚠️ Error establishing relationship for child ${childResult.newId}:`,
+            error
+          );
+        }
       }
     }
   }
@@ -572,9 +708,39 @@ async function createParentChildRelationship(
   parentId: string
 ): Promise<boolean> {
   try {
-    return await service.createHierarchyNode(repositoryId, childId, parentId);
+    console.log(
+      `      🔗 Attempting to create hierarchy relationship: child ${childId} -> parent ${parentId}`
+    );
+
+    const result = await service.createHierarchyNode(repositoryId, childId, parentId);
+
+    if (result) {
+      console.log(`      ✅ Successfully created hierarchy relationship`);
+    } else {
+      console.error(`      ❌ Failed to create hierarchy relationship (returned false)`);
+    }
+
+    return result;
   } catch (error) {
-    console.error(`Error creating parent-child relationship:`, error);
+    if (error instanceof Error) {
+      console.error(`      ❌ Error creating parent-child relationship: ${error.message}`);
+
+      // Check for specific error patterns
+      if (error.message.includes('CONTENT_ITEM_HIERARCHY_PARENT_NOT_HIERARCHY_NODE')) {
+        console.error(
+          `      💡 The parent item (${parentId}) is not recognized as a valid hierarchy node.`
+        );
+        console.error(
+          `      💡 This might happen if the parent item needs to be published first or is missing hierarchy metadata.`
+        );
+      } else if (error.message.includes('400 Bad Request')) {
+        console.error(
+          `      💡 Bad request - check that both parent and child items exist and are valid.`
+        );
+      }
+    } else {
+      console.error(`      ❌ Unknown error creating parent-child relationship:`, error);
+    }
 
     return false;
   }

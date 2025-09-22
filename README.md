@@ -330,3 +330,10 @@ details.
 - Add reporting for each action
 - Add task feature for predefined operations (actions will require context
   parameters first)
+
+## Known Issues
+
+- Syncing content type schemas is too slow due to implementation. Needs to be
+  revised.
+- Copying folder with content does not recreate full hierarchy comparing to
+  copying content items directly.

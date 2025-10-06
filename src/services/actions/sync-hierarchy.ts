@@ -1,6 +1,25 @@
 import { createProgressBar } from '~/utils';
 import { AmplienceService } from '../amplience-service';
 import { HierarchyService } from '../hierarchy-service';
+import {
+  archivePreparedItem,
+  ensureDeletedFolder,
+  prepareItemForRemoval,
+  RemovalPreparationResult,
+} from './item-removal';
+import type { ItemCleanupResult } from './archive-content-item';
+
+const REMOVAL_DELETED_FOLDER_NAME = '__deleted';
+const REMOVAL_CLEAR_DELIVERY_KEY = true;
+const REMOVAL_UNARCHIVE_IF_NEEDED = true;
+const REMOVAL_UNPUBLISH_IF_NEEDED = true;
+
+type RemovalExecutionSummary = {
+  attempted: number;
+  succeeded: number;
+  failed: number;
+  errors: string[];
+};
 
 /**
  * Interface for locale transformation strategy
@@ -105,20 +124,75 @@ async function executeSyncPlan(
     console.log(`\n🗑️  Removing ${plan.itemsToRemove.length} items...`);
     const removeProgress = createProgressBar(plan.itemsToRemove.length, 'Removing items');
     removeProgress.start(plan.itemsToRemove.length, 0);
+    const removalResults: RemovalExecutionSummary = {
+      attempted: 0,
+      succeeded: 0,
+      failed: 0,
+      errors: [],
+    };
 
-    for (const item of plan.itemsToRemove) {
-      try {
-        // For now, we'll archive the item directly (moving to __deleted folder would require additional implementation)
-        await targetService.archiveContentItem(item.targetItem!.id, item.targetItem!.version);
-        successCount++;
-        console.log(`  ✅ Archived: ${item.targetItem!.label}`);
-      } catch (error) {
+    const deletedFolderResult = await ensureDeletedFolder(
+      targetService,
+      targetRepositoryId,
+      REMOVAL_DELETED_FOLDER_NAME
+    );
+
+    if (!deletedFolderResult.success || !deletedFolderResult.folderId) {
+      const errorMessage = deletedFolderResult.error || 'Failed to ensure deleted folder';
+      console.log(`  ❌ Unable to prepare deleted folder: ${errorMessage}`);
+
+      for (const item of plan.itemsToRemove) {
+        const label = item.targetItem?.label || item.sourceItem.label;
+        removalResults.attempted++;
+        removalResults.failed++;
+        removalResults.errors.push(`${label}: ${errorMessage}`);
         failureCount++;
-        console.log(`  ❌ Failed to archive: ${item.targetItem!.label} - ${error}`);
+        console.log(`  ❌ Failed to remove ${label}: ${errorMessage}`);
+        removeProgress.increment();
       }
-      removeProgress.increment();
+    } else {
+      const removalOptions = {
+        deletedFolderId: deletedFolderResult.folderId,
+        deletedFolderName: REMOVAL_DELETED_FOLDER_NAME,
+        clearDeliveryKey: REMOVAL_CLEAR_DELIVERY_KEY,
+        unarchiveIfNeeded: REMOVAL_UNARCHIVE_IF_NEEDED,
+        unpublishIfNeeded: REMOVAL_UNPUBLISH_IF_NEEDED,
+      } as const;
+
+      for (const item of plan.itemsToRemove) {
+        const targetItem = item.targetItem;
+
+        if (!targetItem) {
+          const fallbackLabel = item.sourceItem.label;
+          removalResults.attempted++;
+          removalResults.failed++;
+          removalResults.errors.push(`${fallbackLabel}: Missing target item during removal`);
+          failureCount++;
+          console.log(`  ❌ Failed to remove ${fallbackLabel}: Missing target item`);
+          removeProgress.increment();
+          continue;
+        }
+
+        const removalOutcome = await handleRemoval(
+          targetService,
+          targetRepositoryId,
+          targetItem,
+          removalOptions,
+          removalResults
+        );
+
+        if (removalOutcome.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+
+        removeProgress.increment();
+      }
     }
+
     removeProgress.stop();
+    logRemovalSummary(removalResults);
   }
 
   // Execute creations (order is important - we need to create parents before children)
@@ -254,6 +328,104 @@ async function executeSyncPlan(
 /**
  * Sort items by hierarchy depth to ensure parents are created before children
  */
+function logRemovalSummary(summary: RemovalExecutionSummary): void {
+  if (summary.attempted === 0) {
+    return;
+  }
+
+  console.log(
+    `  🗑️ Removal summary: ${summary.succeeded}/${summary.attempted} succeeded, ${summary.failed} failed`
+  );
+
+  if (summary.errors.length > 0) {
+    console.log('  ⚠️ Removal errors:');
+    summary.errors.forEach(error => {
+      console.log(`    - ${error}`);
+    });
+  }
+}
+
+type RemovalHandlerOptions = {
+  deletedFolderId: string;
+  deletedFolderName: string;
+  clearDeliveryKey: boolean;
+  unarchiveIfNeeded: boolean;
+  unpublishIfNeeded: boolean;
+};
+
+async function handleRemoval(
+  service: AmplienceService,
+  repositoryId: string,
+  item: Amplience.ContentItem,
+  options: RemovalHandlerOptions,
+  summary: RemovalExecutionSummary
+): Promise<{ success: boolean }> {
+  summary.attempted++;
+
+  try {
+    const preparation: RemovalPreparationResult = await prepareItemForRemoval(
+      service,
+      repositoryId,
+      item.id,
+      {
+        deletedFolderId: options.deletedFolderId,
+        deletedFolderName: options.deletedFolderName,
+        clearDeliveryKey: options.clearDeliveryKey,
+        unarchiveIfNeeded: options.unarchiveIfNeeded,
+      }
+    );
+
+    if (!preparation.success) {
+      const errorMessage = preparation.error || 'Failed during removal preparation';
+      summary.failed++;
+      summary.errors.push(`${item.label}: ${errorMessage}`);
+      console.log(`  ❌ Failed to remove ${item.label}: ${errorMessage}`);
+
+      return { success: false };
+    }
+
+    const archiveResult = await archivePreparedItem(service, preparation, {
+      unpublishIfNeeded: options.unpublishIfNeeded,
+      unarchiveIfNeeded: options.unarchiveIfNeeded,
+    });
+
+    if (!archiveResult || !archiveResult.overallSuccess) {
+      const archiveError = extractArchiveError(archiveResult);
+      summary.failed++;
+      summary.errors.push(`${item.label}: ${archiveError}`);
+      console.log(`  ❌ Failed to remove ${item.label}: ${archiveError}`);
+
+      return { success: false };
+    }
+
+    summary.succeeded++;
+    console.log(`  ✅ Removed: ${item.label}`);
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    summary.failed++;
+    summary.errors.push(`${item.label}: ${errorMessage}`);
+    console.log(`  ❌ Failed to remove ${item.label}: ${errorMessage}`);
+
+    return { success: false };
+  }
+}
+
+function extractArchiveError(result?: ItemCleanupResult): string {
+  if (!result) {
+    return 'Archive step skipped: missing prepared item';
+  }
+
+  return (
+    result.archiveResult.error ||
+    result.unpublishResult.error ||
+    result.clearKeyResult.error ||
+    result.moveToDeletedResult.error ||
+    'Archive operation failed'
+  );
+}
+
 function sortItemsByHierarchyDepth(items: Amplience.SyncItem[]): Amplience.SyncItem[] {
   // Create a map to track parent-child relationships
   const parentChildMap = new Map<string, string[]>();

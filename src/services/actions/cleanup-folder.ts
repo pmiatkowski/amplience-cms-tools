@@ -1,10 +1,7 @@
 import { AmplienceService } from '../amplience-service';
-import {
-  archiveContentItem,
-  ItemCleanupResult,
-  ArchiveContentItemOptions,
-} from './archive-content-item';
-import { listNestedSubfolders, FolderTreeNode } from './list-nested-subfolders';
+import { archivePreparedItem, ensureDeletedFolder, prepareItemForRemoval } from './item-removal';
+import { FolderTreeNode, listNestedSubfolders } from './list-nested-subfolders';
+import type { ItemCleanupResult } from './archive-content-item';
 
 /**
  * Performs comprehensive cleanup of a selected folder and all its nested content
@@ -147,35 +144,18 @@ export async function cleanupFolder(
     }
     result.deletedFolderId = deletedFolder.folderId!;
 
-    // Step 4: Move all content items to __deleted folder
-    console.log('Step 4: Moving content items to __deleted folder...');
+    console.log('Step 4: Preparing content items for removal...');
     if (allContentItems.length > 0) {
-      await moveContentItemsToDeletedFolder(
+      await processContentItemsForRemoval(
         service,
+        repositoryId,
         allContentItems,
         deletedFolder.folderId!,
-        result,
-        { unarchiveIfNeeded, clearDeliveryKey }
-      );
-    }
-
-    // Step 5: Archive all moved content items
-    console.log('Step 5: Archiving moved content items...');
-    if (result.contentItemsProcessed.length > 0) {
-      await archiveMovedContentItems(
-        service,
-        result.contentItemsProcessed,
-        {
-          clearDeliveryKey: false, // Already cleared during move
-          unpublishIfNeeded, // Use the user's setting - items must be unpublished before archiving
-          unarchiveIfNeeded,
-        },
+        { deletedFolderName, clearDeliveryKey, unarchiveIfNeeded, unpublishIfNeeded },
         result
       );
     }
-
-    // Step 6: Delete folders in reverse order (deepest first)
-    console.log('Step 6: Deleting empty folders...');
+    console.log('Step 5: Deleting empty folders...');
     if (targetFolderId) {
       // Only delete folders if we're cleaning a specific folder, not the repository root
       await deleteFoldersInReverseOrder(service, nestedResult.tree, targetFolderId, result);
@@ -225,179 +205,106 @@ export type CleanupFolderOptions = {
   unarchiveIfNeeded?: boolean;
 };
 
-/**
- * Moves content items to the __deleted folder with retry logic for version conflicts
- */
-async function moveContentItemsToDeletedFolder(
+async function processContentItemsForRemoval(
   service: AmplienceService,
+  repositoryId: string,
   contentItems: ContentItemWithFolder[],
   deletedFolderId: string,
-  result: FolderCleanupResult,
-  options: CleanupFolderOptions = {}
-): Promise<void> {
-  const { unarchiveIfNeeded = true, clearDeliveryKey = true } = options;
-  const batchSize = 5; // Reduced batch size to avoid overwhelming the API
-  const maxRetries = 3;
-
-  for (let i = 0; i < contentItems.length; i += batchSize) {
-    const batch = contentItems.slice(i, i + batchSize);
-
-    // Process batch items sequentially to avoid version conflicts
-    for (const item of batch) {
-      let retryCount = 0;
-      let success = false;
-
-      while (retryCount < maxRetries && !success) {
-        try {
-          // Get the latest version of the item before processing
-          const latestItem = await service.getContentItemWithDetails(item.id);
-          if (!latestItem) {
-            throw new Error(`Failed to get latest version of item`);
-          }
-          let currentVersion = latestItem.version;
-
-          // Step 1: Unarchive if needed
-          if (unarchiveIfNeeded && latestItem.status === 'ARCHIVED') {
-            const unarchiveResult = await service.unarchiveContentItem(item.id, currentVersion);
-            if (!unarchiveResult.success) {
-              throw new Error(`Failed to unarchive before move: ${unarchiveResult.error}`);
-            }
-            // Update version after unarchiving
-            currentVersion = unarchiveResult.updatedItem?.version || currentVersion + 1;
-          }
-
-          // Step 2: Move to deleted folder and drop hierarchy
-          const model: Amplience.UpdateContentItemRequest = {
-            body: latestItem.body,
-            label: latestItem.label,
-            version: currentVersion,
-            folderId: deletedFolderId,
-          };
-
-          // Drop hierarchy if it exists
-          if (latestItem.hierarchy?.parentId || latestItem.hierarchy?.root === false) {
-            model.hierarchy = null;
-            if (model.body._meta) {
-              model.body._meta.hierarchy = null;
-            }
-          }
-
-          // Clear delivery key during move if requested
-          if (clearDeliveryKey && model.body._meta?.deliveryKey) {
-            model.body._meta.deliveryKey = null;
-          }
-
-          const updateResult = await service.updateContentItem(item.id, model);
-
-          const processedItem: ProcessedContentItem = {
-            itemId: item.id,
-            label: item.label,
-            status: latestItem.status,
-            sourceFolderId: item.sourceFolderId,
-            sourceFolderName: item.sourceFolderName,
-            moveToDeletedResult: {
-              success: updateResult.success,
-              ...(updateResult.error && { error: updateResult.error }),
-              ...(updateResult.updatedItem && { updatedItem: updateResult.updatedItem }),
-            },
-          };
-
-          result.contentItemsProcessed.push(processedItem);
-
-          if (!updateResult.success) {
-            throw new Error(`Move failed: ${updateResult.error}`);
-          }
-
-          success = true;
-        } catch (error) {
-          retryCount++;
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-          // Check if it's a version conflict error
-          if (errorMessage.includes('CONTENT_ITEM_VERSION_NOT_LATEST') && retryCount < maxRetries) {
-            console.log(
-              `  Retry ${retryCount}/${maxRetries} for item ${item.label} due to version conflict`
-            );
-            // Wait a short time before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            continue;
-          }
-
-          // If we've exhausted retries or it's not a version conflict, record the failure
-          const processedItem: ProcessedContentItem = {
-            itemId: item.id,
-            label: item.label,
-            status: item.status,
-            sourceFolderId: item.sourceFolderId,
-            sourceFolderName: item.sourceFolderName,
-            moveToDeletedResult: {
-              success: false,
-              error: errorMessage,
-            },
-          };
-
-          result.contentItemsProcessed.push(processedItem);
-          result.errors.push(`Failed to move item ${item.label} (${item.id}): ${errorMessage}`);
-          break; // Exit retry loop
-        }
-      }
-    }
-
-    console.log(
-      `  Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(contentItems.length / batchSize)}`
-    );
-  }
-}
-
-/**
- * Archives all content items that were successfully moved to the deleted folder
- */
-async function archiveMovedContentItems(
-  service: AmplienceService,
-  processedItems: ProcessedContentItem[],
-  archiveOptions: ArchiveContentItemOptions,
+  options: {
+    deletedFolderName: string;
+    clearDeliveryKey: boolean;
+    unarchiveIfNeeded: boolean;
+    unpublishIfNeeded: boolean;
+  },
   result: FolderCleanupResult
 ): Promise<void> {
-  // Only archive items that were successfully moved
-  const itemsToArchive = processedItems.filter(item => item.moveToDeletedResult.success);
+  for (const item of contentItems) {
+    console.log(`  Processing item ${item.label} (${item.id})`);
 
-  console.log(`Archiving ${itemsToArchive.length} successfully moved items...`);
+    const processedItem: ProcessedContentItem = {
+      itemId: item.id,
+      label: item.label,
+      status: item.status,
+      sourceFolderId: item.sourceFolderId,
+      sourceFolderName: item.sourceFolderName,
+      moveToDeletedResult: {
+        success: false,
+      },
+    };
 
-  for (const processedItem of itemsToArchive) {
     try {
-      // Use the updated content item from the move operation if available
-      const updatedItem = processedItem.moveToDeletedResult.updatedItem;
-      const versionToUse = updatedItem ? updatedItem.version : 1;
+      const prepareResult = await prepareItemForRemoval(service, repositoryId, item.id, {
+        deletedFolderId,
+        deletedFolderName: options.deletedFolderName,
+        clearDeliveryKey: options.clearDeliveryKey,
+        unarchiveIfNeeded: options.unarchiveIfNeeded,
+      });
 
-      // Create a minimal content item object for the archive function
-      const contentItem: Amplience.ContentItem = {
-        id: processedItem.itemId,
-        label: processedItem.label,
-        schemaId: updatedItem?.schemaId || '', // Use actual schema if available
-        status: updatedItem?.status || ('ACTIVE' as Amplience.ContentStatus),
-        publishingStatus: updatedItem?.publishingStatus || ('NONE' as Amplience.PublishingStatus),
-        createdDate: updatedItem?.createdDate || '',
-        lastModifiedDate: updatedItem?.lastModifiedDate || '',
-        version: versionToUse, // Use the updated version from move operation
-        deliveryId: updatedItem?.deliveryId || '',
-        validationState: updatedItem?.validationState || '',
-        body: updatedItem?.body || {},
+      processedItem.moveToDeletedResult = {
+        success: prepareResult.success,
+        ...(prepareResult.error && { error: prepareResult.error }),
+        ...(prepareResult.updatedItem && { updatedItem: prepareResult.updatedItem }),
       };
 
-      const archiveResult = await archiveContentItem(service, contentItem, archiveOptions);
-      processedItem.archiveResult = archiveResult;
+      if (prepareResult.updatedItem) {
+        processedItem.status = prepareResult.updatedItem.status;
+      }
 
-      if (!archiveResult.overallSuccess) {
+      if (!prepareResult.success) {
         result.errors.push(
-          `Failed to archive item ${processedItem.label} (${processedItem.itemId}): Archive operation failed`
+          `Failed to move item ${item.label} (${item.id}) to deleted folder: ${prepareResult.error ?? 'Unknown error'}`
         );
+        result.contentItemsProcessed.push(processedItem);
+        continue;
+      }
+
+      const archiveResult = await archivePreparedItem(service, prepareResult, {
+        unpublishIfNeeded: options.unpublishIfNeeded,
+        unarchiveIfNeeded: options.unarchiveIfNeeded,
+      });
+
+      if (archiveResult) {
+        processedItem.archiveResult = archiveResult;
+        if (!archiveResult.overallSuccess) {
+          result.errors.push(
+            `Failed to archive item ${item.label} (${item.id}): ${archiveResult.archiveResult.error ?? 'Archive operation failed'}`
+          );
+          console.log(`    ⚠️  Prepared but failed to archive ${item.label}`);
+        } else {
+          console.log(`    ✅ Archived ${item.label}`);
+        }
+      } else {
+        processedItem.archiveResult = {
+          itemId: item.id,
+          label: item.label,
+          unarchiveResult: { success: true },
+          moveToDeletedResult: { success: true },
+          clearKeyResult: { success: true },
+          unpublishResult: { success: true },
+          archiveResult: {
+            success: false,
+            error: 'Archive step skipped: missing prepared item',
+          },
+          overallSuccess: false,
+        };
+        result.errors.push(
+          `Failed to archive item ${item.label} (${item.id}): Archive step skipped due to missing prepared item`
+        );
+        console.log(`    ⚠️  Skipped archiving ${item.label}`);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      processedItem.moveToDeletedResult = {
+        success: false,
+        error: errorMessage,
+      };
       result.errors.push(
-        `Failed to archive item ${processedItem.label} (${processedItem.itemId}): ${errorMessage}`
+        `Unexpected error while removing item ${item.label} (${item.id}): ${errorMessage}`
       );
+      console.log(`    ❌ Failed to process ${item.label}: ${errorMessage}`);
     }
+
+    result.contentItemsProcessed.push(processedItem);
   }
 }
 
@@ -481,39 +388,6 @@ async function deleteFoldersInReverseOrder(
       result.foldersDeleted.push(deletedFolder);
       result.errors.push(`Failed to delete folder ${folder.name} (${folder.id}): ${errorMessage}`);
     }
-  }
-}
-
-/**
- * Ensures the __deleted folder exists, creating it if necessary
- * This function is exported so it can be used by other cleanup operations
- */
-export async function ensureDeletedFolder(
-  service: AmplienceService,
-  repositoryId: string,
-  deletedFolderName: string
-): Promise<{ success: boolean; folderId?: string; error?: string }> {
-  try {
-    // Check if __deleted folder already exists
-    const allFolders = await service.getAllFolders(repositoryId, () => {});
-    const existingDeletedFolder = allFolders.find(folder => folder.name === deletedFolderName);
-
-    if (existingDeletedFolder) {
-      return { success: true, folderId: existingDeletedFolder.id };
-    }
-
-    // Create __deleted folder
-    const createResult = await service.createFolder(repositoryId, deletedFolderName);
-    if (createResult.success && createResult.updatedItem) {
-      return { success: true, folderId: createResult.updatedItem.id };
-    } else {
-      return { success: false, error: createResult.error || 'Failed to create deleted folder' };
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
   }
 }
 

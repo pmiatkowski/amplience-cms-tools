@@ -323,10 +323,6 @@ details.
 
 ## TODO
 
-- In hierarchy synchronization, when item needs to be removed, it should be
-  removed as in the clean-repository procedure - including removing delivery
-  key, dropping from hierarchy, unpublishing, moving to deleted folder,
-  archiving.
 - Add reporting for each action
 - Add task feature for predefined operations (actions will require context
   parameters first)
@@ -335,5 +331,3 @@ details.
 
 - Syncing content type schemas is too slow due to implementation. Needs to be
   revised.
-- Copying folder with content does not recreate full hierarchy comparing to
-  copying content items directly.

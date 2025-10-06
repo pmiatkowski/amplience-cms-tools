@@ -7,10 +7,12 @@ import { recreateContentItems } from '~/services/actions/recreate-content-items'
 import { recreateFolderStructure } from '~/services/actions/recreate-folder-structure';
 import { countTotalFolders, createProgressBar, getAllSubfolderIds } from '~/utils';
 import {
+  analyzeHierarchyStructure,
   confirmOperation,
   createFolderMapping,
   selectSourceLocation,
   selectTargetLocation,
+  sortContentForRecreation,
   type OperationSummary,
 } from '../shared';
 
@@ -137,6 +139,79 @@ export async function runCopyFolderWithContent(): Promise<void> {
       return;
     }
 
+    // === HIERARCHY ANALYSIS ===
+    console.log('\n🌳 Analyzing hierarchy structure...');
+
+    // Extract just the content items for hierarchy analysis
+    const allContentItems = allContentItemsWithFolders.map(({ item }) => item);
+
+    // Analyze hierarchy and discover all descendants
+    const hierarchyAnalysis = await analyzeHierarchyStructure(
+      source.service,
+      source.repository.id,
+      allContentItems
+    );
+
+    // If hierarchy children were found, we need to fetch their details and add them to our processing list
+    let finalItemsToProcess = allContentItemsWithFolders;
+
+    if (hierarchyAnalysis.hierarchyChildrenFound > 0) {
+      console.log(
+        `\n🔍 Fetching details for ${hierarchyAnalysis.hierarchyChildrenFound} hierarchy descendants...`
+      );
+
+      // Get the newly discovered item IDs (those not in the original list)
+      const originalItemIds = new Set(allContentItems.map(item => item.id));
+      const newItemIds = hierarchyAnalysis.allItemsToProcess.filter(id => !originalItemIds.has(id));
+
+      // Fetch full details for new items
+      const newItemsProgressBar = createProgressBar(newItemIds.length, 'Fetching hierarchy items');
+      const newItems: Amplience.ContentItem[] = [];
+
+      for (const itemId of newItemIds) {
+        try {
+          const itemDetails = await source.service.getContentItemWithDetails(itemId);
+          if (itemDetails) {
+            newItems.push(itemDetails);
+          }
+        } catch (error) {
+          console.warn(`⚠️  Failed to fetch hierarchy item ${itemId}:`, error);
+        }
+        newItemsProgressBar.increment();
+      }
+
+      newItemsProgressBar.stop();
+
+      // Add new hierarchy items to the processing list
+      // For hierarchy items, we'll use the root item's folder as the source folder
+      // (This is a simplification - in reality, hierarchy items may be in different folders)
+      newItems.forEach(item => {
+        allContentItemsWithFolders.push({
+          item,
+          sourceFolderId: source.folder!.id, // Use the main folder as default
+        });
+      });
+
+      console.log(
+        `✓ Added ${newItems.length} hierarchy descendants to processing list (total: ${allContentItemsWithFolders.length})`
+      );
+
+      finalItemsToProcess = allContentItemsWithFolders;
+    }
+
+    // Sort items to ensure parents are processed before children
+    const sortedItems = sortContentForRecreation(finalItemsToProcess.map(({ item }) => item));
+
+    // Rebuild the items with folders array in sorted order
+    const sortedItemsWithFolders = sortedItems.map(item => {
+      const original = finalItemsToProcess.find(({ item: i }) => i.id === item.id);
+
+      return {
+        item,
+        sourceFolderId: original?.sourceFolderId || source.folder!.id,
+      };
+    });
+
     // === CONFIRMATION ===
     const operationSummary: OperationSummary = {
       sourceHub: source.hub.name,
@@ -147,12 +222,14 @@ export async function runCopyFolderWithContent(): Promise<void> {
       targetFolder: target.folder?.name || 'Root',
       'Folder to copy': source.folder!.name,
       Subfolders: countTotalFolders(folderStructure),
-      'Content items': allContentItemsWithFolders.length,
+      'Content items (originally)': allContentItems.length,
+      'Hierarchy descendants discovered': hierarchyAnalysis.hierarchyChildrenFound,
+      'Total items to copy': sortedItemsWithFolders.length,
     };
 
     const confirmed = await confirmOperation(
       operationSummary,
-      'Do you want to proceed with copying the folder and all its content?',
+      'Do you want to proceed with copying the folder and all its content (including hierarchy)?',
       true
     );
 
@@ -248,17 +325,17 @@ export async function runCopyFolderWithContent(): Promise<void> {
     }
 
     // Step 3: Recreate content items
-    if (allContentItemsWithFolders.length > 0) {
-      console.log('\n📄 Recreating content items...');
+    if (sortedItemsWithFolders.length > 0) {
+      console.log('\n📄 Recreating content items (with hierarchy)...');
 
       const contentProgressBar = createProgressBar(
-        allContentItemsWithFolders.length,
+        sortedItemsWithFolders.length,
         'Recreating content'
       );
 
       try {
         // Prepare the items with their folder mappings
-        const itemsWithFolders = allContentItemsWithFolders.map(({ item, sourceFolderId }) => ({
+        const itemsWithFolders = sortedItemsWithFolders.map(({ item, sourceFolderId }) => ({
           itemId: item.id,
           sourceFolderId,
         }));
@@ -284,7 +361,7 @@ export async function runCopyFolderWithContent(): Promise<void> {
 
     console.log('\n🎉 Folder copy operation completed successfully!');
     console.log(
-      `📁 Copied folder "${source.folder!.name}" with ${allContentItemsWithFolders.length} items to target hub.`
+      `📁 Copied folder "${source.folder!.name}" with ${sortedItemsWithFolders.length} items (including ${hierarchyAnalysis.hierarchyChildrenFound} hierarchy descendants) to target hub.`
     );
   } catch (error) {
     console.error('❌ Unexpected error during folder copy operation:', error);

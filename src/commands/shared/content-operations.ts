@@ -186,3 +186,57 @@ export async function fetchContentItemsFromFolders(
     totalItems: allContentItemsWithFolders.length,
   };
 }
+
+/**
+ * Sorts content items to ensure parents are processed before their children.
+ * This is crucial for hierarchy recreation where parent items must exist
+ * before their children can be created with proper parentId references.
+ *
+ * @param items - Array of content items to sort
+ * @returns Sorted array with parents before children
+ */
+export function sortContentForRecreation(items: Amplience.ContentItem[]): Amplience.ContentItem[] {
+  const sorted: Amplience.ContentItem[] = [];
+  const processed = new Set<string>();
+  const itemMap = new Map<string, Amplience.ContentItem>();
+
+  // Build a map for quick lookup
+  items.forEach(item => {
+    if (item.id) {
+      itemMap.set(item.id, item);
+    }
+  });
+
+  /**
+   * Recursively processes an item and its ancestors first
+   */
+  const processItem = (item: Amplience.ContentItem): void => {
+    // Skip if already processed
+    if (processed.has(item.id)) {
+      return;
+    }
+
+    // If item has a parent, process parent first
+    if (item.hierarchy?.parentId) {
+      const parentId = item.hierarchy.parentId;
+      const parent = itemMap.get(parentId);
+
+      if (parent && !processed.has(parentId)) {
+        processItem(parent);
+      }
+    }
+
+    // Add current item to sorted list
+    sorted.push(item);
+    processed.add(item.id);
+  };
+
+  // Process all items
+  items.forEach(item => {
+    processItem(item);
+  });
+
+  console.log(`  ✓ Sorted ${sorted.length} items for recreation (parents before children)`);
+
+  return sorted;
+}

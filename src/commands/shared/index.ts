@@ -4,6 +4,7 @@ export {
   type ContentFetchResult,
   type ContentItemWithFolder,
   fetchContentItemsFromFolders,
+  sortContentForRecreation,
 } from './content-operations';
 export {
   confirmOperation,

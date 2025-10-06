@@ -44,6 +44,7 @@ export default [
     },
     rules: {
       ...pluginTypescriptEslint.configs.recommended.rules,
+      'linebreak-style': ['error', 'unix'],
       'unicorn/filename-case': [
         'error',
         {

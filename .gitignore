@@ -37,7 +37,7 @@ reports/
 !reports/.gitkeep
 
 # IDE and editor files
-.vscode/
+.vscode/*.code-workspace
 .idea/
 *.swp
 *.swo

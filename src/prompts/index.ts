@@ -1,3 +1,4 @@
+export { type ContentItemSelectionResult, promptForContentItem } from './prompt-for-content-item';
 export {
   type ContentTypeStatusFilter,
   promptForContentTypeStatus,
@@ -5,7 +6,6 @@ export {
 export { promptForCleanupFilters } from './prompt-for-cleanup-filters';
 export { promptForCommand } from './prompt-for-command';
 export { promptForConfirmation } from './prompt-for-confirmation';
-export { promptForContentItem } from './prompt-for-content-item';
 export { promptForDryRun } from './prompt-for-dry-run';
 export { promptForFilters } from './prompt-for-filters';
 export { promptForFolder } from './prompt-for-folder';

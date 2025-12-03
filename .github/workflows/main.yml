@@ -1,9 +1,9 @@
-name: Master Quality Checks
+name: Main Quality Checks
 
 on:
   workflow_dispatch:
     branches:
-      - master
+      - main
 
 jobs:
   quality-checks:

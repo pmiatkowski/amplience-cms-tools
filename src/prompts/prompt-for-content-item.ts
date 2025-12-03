@@ -22,7 +22,8 @@ export async function promptForContentItem(
       deliveryKey?: string
     ) => Promise<{ allItems: Amplience.ContentItem[]; filteredItems: Amplience.ContentItem[] }>;
   },
-  repositoryId: string
+  repositoryId: string,
+  defaults?: { deliveryKey?: string }
 ): Promise<ContentItemSelectionResult | null> {
   const { schemaId, label, deliveryKey } = await inquirer.prompt([
     {
@@ -39,6 +40,7 @@ export async function promptForContentItem(
       type: 'input',
       name: 'deliveryKey',
       message: 'Filter by delivery key (partial match, leave blank for any):',
+      default: defaults?.deliveryKey || '',
     },
   ]);
 

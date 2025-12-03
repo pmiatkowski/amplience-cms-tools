@@ -266,6 +266,134 @@ describe('runSyncHierarchy command', () => {
       expect(promptForDryRun).toHaveBeenCalledTimes(1);
     });
 
+    it('should pass source delivery key as default when prompting for target content item', async () => {
+      const sourceHub = createTestHubConfig({ name: 'Source Hub' });
+      const targetHub = createTestHubConfig({ name: 'Target Hub' });
+      const repo = createTestRepository();
+      const sourceRootItem = createTestContentItem({
+        id: 'source-item',
+        body: {
+          _meta: {
+            name: 'source-item',
+            schema: 'test-schema',
+            deliveryKey: 'source-delivery-key',
+          },
+        },
+      });
+      const targetRootItem = createTestContentItem({ id: 'target-item' });
+      const tree = { item: sourceRootItem, children: [] };
+
+      vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
+      vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
+      vi.mocked(promptForRepository).mockResolvedValue(repo);
+      vi.mocked(promptForContentItem)
+        .mockResolvedValueOnce({
+          selectedItem: sourceRootItem,
+          allItems: [sourceRootItem],
+          filteredItems: [sourceRootItem],
+        })
+        .mockResolvedValueOnce({
+          selectedItem: targetRootItem,
+          allItems: [targetRootItem],
+          filteredItems: [targetRootItem],
+        });
+      vi.mocked(promptForLocaleStrategy).mockResolvedValue({ strategy: 'keep' });
+      vi.mocked(promptForDryRun).mockResolvedValue(false);
+      vi.mocked(promptForConfirmation)
+        .mockResolvedValueOnce(false) // Update content
+        .mockResolvedValueOnce(false) // Publish after sync
+        .mockResolvedValueOnce(true); // Final confirmation
+
+      const mockService = {
+        getRepositories: vi.fn().mockResolvedValue([repo]),
+      } as unknown as AmplienceService;
+
+      vi.mocked(AmplienceService).mockImplementation(() => mockService);
+
+      const mockHierarchyService = {
+        buildHierarchyTreeFromItems: vi.fn().mockReturnValue(tree),
+      };
+
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
+      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+
+      await runSyncHierarchy();
+
+      // Verify first call (source) has no defaults
+      expect(promptForContentItem).toHaveBeenNthCalledWith(1, expect.anything(), repo.id);
+
+      // Verify second call (target) has source delivery key as default
+      expect(promptForContentItem).toHaveBeenNthCalledWith(2, expect.anything(), repo.id, {
+        deliveryKey: 'source-delivery-key',
+      });
+    });
+
+    it('should pass undefined defaults when source item has no delivery key', async () => {
+      const sourceHub = createTestHubConfig({ name: 'Source Hub' });
+      const targetHub = createTestHubConfig({ name: 'Target Hub' });
+      const repo = createTestRepository();
+      const sourceRootItem = createTestContentItem({
+        id: 'source-item',
+        body: {
+          _meta: {
+            name: 'source-item',
+            schema: 'test-schema',
+            deliveryKey: null,
+          },
+        },
+      });
+      const targetRootItem = createTestContentItem({ id: 'target-item' });
+      const tree = { item: sourceRootItem, children: [] };
+
+      vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
+      vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
+      vi.mocked(promptForRepository).mockResolvedValue(repo);
+      vi.mocked(promptForContentItem)
+        .mockResolvedValueOnce({
+          selectedItem: sourceRootItem,
+          allItems: [sourceRootItem],
+          filteredItems: [sourceRootItem],
+        })
+        .mockResolvedValueOnce({
+          selectedItem: targetRootItem,
+          allItems: [targetRootItem],
+          filteredItems: [targetRootItem],
+        });
+      vi.mocked(promptForLocaleStrategy).mockResolvedValue({ strategy: 'keep' });
+      vi.mocked(promptForDryRun).mockResolvedValue(false);
+      vi.mocked(promptForConfirmation)
+        .mockResolvedValueOnce(false) // Update content
+        .mockResolvedValueOnce(false) // Publish after sync
+        .mockResolvedValueOnce(true); // Final confirmation
+
+      const mockService = {
+        getRepositories: vi.fn().mockResolvedValue([repo]),
+      } as unknown as AmplienceService;
+
+      vi.mocked(AmplienceService).mockImplementation(() => mockService);
+
+      const mockHierarchyService = {
+        buildHierarchyTreeFromItems: vi.fn().mockReturnValue(tree),
+      };
+
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
+      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+
+      await runSyncHierarchy();
+
+      // Verify second call (target) has undefined defaults when source has no delivery key
+      expect(promptForContentItem).toHaveBeenNthCalledWith(
+        2,
+        expect.anything(),
+        repo.id,
+        undefined
+      );
+    });
+
     it('should pass updateContent: true when user selects update content', async () => {
       const sourceHub = createTestHubConfig();
       const targetHub = createTestHubConfig();

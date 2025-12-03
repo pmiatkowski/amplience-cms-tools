@@ -78,7 +78,13 @@ export async function runSyncHierarchy(): Promise<void> {
     const targetRepo = await promptForRepository(targetRepos);
     console.log(`✅ Selected target: ${targetHub.name} / ${targetRepo.label}`);
 
-    const targetResult = await promptForContentItem(targetService, targetRepo.id);
+    const targetResult = await promptForContentItem(
+      targetService,
+      targetRepo.id,
+      sourceRootItem.body._meta?.deliveryKey
+        ? { deliveryKey: sourceRootItem.body._meta.deliveryKey }
+        : undefined
+    );
     if (!targetResult) {
       console.log('❌ No target root item selected. Aborting.');
 

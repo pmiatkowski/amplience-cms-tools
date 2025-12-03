@@ -8,12 +8,16 @@ export async function promptForCommand(): Promise<CommandChoice> {
       message: 'Select a command to run:',
       choices: [
         {
-          name: 'Synchronize content-type-schemas (Recreates non-archived content-type schema)',
-          value: 'sync-content-type-schemas',
+          name: 'Copy content-type-schemas (Recreates non-archived content-type schema)',
+          value: 'copy-content-type-schemas',
         },
         {
-          name: 'Synchronize content-types (Creates missing content-types and assigns to repositories)',
-          value: 'sync-content-types',
+          name: 'Copy content-types (Creates missing content-types and assigns to repositories)',
+          value: 'copy-content-types',
+        },
+        {
+          name: 'Sync content-type properties (Synchronizes content types with their schemas)',
+          value: 'sync-content-type-properties',
         },
         {
           name: 'Synchronize content-item hierarchy (recreates missing items based on source hierarchy)',
@@ -51,7 +55,8 @@ type CommandChoice =
   | 'recreate-folder-structure'
   | 'recreate-content-items'
   | 'copy-folder-with-content'
-  | 'sync-content-type-schemas'
-  | 'sync-content-types'
+  | 'copy-content-type-schemas'
+  | 'copy-content-types'
+  | 'sync-content-type-properties'
   | 'archive-content-type-schemas'
   | 'sync-hierarchy';

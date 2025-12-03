@@ -1,6 +1,6 @@
-# Functionality: Sync Content Types
+# Functionality: Copy Content Types
 
-The "Sync Content Types" functionality is a self-contained command module that
+The "Copy Content Types" functionality is a self-contained command module that
 orchestrates the process of comparing and creating missing content types between
 different Amplience hubs.
 

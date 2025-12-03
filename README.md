@@ -117,7 +117,7 @@ npm start
 
 ## 🎯 Available Commands
 
-The CLI tool provides 11 specialized commands for different bulk operations:
+The CLI tool provides 12 specialized commands for different bulk operations:
 
 ### 1. Clean Repository
 
@@ -167,13 +167,14 @@ comprehensive filtering, hierarchy handling, and locale management.
 Replicates folder hierarchies from source to target locations without content,
 perfect for environment setup and structural consistency.
 
-### 7. Sync Content Type Schemas
+### 7. Copy Content Type Schemas
 
-**Command**: Sync Content Type Schemas  
-**Documentation**: [sync-content-type-schemas.md](docs/sync-content-type-schemas.md)
+**Command**: Copy Content Type Schemas  
+**Documentation**: [copy-content-type-schemas.md](docs/copy-content-type-schemas.md)
 
-Synchronizes content type schemas between hubs using Amplience DC-CLI, ensuring
-consistent content models across environments.
+Copies content type schemas between hubs using Amplience DC-CLI, ensuring
+consistent content models across environments with optional content type
+synchronization.
 
 ### 8. Archive Content Type Schemas
 
@@ -184,15 +185,23 @@ Archives content type schemas and their dependencies (content types and content
 items) in the correct dependency order to maintain data integrity and prevent
 orphaned content.
 
-### 9. Sync Content Types
+### 9. Copy Content Types
 
-**Command**: Sync Content Types  
-**Documentation**: [sync-content-types.md](docs/sync-content-types.md)
+**Command**: Copy Content Types  
+**Documentation**: [copy-content-types.md](docs/copy-content-types.md)
 
 Compares and creates missing content types between hubs with proper schema
 validation and repository assignments.
 
-### 10. Sync Hierarchy
+### 10. Sync Content Type Properties
+
+**Command**: Sync Content Type Properties  
+**Documentation**: [sync-content-type-properties.md](docs/sync-content-type-properties.md)
+
+Synchronizes content types with their schemas on a target hub, ensuring content
+types reflect the latest schema versions with flexible filtering options.
+
+### 11. Sync Hierarchy
 
 **Command**: Sync Hierarchy  
 **Documentation**: [sync-hierarchy.md](docs/sync-hierarchy.md)
@@ -201,7 +210,7 @@ Synchronizes content item hierarchies between hubs, comparing source and target
 hierarchical structures to create, remove, or update items while preserving
 parent-child relationships and handling locale strategies for delivery keys.
 
-### 11. Update Delivery Keys Locale
+### 12. Update Delivery Keys Locale
 
 **Command**: Update Delivery Keys Locale  
 **Documentation**: [update-delivery-keys-locale.md](docs/update-delivery-keys-locale.md)

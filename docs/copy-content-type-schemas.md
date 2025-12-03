@@ -1,6 +1,6 @@
-# Functionality: Sync Content Type Schemas
+# Functionality: Copy Content Type Schemas
 
-This functionality is designed to synchronize content type schemas from a source
+This functionality is designed to copy content type schemas from a source
 Amplience hub to a target hub, ensuring that the structure, validation rules,
 and definitions for content are consistent across multiple environments. The
 tool uses the Amplience DC-CLI for the actual schema operations.

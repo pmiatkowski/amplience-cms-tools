@@ -1,3 +1,7 @@
+export {
+  type ContentTypeStatusFilter,
+  promptForContentTypeStatus,
+} from './prompt-for-content-type-status';
 export { promptForCleanupFilters } from './prompt-for-cleanup-filters';
 export { promptForCommand } from './prompt-for-command';
 export { promptForConfirmation } from './prompt-for-confirmation';

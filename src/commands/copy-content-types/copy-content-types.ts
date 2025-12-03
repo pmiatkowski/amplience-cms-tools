@@ -2,7 +2,7 @@ import { getHubConfigs } from '~/app-config';
 import { promptForHub, promptForConfirmation, promptForValidateSchemas } from '~/prompts';
 import { AmplienceService, ContentTypeService } from '~/services';
 import { createProgressBar } from '~/utils';
-import { syncContentTypeSchemas } from '../sync-content-type-schemas';
+import { copyContentTypeSchemas } from '../copy-content-type-schemas';
 import {
   promptForContentTypesToSync,
   promptForRepositoryStrategy,
@@ -10,13 +10,13 @@ import {
 } from './prompts';
 
 /**
- * Main command function for synchronizing content types from source to target hub
+ * Main command function for copying content types from source to target hub
  */
-export async function runSyncContentTypes(): Promise<void> {
-  console.log('\n🔄 Sync Content Types');
-  console.log('This command will synchronize content types from a source hub to a target hub.');
+export async function runCopyContentTypes(): Promise<void> {
+  console.log('\n📋 Copy Content Types');
+  console.log('This command will copy content types from a source hub to a target hub.');
   console.log(
-    'Note: If you sync schemas first, content types may be automatically created during that process.\n'
+    'Note: If you copy schemas first, content types may be automatically created during that process.\n'
   );
 
   try {
@@ -49,10 +49,10 @@ export async function runSyncContentTypes(): Promise<void> {
     // === OPTIONAL SCHEMA SYNC ===
     const shouldSyncSchemas = await promptForValidateSchemas();
     if (shouldSyncSchemas) {
-      console.log('\n🔄 Running content type schema sync first...');
+      console.log('\n🔄 Running content type schema copy first...');
       try {
-        await syncContentTypeSchemas();
-        console.log('✅ Content type schema sync completed.');
+        await copyContentTypeSchemas();
+        console.log('✅ Content type schema copy completed.');
       } catch (error) {
         console.error(
           '❌ Schema sync failed:',
@@ -125,7 +125,7 @@ export async function runSyncContentTypes(): Promise<void> {
         };
 
         try {
-          const result = await syncContentTypeSchemas({ context: syncContext });
+          const result = await copyContentTypeSchemas({ context: syncContext });
 
           if (result.failedSchemas.length > 0) {
             console.log(`❌ ${result.failedSchemas.length} schemas failed to sync:`);
@@ -146,8 +146,7 @@ export async function runSyncContentTypes(): Promise<void> {
 
           if (result.processedSchemas.length > 0) {
             console.log(`✅ Successfully synced ${result.processedSchemas.length} schemas`);
-            console.log(`  • Created: ${result.createdCount}`);
-            console.log(`  • Updated: ${result.updatedCount}`);
+            console.log(`  • Total processed: ${result.totalCount}`);
           }
 
           console.log('✅ Missing schemas sync completed.');

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as archiveModule from '~/services/actions/archive-content-item';
 import {
   archivePreparedItem,
   prepareItemForRemoval,
@@ -7,6 +6,7 @@ import {
   RemovalOptions,
 } from '~/services/actions/item-removal';
 import { AmplienceService } from '~/services/amplience-service';
+import * as archiveModule from './archive-content-item';
 
 describe('item-removal helpers', () => {
   const repositoryId = 'repo-1';

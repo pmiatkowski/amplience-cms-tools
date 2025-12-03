@@ -1,0 +1,60 @@
+name: 'Run Quality Pipeline'
+description: 'Extract thresholds, run quality checks, and upload coverage reports'
+
+inputs:
+  artifact-name:
+    description: 'Name for the coverage artifact'
+    required: true
+  retention-days:
+    description: 'Days to retain artifacts'
+    required: false
+    default: '30'
+
+outputs:
+  coverage-lines:
+    description: 'Lines coverage percentage'
+    value: ${{ steps.quality.outputs.coverage-lines }}
+  coverage-statements:
+    description: 'Statements coverage percentage'
+    value: ${{ steps.quality.outputs.coverage-statements }}
+  coverage-functions:
+    description: 'Functions coverage percentage'
+    value: ${{ steps.quality.outputs.coverage-functions }}
+  coverage-branches:
+    description: 'Branches coverage percentage'
+    value: ${{ steps.quality.outputs.coverage-branches }}
+  threshold-lines:
+    description: 'Lines threshold from config'
+    value: ${{ steps.thresholds.outputs.lines }}
+  threshold-statements:
+    description: 'Statements threshold from config'
+    value: ${{ steps.thresholds.outputs.statements }}
+  threshold-functions:
+    description: 'Functions threshold from config'
+    value: ${{ steps.thresholds.outputs.functions }}
+  threshold-branches:
+    description: 'Branches threshold from config'
+    value: ${{ steps.thresholds.outputs.branches }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract coverage thresholds
+      id: thresholds
+      shell: bash
+      run: |
+        npx tsx scripts/extract-thresholds.ts
+
+    - name: Run quality checks
+      id: quality
+      uses: ./.github/actions/quality-checks
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          coverage/
+          reports/
+        retention-days: ${{ inputs.retention-days }}

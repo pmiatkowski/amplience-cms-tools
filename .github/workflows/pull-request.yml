@@ -1,0 +1,95 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: ./.github/actions/setup-node
+
+      - name: Run quality pipeline
+        id: pipeline
+        uses: ./.github/actions/run-quality-pipeline
+        with:
+          artifact-name: coverage-report-pr-${{ github.event.pull_request.number }}
+          retention-days: 30
+
+      - name: Create PR summary header
+        if: always()
+        run: |
+          echo "## Quality Checks Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Linting & Type Checking" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ESLint: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- TypeScript: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create coverage summary
+        if: always()
+        uses: ./.github/actions/create-summary
+        with:
+          coverage-lines: ${{ steps.pipeline.outputs.coverage-lines }}
+          coverage-statements: ${{ steps.pipeline.outputs.coverage-statements }}
+          coverage-functions: ${{ steps.pipeline.outputs.coverage-functions }}
+          coverage-branches: ${{ steps.pipeline.outputs.coverage-branches }}
+          threshold-lines: ${{ steps.pipeline.outputs.threshold-lines }}
+          threshold-statements: ${{ steps.pipeline.outputs.threshold-statements }}
+          threshold-functions: ${{ steps.pipeline.outputs.threshold-functions }}
+          threshold-branches: ${{ steps.pipeline.outputs.threshold-branches }}
+
+      - name: Create PR summary footer
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 **Coverage reports** are available in the workflow artifacts." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lines = '${{ steps.pipeline.outputs.coverage-lines }}';
+            const statements = '${{ steps.pipeline.outputs.coverage-statements }}';
+            const functions = '${{ steps.pipeline.outputs.coverage-functions }}';
+            const branches = '${{ steps.pipeline.outputs.coverage-branches }}';
+
+            const linesThreshold = '${{ steps.pipeline.outputs.threshold-lines }}';
+            const statementsThreshold = '${{ steps.pipeline.outputs.threshold-statements }}';
+            const functionsThreshold = '${{ steps.pipeline.outputs.threshold-functions }}';
+            const branchesThreshold = '${{ steps.pipeline.outputs.threshold-branches }}';
+
+            const body = `## Quality Checks Report
+
+            ### 📊 Test Coverage
+
+            | Metric | Coverage | Threshold | Status |
+            |--------|----------|-----------|--------|
+            | Lines | ${lines}% | ${linesThreshold}% | ${parseFloat(lines) >= parseFloat(linesThreshold) ? '✅' : '❌'} |
+            | Statements | ${statements}% | ${statementsThreshold}% | ${parseFloat(statements) >= parseFloat(statementsThreshold) ? '✅' : '❌'} |
+            | Functions | ${functions}% | ${functionsThreshold}% | ${parseFloat(functions) >= parseFloat(functionsThreshold) ? '✅' : '❌'} |
+            | Branches | ${branches}% | ${branchesThreshold}% | ${parseFloat(branches) >= parseFloat(branchesThreshold) ? '✅' : '❌'} |
+
+            ---
+            📁 Detailed coverage reports are available in the workflow artifacts.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

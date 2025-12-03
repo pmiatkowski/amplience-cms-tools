@@ -13,7 +13,7 @@ import {
   promptForDryRun,
   promptForValidateSchemas,
 } from '~/prompts';
-import { createProgressBar } from '~/utils';
+import { syncContentTypeProperties } from '../sync-content-type-properties';
 
 const execAsync = promisify(exec);
 
@@ -29,24 +29,23 @@ type SchemaValidationResult = {
   errors: string[];
 };
 
-type SyncContext = {
+type CopyContext = {
   sourceHub: Amplience.HubConfig;
   targetHub: Amplience.HubConfig;
-  specificSchemas: string[]; // Array of schema URIs to sync
+  specificSchemas: string[]; // Array of schema URIs to copy
   skipConfirmations?: boolean; // Skip user confirmation prompts
   skipValidation?: boolean; // Skip schema validation
 };
 
-type SyncResult = {
+type CopyResult = {
   success: boolean; // Overall operation success
   processedSchemas: string[]; // Successfully processed schema URIs
   failedSchemas: { schemaId: string; error: string }[]; // Failed schemas with errors
-  createdCount: number; // Number of schemas created
-  updatedCount: number; // Number of schemas updated
+  totalCount: number; // Total number of schemas processed
 };
 
-type SyncContentTypeSchemasOptions = {
-  context?: SyncContext;
+type CopyContentTypeSchemasOptions = {
+  context?: CopyContext;
 };
 
 /**
@@ -162,15 +161,14 @@ const runDcCli = async (
   return result;
 };
 
-export const syncContentTypeSchemas = async (
-  options?: SyncContentTypeSchemasOptions
-): Promise<SyncResult> => {
-  const result: SyncResult = {
+export const copyContentTypeSchemas = async (
+  options?: CopyContentTypeSchemasOptions
+): Promise<CopyResult> => {
+  const result: CopyResult = {
     success: false,
     processedSchemas: [],
     failedSchemas: [],
-    createdCount: 0,
-    updatedCount: 0,
+    totalCount: 0,
   };
 
   try {
@@ -394,7 +392,7 @@ export const syncContentTypeSchemas = async (
 
       // 6. Main operation confirmation - skip if context provided
       if (!options?.context?.skipConfirmations) {
-        const actionText = isDryRun ? 'preview' : 'synchronizing';
+        const actionText = isDryRun ? 'preview' : 'copying';
         const syncText = shouldSyncContentTypes ? ' and synchronize content types' : '';
         const confirmed = await promptForConfirmation(
           `Proceed with ${actionText} ${schemasToCopy.length} schemas from "${sourceHub.name}" to "${targetHub.name}"${syncText}? (This will create new schemas and update existing ones)`
@@ -413,35 +411,17 @@ export const syncContentTypeSchemas = async (
 
       // 6. Schema creation/update (or dry-run preview)
       if (isDryRun) {
-        console.log('🔍 DRY-RUN PREVIEW: The following actions would be performed:');
-
-        for (let index = 0; index < schemasToCopy.length; index++) {
-          const configFile = schemasToCopy[index];
-          try {
-            const configContent = JSON.parse(fsSync.readFileSync(configFile, 'utf-8'));
-
-            // Check if schema exists in target hub
-            let schemaExists = false;
-            try {
-              await runDcCli(`content-type-schema get "${configContent.schemaId}"`, targetHub);
-              schemaExists = true;
-            } catch {
-              // Schema doesn't exist
-            }
-
-            const action = schemaExists ? 'Update' : 'Create';
-            console.log(
-              `  ${index + 1}. ${action} schema: ${configContent.schemaId} (validation: ${configContent.validationLevel})`
-            );
-          } catch {
-            console.log(
-              `  ${index + 1}. Process schema from ${path.basename(configFile)} (parsing failed)`
-            );
-          }
-        }
+        console.log('🔍 DRY-RUN PREVIEW:');
         console.log(
-          `\n📊 Summary: ${schemasToCopy.length} schemas would be created/updated in "${targetHub.name}"`
+          `The following ${schemasToCopy.length} schemas would be imported to "${targetHub.name}":`
         );
+
+        for (const file of schemasToCopy) {
+          const config = JSON.parse(fsSync.readFileSync(file, 'utf-8'));
+          console.log(`  • ${config.schemaId}`);
+        }
+
+        console.log(`\nNote: Existing schemas will be updated, new schemas will be created.`);
         if (shouldSyncContentTypes) {
           console.log(`🔄 Content types would also be synchronized after creation`);
         }
@@ -449,151 +429,87 @@ export const syncContentTypeSchemas = async (
         // For dry-run, return success with preview information
         result.success = true;
         result.processedSchemas = schemasToCopy.map(file => {
-          try {
-            const configContent = JSON.parse(fsSync.readFileSync(file, 'utf-8'));
+          const config = JSON.parse(fsSync.readFileSync(file, 'utf-8'));
 
-            return configContent.schemaId;
-          } catch {
-            return path.basename(file);
-          }
+          return config.schemaId;
         });
+        result.totalCount = result.processedSchemas.length;
 
         return result;
       }
 
-      // 7. Actual schema creation/update
-      const progressBar = createProgressBar(schemasToCopy.length, 'Processing Schemas');
-      const createdSchemaIds: string[] = [];
-      const updatedSchemaIds: string[] = [];
-      const failedSchemas: { file: string; error: string }[] = [];
+      // 7. Bulk import schemas
+      console.log(`📤 Importing ${schemasToCopy.length} schemas to ${targetHub.name}...`);
 
-      for (const configFile of schemasToCopy) {
+      try {
+        // Import all schemas at once using bulk operation
+        await runDcCli(`content-type-schema import "${tempDir}"`, targetHub);
+
+        // Populate result object
+        result.processedSchemas = schemasToCopy.map(file => {
+          const config = JSON.parse(fsSync.readFileSync(file, 'utf-8'));
+
+          return config.schemaId;
+        });
+        result.totalCount = result.processedSchemas.length;
+        result.success = true;
+
+        console.log(`✅ Successfully imported ${result.totalCount} schemas`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        result.success = false;
+        result.failedSchemas.push({
+          schemaId: 'bulk-import',
+          error: errorMessage,
+        });
+        console.error(`❌ Bulk import failed: ${errorMessage}`);
+      }
+
+      const totalProcessed = result.totalCount;
+
+      // 8. Optionally sync content types with their schemas
+      if (totalProcessed > 0 && shouldSyncContentTypes) {
+        console.log('\n🔄 Synchronizing content types with their schemas...');
+        console.log('⏳ Waiting for schema indexing to complete...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
         try {
-          // Read the configuration file (which contains metadata about the schema)
-          const configContent = JSON.parse(await fs.readFile(configFile, 'utf-8'));
+          // Build schema ID filter from processed schemas
+          const schemaIds = result.processedSchemas.join('|');
+          const schemaIdFilter = schemaIds ? `(${schemaIds})` : '';
 
-          // Resolve the actual schema file path from the body field
-          const actualSchemaFile = path.resolve(path.dirname(configFile), configContent.body);
-
-          // Check if the actual schema file exists
-          if (!fsSync.existsSync(actualSchemaFile)) {
-            throw new Error(`Schema file not found: ${actualSchemaFile}`);
-          }
-
-          // Read and validate the actual schema content
-          const schemaContent = JSON.parse(await fs.readFile(actualSchemaFile, 'utf-8'));
-
-          // Ensure the schema has the correct $id field that matches the schemaId from config
-          if (!schemaContent.$id || schemaContent.$id !== configContent.schemaId) {
-            schemaContent.$id = configContent.schemaId;
-            await fs.writeFile(actualSchemaFile, JSON.stringify(schemaContent, null, 2));
-          }
-
-          // Check if schema already exists in target hub
-          let schemaExists = false;
-          try {
-            await runDcCli(`content-type-schema get "${configContent.schemaId}"`, targetHub);
-            schemaExists = true;
-            console.log(`🔄 Schema ${configContent.schemaId} already exists - will be updated`);
-          } catch {
-            console.log(`➕ Schema ${configContent.schemaId} does not exist - will be created`);
-          }
-
-          if (schemaExists) {
-            // Schema exists - use import to update it
-            // Create a temporary directory for this single schema
-            const singleSchemaDir = `${tempDir}_single_${Date.now()}`;
-            await fs.mkdir(singleSchemaDir, { recursive: true });
-
-            try {
-              // Copy the config file and schema file to the temporary directory
-              const tempConfigFile = path.join(singleSchemaDir, path.basename(configFile));
-              const tempSchemaDir = path.join(singleSchemaDir, 'schemas');
-              await fs.mkdir(tempSchemaDir, { recursive: true });
-
-              const tempSchemaFile = path.join(tempSchemaDir, path.basename(actualSchemaFile));
-
-              // Copy files
-              await fs.copyFile(configFile, tempConfigFile);
-              await fs.copyFile(actualSchemaFile, tempSchemaFile);
-
-              // Update the body path in the temp config file to point to the temp schema file
-              const tempConfigContent = { ...configContent };
-              tempConfigContent.body = `./schemas/${path.basename(actualSchemaFile)}`;
-              await fs.writeFile(tempConfigFile, JSON.stringify(tempConfigContent, null, 2));
-
-              // Use import to update the existing schema
-              await runDcCli(`content-type-schema import "${singleSchemaDir}"`, targetHub);
-              updatedSchemaIds.push(configContent.schemaId);
-            } finally {
-              // Clean up temporary directory
-              await fs.rm(singleSchemaDir, { recursive: true, force: true });
-            }
-          } else {
-            // Schema doesn't exist - create it
-            await runDcCli(
-              `content-type-schema create --schema "${actualSchemaFile}" --validationLevel "${configContent.validationLevel}"`,
-              targetHub
-            );
-            createdSchemaIds.push(configContent.schemaId);
-          }
-
-          // Verify the schema exists after creation/update
-          await runDcCli(`content-type-schema get "${configContent.schemaId}"`, targetHub);
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          failedSchemas.push({
-            file: path.basename(configFile),
-            error: errorMessage,
+          const syncResult = await syncContentTypeProperties({
+            context: {
+              targetHub,
+              schemaIdFilter,
+              statusFilter: 'ACTIVE',
+              skipConfirmations: true,
+            },
           });
 
-          // Add to result's failed schemas with schemaId instead of filename
-          try {
-            const configContent = JSON.parse(await fs.readFile(configFile, 'utf-8'));
-            result.failedSchemas.push({
-              schemaId: configContent.schemaId,
-              error: errorMessage,
-            });
-          } catch {
-            result.failedSchemas.push({
-              schemaId: path.basename(configFile),
-              error: errorMessage,
-            });
+          if (syncResult.success) {
+            console.log(
+              `✅ Successfully synchronized ${syncResult.processedContentTypes.length} content types`
+            );
+          } else if (syncResult.failedContentTypes.length > 0) {
+            console.log(
+              `⚠️  Some content types failed to sync: ${syncResult.failedContentTypes.length}`
+            );
           }
+        } catch (error) {
+          console.error(
+            '⚠️  Content type synchronization failed:',
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+          console.log(
+            'ℹ️  You can manually sync content types using the "Sync content-type properties" command.'
+          );
         }
-        progressBar.increment();
-      }
-      progressBar.stop();
-
-      // Populate result object
-      result.processedSchemas = [...createdSchemaIds, ...updatedSchemaIds];
-      result.createdCount = createdSchemaIds.length;
-      result.updatedCount = updatedSchemaIds.length;
-      result.success = failedSchemas.length === 0 || result.processedSchemas.length > 0;
-
-      const totalProcessed = createdSchemaIds.length + updatedSchemaIds.length;
-      console.log(`Successfully processed ${totalProcessed} schemas:`);
-      if (createdSchemaIds.length > 0) {
-        console.log(`  ➕ Created: ${createdSchemaIds.length} schemas`);
-      }
-      if (updatedSchemaIds.length > 0) {
-        console.log(`  🔄 Updated: ${updatedSchemaIds.length} schemas`);
-      }
-
-      if (failedSchemas.length > 0) {
-        console.error(`Failed to process ${failedSchemas.length} schemas:`);
-        failedSchemas.forEach(fail => console.error(`  - ${fail.file}: ${fail.error}`));
-      }
-
-      // 8. Skip automatic content type synchronization since it's problematic
-      // The content-type sync command expects content type IDs, not schema IDs
-      // and is meant for syncing existing content types, not creating new ones
-      if (totalProcessed > 0 && shouldSyncContentTypes) {
-        console.log('ℹ️  Skipping automatic content type creation via dc-cli.');
-        console.log('ℹ️  Content types will be created by the main sync-content-types command.');
-        console.log('ℹ️  The schemas have been successfully processed and are ready for use.');
       } else if (totalProcessed > 0 && !shouldSyncContentTypes) {
         console.log('ℹ️  Content type synchronization was skipped by user choice.');
+        console.log(
+          'ℹ️  You can manually sync content types later using the "Sync content-type properties" command.'
+        );
       }
     } finally {
       // Cleanup
@@ -602,7 +518,7 @@ export const syncContentTypeSchemas = async (
 
     return result;
   } catch (error) {
-    console.error(`Failed to sync content type schemas: ${error}`);
+    console.error(`Failed to copy content type schemas: ${error}`);
     result.success = false;
     result.failedSchemas.push({
       schemaId: 'unknown',

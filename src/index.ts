@@ -1,12 +1,13 @@
 import { runArchiveContentTypeSchemas } from './commands/archive-content-type-schemas';
 import { runCleanRepository } from './commands/clean-repository';
 import { runCleanupFolderCommand } from './commands/cleanup-folder';
+import { copyContentTypeSchemas } from './commands/copy-content-type-schemas';
+import { runCopyContentTypes } from './commands/copy-content-types';
 import { runCopyFolderWithContent } from './commands/copy-folder-with-content';
 import { runListFolderTree } from './commands/list-folder-tree';
 import { runRecreateContentItems } from './commands/recreate-content-items';
 import { runRecreateFolderStructure } from './commands/recreate-folder-structure';
-import { syncContentTypeSchemas } from './commands/sync-content-type-schemas';
-import { runSyncContentTypes } from './commands/sync-content-types';
+import { runSyncContentTypeProperties } from './commands/sync-content-type-properties';
 import { runSyncHierarchy } from './commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from './commands/update-delivery-keys-locale';
 import { promptForCommand } from './prompts';
@@ -16,11 +17,14 @@ async function main(): Promise<void> {
     const command = await promptForCommand();
 
     switch (command) {
-      case 'sync-content-type-schemas':
-        await syncContentTypeSchemas();
+      case 'copy-content-type-schemas':
+        await copyContentTypeSchemas();
         break;
-      case 'sync-content-types':
-        await runSyncContentTypes();
+      case 'copy-content-types':
+        await runCopyContentTypes();
+        break;
+      case 'sync-content-type-properties':
+        await runSyncContentTypeProperties();
         break;
       case 'archive-content-type-schemas':
         await runArchiveContentTypeSchemas();

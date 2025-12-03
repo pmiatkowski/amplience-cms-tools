@@ -1,0 +1,45 @@
+name: Master Quality Checks
+
+on:
+  workflow_dispatch:
+    branches:
+      - master
+
+jobs:
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: ./.github/actions/setup-node
+
+      - name: Run quality pipeline
+        id: pipeline
+        uses: ./.github/actions/run-quality-pipeline
+        with:
+          artifact-name: coverage-report
+          retention-days: 30
+
+      - name: Create summary header
+        if: always()
+        run: echo "## Quality Checks Summary" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create coverage summary
+        if: always()
+        uses: ./.github/actions/create-summary
+        with:
+          coverage-lines: ${{ steps.pipeline.outputs.coverage-lines }}
+          coverage-statements: ${{ steps.pipeline.outputs.coverage-statements }}
+          coverage-functions: ${{ steps.pipeline.outputs.coverage-functions }}
+          coverage-branches: ${{ steps.pipeline.outputs.coverage-branches }}
+          threshold-lines: ${{ steps.pipeline.outputs.threshold-lines }}
+          threshold-statements: ${{ steps.pipeline.outputs.threshold-statements }}
+          threshold-functions: ${{ steps.pipeline.outputs.threshold-functions }}
+          threshold-branches: ${{ steps.pipeline.outputs.threshold-branches }}

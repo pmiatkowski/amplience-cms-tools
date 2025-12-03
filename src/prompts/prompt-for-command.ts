@@ -12,12 +12,12 @@ export async function promptForCommand(): Promise<CommandChoice> {
           value: 'sync-hierarchy',
         },
         {
-          name: 'Synchronize content-type properties (Synchronizes content types with their schemas)',
-          value: 'sync-content-type-properties',
+          name: 'Copy content-type-schemas (Copies schemas between hubs with optional validation)',
+          value: 'copy-content-type-schemas',
         },
         {
-          name: 'Copy content-type-schemas (Recreates non-archived content-type schema)',
-          value: 'copy-content-type-schemas',
+          name: 'Synchronize content-type properties (Synchronizes content types with their schemas)',
+          value: 'sync-content-type-properties',
         },
         {
           name: 'Copy content-types (Creates missing content-types and assigns to repositories)',

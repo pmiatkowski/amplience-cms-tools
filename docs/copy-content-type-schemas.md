@@ -39,34 +39,54 @@ for a stable and predictable content management workflow.
    - Dry-run mode to preview changes without making them
 
 4. **Schema Export**: The tool exports all schemas from the source hub using
-   DC-CLI export functionality to a temporary directory.
+   `dc-cli content-type-schema export` to a temporary directory.
 
 5. **Filtering**: If filters are applied, the exported schemas are filtered
    based on the specified criteria (schema ID patterns, archived status).
+   Non-matching files are removed from the export directory.
 
 6. **Schema Validation** (optional): Each schema is validated for required
-   fields ($id, title, type) and structural correctness before processing.
+   fields ($id, title, type) and structural correctness before processing. Users
+   can choose to proceed even with validation errors.
 
 7. **Schema Selection**: The user is presented with a list of available schemas
    and can select which ones to synchronize (or select all).
 
-8. **Synchronization Process**: For each selected schema:
-   - The tool checks if the schema already exists in the target hub
-   - If it exists, the schema is updated using DC-CLI import
-   - If it doesn't exist, the schema is created using DC-CLI create
-   - The tool ensures proper $id field alignment between config and schema files
+8. **Content Type Sync Option**: Before importing, users are prompted whether to
+   automatically synchronize content types after schema import.
 
-9. **Progress Tracking**: A progress bar shows the status of schema processing.
+9. **Bulk Import**: Selected schemas are imported to the target hub using
+   `dc-cli content-type-schema import` which handles both creating new schemas
+   and updating existing ones in a single bulk operation.
 
-10. **Results Summary**: The tool provides a detailed summary of:
-    - Number of schemas created
-    - Number of schemas updated
+10. **Optional Content Type Sync**: If enabled, the tool waits briefly for
+    schema indexing, then automatically runs content type synchronization for
+    content types using the imported schemas.
+
+11. **Results Summary**: The tool provides a detailed summary of:
+    - Number of schemas successfully imported
     - Any failed operations with error details
+    - Content type synchronization results (if enabled)
 
 ## Technical Implementation
 
 - Uses the `@amplience/dc-cli` package as a dependency
-- Operates through temporary file exports and imports
+- Operates through temporary file exports and bulk imports
 - Supports both interactive mode and programmatic context mode
 - Includes comprehensive error handling and validation
 - Provides dry-run capability for safe testing
+- Integrates with sync-content-type-properties command for post-import sync
+
+## Integration with Sync Content Type Properties
+
+After successfully importing schemas, the tool offers to automatically
+synchronize content types. This ensures that content type display properties
+(icons, visualizations, cards) are updated to match the newly imported schema
+definitions.
+
+When enabled:
+
+1. Waits 3 seconds for schema indexing to complete
+2. Builds a regex filter from processed schema IDs
+3. Calls sync-content-type-properties with skipConfirmations enabled
+4. Reports sync results alongside schema import results

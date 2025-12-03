@@ -362,5 +362,4 @@ details.
 
 ## Known Issues
 
-- Syncing content type schemas is too slow due to implementation. Needs to be
-  revised.
+- None currently reported.

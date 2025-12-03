@@ -42,15 +42,55 @@ const SUMMARY_FILE = join(COVERAGE_DIR, 'coverage-summary.json');
 const REPORT_DIR = join(process.cwd(), 'reports');
 const OUTPUT_FILE = join(REPORT_DIR, `coverage-report-${Date.now()}.json`);
 
-const THRESHOLDS = {
-  lines: 80,
-  statements: 80,
-  functions: 80,
-  branches: 80,
-};
+const THRESHOLDS = ((): {
+  lines: number;
+  statements: number;
+  functions: number;
+  branches: number;
+} => {
+  try {
+    const configPath = join(process.cwd(), 'vitest.config.ts');
+
+    if (!existsSync(configPath)) {
+      console.warn('⚠️ vitest.config.ts not found, using default thresholds (80%)');
+
+      return { lines: 80, statements: 80, functions: 80, branches: 80 };
+    }
+
+    const content = readFileSync(configPath, 'utf-8');
+    const thresholdsMatch = content.match(/thresholds:\s*{([^}]+)}/s);
+
+    if (!thresholdsMatch) {
+      console.warn('⚠️ Thresholds not found in vitest.config.ts, using default thresholds (80%)');
+
+      return { lines: 80, statements: 80, functions: 80, branches: 80 };
+    }
+
+    const thresholdsContent = thresholdsMatch[1];
+    const getMetric = (name: string): number => {
+      const match = thresholdsContent.match(new RegExp(`${name}:\\s*(\\d+)`));
+
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    return {
+      lines: getMetric('lines'),
+      statements: getMetric('statements'),
+      functions: getMetric('functions'),
+      branches: getMetric('branches'),
+    };
+  } catch (error) {
+    console.warn('⚠️ Error reading thresholds, using default thresholds (80%):', error);
+
+    return { lines: 80, statements: 80, functions: 80, branches: 80 };
+  }
+})();
 
 function processCoverage(): void {
   console.log('🔍 Processing coverage report...\n');
+  console.log(
+    `Using thresholds: Lines ${THRESHOLDS.lines}%, Statements ${THRESHOLDS.statements}%, Functions ${THRESHOLDS.functions}%, Branches ${THRESHOLDS.branches}%\n`
+  );
 
   // Check if coverage summary exists
   if (!existsSync(SUMMARY_FILE)) {

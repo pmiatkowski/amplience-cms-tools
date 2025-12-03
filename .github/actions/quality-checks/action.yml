@@ -1,0 +1,50 @@
+name: 'Quality Checks'
+description: 'Run linting, type checking, and tests with coverage'
+
+outputs:
+  coverage-lines:
+    description: 'Lines coverage percentage'
+    value: ${{ steps.coverage.outputs.lines }}
+  coverage-statements:
+    description: 'Statements coverage percentage'
+    value: ${{ steps.coverage.outputs.statements }}
+  coverage-functions:
+    description: 'Functions coverage percentage'
+    value: ${{ steps.coverage.outputs.functions }}
+  coverage-branches:
+    description: 'Branches coverage percentage'
+    value: ${{ steps.coverage.outputs.branches }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run ESLint
+      shell: bash
+      run: npm run lint
+
+    - name: Run TypeScript type check
+      shell: bash
+      run: npm run type-check
+
+    - name: Run tests with coverage
+      shell: bash
+      run: npm run test:coverage
+
+    - name: Process coverage report
+      id: coverage
+      shell: bash
+      run: |
+        npm run coverage:report
+
+        # Extract coverage percentages from the summary file
+        if [ -f coverage/coverage-summary.json ]; then
+          LINES=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          STATEMENTS=$(jq -r '.total.statements.pct' coverage/coverage-summary.json)
+          FUNCTIONS=$(jq -r '.total.functions.pct' coverage/coverage-summary.json)
+          BRANCHES=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
+
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+        fi

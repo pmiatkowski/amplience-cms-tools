@@ -1,0 +1,59 @@
+name: 'Create Quality Summary'
+description: 'Generates a job summary with coverage results'
+
+inputs:
+  coverage-lines:
+    description: 'Lines coverage percentage'
+    required: true
+  coverage-statements:
+    description: 'Statements coverage percentage'
+    required: true
+  coverage-functions:
+    description: 'Functions coverage percentage'
+    required: true
+  coverage-branches:
+    description: 'Branches coverage percentage'
+    required: true
+  threshold-lines:
+    description: 'Lines threshold'
+    required: true
+  threshold-statements:
+    description: 'Statements threshold'
+    required: true
+  threshold-functions:
+    description: 'Functions threshold'
+    required: true
+  threshold-branches:
+    description: 'Branches threshold'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create summary
+      shell: bash
+      run: |
+        echo "### Coverage Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Coverage | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|----------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+
+        LINES_COV="${{ inputs.coverage-lines }}"
+        LINES_THR="${{ inputs.threshold-lines }}"
+        LINES_STATUS=$(awk -v cov="$LINES_COV" -v thr="$LINES_THR" 'BEGIN { print (cov >= thr) ? "✅" : "❌" }')
+        echo "| Lines | ${LINES_COV}% | ${LINES_THR}% | ${LINES_STATUS} |" >> $GITHUB_STEP_SUMMARY
+
+        STATEMENTS_COV="${{ inputs.coverage-statements }}"
+        STATEMENTS_THR="${{ inputs.threshold-statements }}"
+        STATEMENTS_STATUS=$(awk -v cov="$STATEMENTS_COV" -v thr="$STATEMENTS_THR" 'BEGIN { print (cov >= thr) ? "✅" : "❌" }')
+        echo "| Statements | ${STATEMENTS_COV}% | ${STATEMENTS_THR}% | ${STATEMENTS_STATUS} |" >> $GITHUB_STEP_SUMMARY
+
+        FUNCTIONS_COV="${{ inputs.coverage-functions }}"
+        FUNCTIONS_THR="${{ inputs.threshold-functions }}"
+        FUNCTIONS_STATUS=$(awk -v cov="$FUNCTIONS_COV" -v thr="$FUNCTIONS_THR" 'BEGIN { print (cov >= thr) ? "✅" : "❌" }')
+        echo "| Functions | ${FUNCTIONS_COV}% | ${FUNCTIONS_THR}% | ${FUNCTIONS_STATUS} |" >> $GITHUB_STEP_SUMMARY
+
+        BRANCHES_COV="${{ inputs.coverage-branches }}"
+        BRANCHES_THR="${{ inputs.threshold-branches }}"
+        BRANCHES_STATUS=$(awk -v cov="$BRANCHES_COV" -v thr="$BRANCHES_THR" 'BEGIN { print (cov >= thr) ? "✅" : "❌" }')
+        echo "| Branches | ${BRANCHES_COV}% | ${BRANCHES_THR}% | ${BRANCHES_STATUS} |" >> $GITHUB_STEP_SUMMARY

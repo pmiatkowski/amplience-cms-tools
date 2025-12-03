@@ -48,12 +48,13 @@ export async function runSyncHierarchy(): Promise<void> {
     const sourceRepo = await promptForRepository(sourceRepos);
     console.log(`✅ Selected source: ${sourceHub.name} / ${sourceRepo.label}`);
 
-    const sourceRootItem = await promptForContentItem(sourceService, sourceRepo.id);
-    if (!sourceRootItem) {
+    const sourceResult = await promptForContentItem(sourceService, sourceRepo.id);
+    if (!sourceResult) {
       console.log('❌ No source root item selected. Aborting.');
 
       return;
     }
+    const sourceRootItem = sourceResult.selectedItem;
     console.log(`✅ Selected source root: ${sourceRootItem.label}\n`);
 
     // Step 2: Target Selection
@@ -77,12 +78,19 @@ export async function runSyncHierarchy(): Promise<void> {
     const targetRepo = await promptForRepository(targetRepos);
     console.log(`✅ Selected target: ${targetHub.name} / ${targetRepo.label}`);
 
-    const targetRootItem = await promptForContentItem(targetService, targetRepo.id);
-    if (!targetRootItem) {
+    const targetResult = await promptForContentItem(
+      targetService,
+      targetRepo.id,
+      sourceRootItem.body._meta?.deliveryKey
+        ? { deliveryKey: sourceRootItem.body._meta.deliveryKey }
+        : undefined
+    );
+    if (!targetResult) {
       console.log('❌ No target root item selected. Aborting.');
 
       return;
     }
+    const targetRootItem = targetResult.selectedItem;
     console.log(`✅ Selected target root: ${targetRootItem.label}\n`);
 
     // Step 3: Configuration Options
@@ -117,19 +125,24 @@ export async function runSyncHierarchy(): Promise<void> {
       return;
     }
 
-    // Step 4: Build Hierarchies
+    // Step 4: Build Hierarchies (reusing data fetched in Steps 1-2)
     console.log('🏗️  Step 4: Building Hierarchies');
 
     const hierarchyService = new HierarchyService(sourceService);
 
     console.log('Building source hierarchy...');
-    const sourceTree = await hierarchyService.buildHierarchyTree(sourceRootItem.id, sourceRepo.id);
+    console.log('Reusing items fetched from source selection (no additional API calls)...');
+    const sourceTree = hierarchyService.buildHierarchyTreeFromItems(
+      sourceRootItem.id,
+      sourceResult.allItems
+    );
 
     console.log('Building target hierarchy...');
+    console.log('Reusing items fetched from target selection (no additional API calls)...');
     const targetHierarchyService = new HierarchyService(targetService);
-    const targetTree = await targetHierarchyService.buildHierarchyTree(
+    const targetTree = targetHierarchyService.buildHierarchyTreeFromItems(
       targetRootItem.id,
-      targetRepo.id
+      targetResult.allItems
     );
 
     // Execute the synchronization action

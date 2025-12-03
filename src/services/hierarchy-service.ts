@@ -97,6 +97,96 @@ export class HierarchyService {
   }
 
   /**
+   * Build a hierarchy tree from pre-fetched content items without making API calls
+   * This method reuses already-fetched data to avoid redundant API requests
+   */
+  public buildHierarchyTreeFromItems(
+    rootItemId: string,
+    allItems: Amplience.ContentItem[]
+  ): Amplience.HierarchyNode {
+    try {
+      console.log(`Building hierarchy tree from ${allItems.length} pre-fetched items...`);
+
+      // Find the root item
+      const rootItem = allItems.find(item => item.id === rootItemId);
+      if (!rootItem) {
+        throw new Error(`Root item with ID ${rootItemId} not found in provided items`);
+      }
+
+      // Build a map of parentId -> children for efficient lookup
+      const childrenMap = new Map<string, Amplience.ContentItem[]>();
+
+      allItems.forEach(item => {
+        if (item.hierarchy && !item.hierarchy.root && item.hierarchy.parentId) {
+          const parentId = item.hierarchy.parentId;
+          if (!childrenMap.has(parentId)) {
+            childrenMap.set(parentId, []);
+          }
+          childrenMap.get(parentId)!.push(item);
+        }
+      });
+
+      // Recursively collect all descendants of the root item
+      const descendants: Amplience.ContentItem[] = [];
+      const visitedIds = new Set<string>();
+
+      const collectDescendants = (parentId: string): void => {
+        const children = childrenMap.get(parentId) || [];
+
+        children.forEach(child => {
+          if (!visitedIds.has(child.id)) {
+            visitedIds.add(child.id);
+            descendants.push(child);
+            // Recursively collect children of this child
+            collectDescendants(child.id);
+          }
+        });
+      };
+
+      // Start collecting from the root item
+      collectDescendants(rootItemId);
+
+      // Now build the tree structure using only root + descendants
+      const relevantItems = [rootItem, ...descendants];
+      const nodeMap = new Map<string, Amplience.HierarchyNode>();
+
+      relevantItems.forEach(item => {
+        nodeMap.set(item.id, {
+          item,
+          children: [],
+        });
+      });
+
+      // Build parent-child relationships
+      relevantItems.forEach(item => {
+        const node = nodeMap.get(item.id);
+        if (!node) return;
+
+        const parentId = item.hierarchy?.parentId;
+        if (parentId) {
+          const parentNode = nodeMap.get(parentId);
+          if (parentNode) {
+            parentNode.children.push(node);
+          }
+        }
+      });
+
+      // Get the root node from the map
+      const finalRootNode = nodeMap.get(rootItemId);
+      if (!finalRootNode) {
+        throw new Error(`Failed to build tree for root item ${rootItemId}`);
+      }
+
+      console.log(`✅ Built hierarchy tree with ${descendants.length + 1} items (from cache)`);
+
+      return finalRootNode;
+    } catch (error) {
+      console.error(`❌ Error building hierarchy tree from items:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Generate a synchronization plan by comparing source and target hierarchies
    */
   public async generateSyncPlan(

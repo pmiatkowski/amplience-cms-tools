@@ -125,7 +125,7 @@ async function archiveContentItems(
 
       // Find repository that contains this content item
       for (const repo of repositories) {
-        const repoItems = await amplienceService.getContentItemsBy(
+        const { allItems: repoItems } = await amplienceService.getContentItemsBy(
           repo.id,
           item.body._meta?.schema || ''
         );

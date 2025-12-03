@@ -1,7 +1,17 @@
 import inquirer from 'inquirer';
 
 /**
+ * Result of content item selection containing both the selected item and all fetched items
+ */
+export type ContentItemSelectionResult = {
+  selectedItem: Amplience.ContentItem;
+  allItems: Amplience.ContentItem[]; // All items from repository (unfiltered)
+  filteredItems: Amplience.ContentItem[]; // Items after applying search filters
+};
+
+/**
  * Prompt user to find and select a specific content item
+ * Returns both the selected item and all fetched items to enable data reuse
  */
 export async function promptForContentItem(
   service: {
@@ -10,10 +20,11 @@ export async function promptForContentItem(
       schemaId?: string,
       label?: string,
       deliveryKey?: string
-    ) => Promise<Amplience.ContentItem[]>;
+    ) => Promise<{ allItems: Amplience.ContentItem[]; filteredItems: Amplience.ContentItem[] }>;
   },
-  repositoryId: string
-): Promise<Amplience.ContentItem | null> {
+  repositoryId: string,
+  defaults?: { deliveryKey?: string }
+): Promise<ContentItemSelectionResult | null> {
   const { schemaId, label, deliveryKey } = await inquirer.prompt([
     {
       type: 'input',
@@ -29,31 +40,34 @@ export async function promptForContentItem(
       type: 'input',
       name: 'deliveryKey',
       message: 'Filter by delivery key (partial match, leave blank for any):',
+      default: defaults?.deliveryKey || '',
     },
   ]);
 
   try {
     console.log('Searching for content items...');
-    const items = await service.getContentItemsBy(
+    const result = await service.getContentItemsBy(
       repositoryId,
       schemaId || undefined,
       label || undefined,
       deliveryKey || undefined
     );
 
-    if (items.length === 0) {
+    if (result.filteredItems.length === 0) {
       console.log('No content items found matching the criteria.');
 
       return null;
     }
 
-    if (items.length > 100) {
-      console.log(`Found ${items.length} items. Please refine your search criteria.`);
+    if (result.filteredItems.length > 100) {
+      console.log(
+        `Found ${result.filteredItems.length} items. Please refine your search criteria.`
+      );
 
       return null;
     }
 
-    const choices = items.map(item => ({
+    const choices = result.filteredItems.map(item => ({
       name: `${item.label} (${item.body._meta?.deliveryKey || 'no-key'}) - ${item.body._meta?.schema || 'no-schema'}`,
       value: item,
     }));
@@ -67,7 +81,7 @@ export async function promptForContentItem(
       },
     ]);
 
-    return selectedItem;
+    return { selectedItem, allItems: result.allItems, filteredItems: result.filteredItems };
   } catch (error) {
     console.error('Error searching for content items:', error);
 

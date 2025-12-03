@@ -174,6 +174,158 @@ describe('HierarchyService', () => {
     });
   });
 
+  describe('buildHierarchyTreeFromItems', () => {
+    const rootItemId = 'root-123';
+
+    it('should throw error when root item is not found in provided items', () => {
+      const items = [
+        createContentItem({ id: 'other-1', label: 'Other Item 1' }),
+        createContentItem({ id: 'other-2', label: 'Other Item 2' }),
+      ];
+
+      expect(() => hierarchyService.buildHierarchyTreeFromItems(rootItemId, items)).toThrow(
+        `Root item with ID ${rootItemId} not found in provided items`
+      );
+    });
+
+    it('should return tree with only root node when no descendants exist', () => {
+      const rootItem = createContentItem({ id: rootItemId, label: 'Root Item' });
+      const items = [rootItem];
+
+      const result = hierarchyService.buildHierarchyTreeFromItems(rootItemId, items);
+
+      expect(result).toEqual({
+        item: rootItem,
+        children: [],
+      });
+    });
+
+    it('should build flat hierarchy with all items as direct children', () => {
+      const rootItem = createContentItem({ id: rootItemId, label: 'Root' });
+      const child1 = createContentItem({
+        id: 'child-1',
+        label: 'Child 1',
+        hierarchy: { root: false, parentId: rootItemId },
+      });
+      const child2 = createContentItem({
+        id: 'child-2',
+        label: 'Child 2',
+        hierarchy: { root: false, parentId: rootItemId },
+      });
+      const items = [rootItem, child1, child2];
+
+      const result = hierarchyService.buildHierarchyTreeFromItems(rootItemId, items);
+
+      expect(result.item).toEqual(rootItem);
+      expect(result.children).toHaveLength(2);
+      expect(result.children[0].item).toEqual(child1);
+      expect(result.children[1].item).toEqual(child2);
+    });
+
+    it('should build deep hierarchy with correct parent-child relationships', () => {
+      const rootItem = createContentItem({ id: rootItemId, label: 'Root' });
+      const child1 = createContentItem({
+        id: 'child-1',
+        label: 'Child 1',
+        hierarchy: { root: false, parentId: rootItemId },
+      });
+      const grandchild1 = createContentItem({
+        id: 'grandchild-1',
+        label: 'Grandchild 1',
+        hierarchy: { root: false, parentId: 'child-1' },
+      });
+      const greatGrandchild1 = createContentItem({
+        id: 'great-grandchild-1',
+        label: 'Great Grandchild 1',
+        hierarchy: { root: false, parentId: 'grandchild-1' },
+      });
+      const items = [rootItem, child1, grandchild1, greatGrandchild1];
+
+      const result = hierarchyService.buildHierarchyTreeFromItems(rootItemId, items);
+
+      expect(result.item).toEqual(rootItem);
+      expect(result.children).toHaveLength(1);
+      expect(result.children[0].item).toEqual(child1);
+      expect(result.children[0].children).toHaveLength(1);
+      expect(result.children[0].children[0].item).toEqual(grandchild1);
+      expect(result.children[0].children[0].children).toHaveLength(1);
+      expect(result.children[0].children[0].children[0].item).toEqual(greatGrandchild1);
+    });
+
+    it('should handle items without hierarchy information', () => {
+      const rootItem = createContentItem({ id: rootItemId, label: 'Root' });
+      const orphanItem = createContentItem({ id: 'orphan-1', label: 'Orphan' });
+      const items = [rootItem, orphanItem];
+
+      const result = hierarchyService.buildHierarchyTreeFromItems(rootItemId, items);
+
+      expect(result.item).toEqual(rootItem);
+      expect(result.children).toHaveLength(0);
+    });
+
+    it('should not make any API calls', () => {
+      const rootItem = createContentItem({ id: rootItemId, label: 'Root' });
+      const child1 = createContentItem({
+        id: 'child-1',
+        label: 'Child 1',
+        hierarchy: { root: false, parentId: rootItemId },
+      });
+      const items = [rootItem, child1];
+
+      hierarchyService.buildHierarchyTreeFromItems(rootItemId, items);
+
+      expect(mockAmplienceService.getContentItemWithDetails).not.toHaveBeenCalled();
+      expect(mockAmplienceService.getHierarchyDescendantsByApi).not.toHaveBeenCalled();
+      expect(mockAmplienceService.getAllHierarchyDescendants).not.toHaveBeenCalled();
+    });
+
+    it('should filter out items not in the hierarchy tree', () => {
+      const rootItem = createContentItem({ id: rootItemId, label: 'Root' });
+      const child1 = createContentItem({
+        id: 'child-1',
+        label: 'Child 1',
+        hierarchy: { root: false, parentId: rootItemId },
+      });
+      const grandchild1 = createContentItem({
+        id: 'grandchild-1',
+        label: 'Grandchild 1',
+        hierarchy: { root: false, parentId: 'child-1' },
+      });
+      // Items that are NOT part of this hierarchy
+      const otherRoot = createContentItem({ id: 'other-root', label: 'Other Root' });
+      const otherChild = createContentItem({
+        id: 'other-child',
+        label: 'Other Child',
+        hierarchy: { root: false, parentId: 'other-root' },
+      });
+      const unrelatedItem = createContentItem({ id: 'unrelated', label: 'Unrelated' });
+
+      const items = [rootItem, child1, grandchild1, otherRoot, otherChild, unrelatedItem];
+
+      const result = hierarchyService.buildHierarchyTreeFromItems(rootItemId, items);
+
+      // Should only include rootItem and its descendants
+      expect(result.item).toEqual(rootItem);
+      expect(result.children).toHaveLength(1);
+      expect(result.children[0].item).toEqual(child1);
+      expect(result.children[0].children).toHaveLength(1);
+      expect(result.children[0].children[0].item).toEqual(grandchild1);
+
+      // Verify other items are NOT included
+      const allNodesInTree: string[] = [];
+      const collectNodeIds = (node: Amplience.HierarchyNode): void => {
+        allNodesInTree.push(node.item.id);
+        node.children.forEach(collectNodeIds);
+      };
+      collectNodeIds(result);
+
+      expect(allNodesInTree).toEqual([rootItemId, 'child-1', 'grandchild-1']);
+      expect(allNodesInTree).not.toContain('other-root');
+      expect(allNodesInTree).not.toContain('other-child');
+      expect(allNodesInTree).not.toContain('unrelated');
+    });
+  });
+
   describe('generateSyncPlan', () => {
     it('should return empty create/remove lists when both trees have only root', async () => {
       const sourceTree = createHierarchyNode({ id: 'source-root', label: 'Source Root' });

@@ -1063,7 +1063,7 @@ export class AmplienceService {
     schemaId?: string,
     label?: string,
     deliveryKey?: string
-  ): Promise<Amplience.ContentItem[]> {
+  ): Promise<{ allItems: Amplience.ContentItem[]; filteredItems: Amplience.ContentItem[] }> {
     try {
       // Use the optimized getAllContentItems method with proper query parameters
       const queryParams: Amplience.ContentItemQueryParams = {
@@ -1127,11 +1127,11 @@ export class AmplienceService {
 
       console.log(`✅ Final result: ${filteredItems.length} items match the criteria`);
 
-      return filteredItems;
+      return { allItems, filteredItems };
     } catch (error) {
       console.error(`❌ Error searching content items:`, error);
 
-      return [];
+      return { allItems: [], filteredItems: [] };
     }
   }
 

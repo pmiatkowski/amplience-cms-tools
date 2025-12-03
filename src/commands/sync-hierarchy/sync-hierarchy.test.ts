@@ -41,7 +41,7 @@ describe('runSyncHierarchy command', () => {
 
     it('should return early when user cancels source hub selection', async () => {
       vi.mocked(getHubConfigs).mockReturnValue([createTestHubConfig()]);
-      vi.mocked(promptForHub).mockResolvedValueOnce(null);
+      vi.mocked(promptForHub).mockResolvedValueOnce(null as unknown as Amplience.HubConfig);
 
       await runSyncHierarchy();
 
@@ -97,7 +97,7 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub)
         .mockResolvedValueOnce(hubConfig) // Source hub
-        .mockResolvedValueOnce(null); // Target hub
+        .mockResolvedValueOnce(null as unknown as Amplience.HubConfig); // Target hub
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
       vi.mocked(promptForContentItem).mockResolvedValueOnce(rootItem);
 
@@ -202,7 +202,6 @@ describe('runSyncHierarchy command', () => {
       const repo = createTestRepository();
       const rootItem = createTestContentItem();
       const sourceTree = { item: rootItem, children: [] };
-      const targetTree = { item: rootItem, children: [] };
 
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
@@ -222,7 +221,9 @@ describe('runSyncHierarchy command', () => {
         buildHierarchyTree: vi.fn().mockResolvedValue(sourceTree),
       };
 
-      vi.mocked(HierarchyService).mockImplementation(() => mockHierarchyService as any);
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
       vi.mocked(syncHierarchy).mockResolvedValue(undefined);
 
       await runSyncHierarchy();
@@ -263,7 +264,9 @@ describe('runSyncHierarchy command', () => {
         buildHierarchyTree: vi.fn().mockResolvedValue(tree),
       };
 
-      vi.mocked(HierarchyService).mockImplementation(() => mockHierarchyService as any);
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
       vi.mocked(syncHierarchy).mockResolvedValue(undefined);
 
       await runSyncHierarchy();
@@ -303,7 +306,9 @@ describe('runSyncHierarchy command', () => {
         buildHierarchyTree: vi.fn().mockResolvedValue(tree),
       };
 
-      vi.mocked(HierarchyService).mockImplementation(() => mockHierarchyService as any);
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
       vi.mocked(syncHierarchy).mockResolvedValue(undefined);
 
       await runSyncHierarchy();
@@ -343,7 +348,9 @@ describe('runSyncHierarchy command', () => {
         buildHierarchyTree: vi.fn().mockResolvedValue(tree),
       };
 
-      vi.mocked(HierarchyService).mockImplementation(() => mockHierarchyService as any);
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
       vi.mocked(syncHierarchy).mockResolvedValue(undefined);
 
       await runSyncHierarchy();
@@ -496,7 +503,7 @@ describe('runSyncHierarchy command', () => {
         () =>
           ({
             buildHierarchyTree: buildHierarchyTreeMock,
-          }) as any
+          }) as unknown as HierarchyService
       );
 
       await runSyncHierarchy();
@@ -586,7 +593,9 @@ describe('runSyncHierarchy command', () => {
         buildHierarchyTree: vi.fn().mockRejectedValue(testError),
       };
 
-      vi.mocked(HierarchyService).mockImplementation(() => mockHierarchyService as any);
+      vi.mocked(HierarchyService).mockImplementation(
+        () => mockHierarchyService as unknown as HierarchyService
+      );
 
       await expect(runSyncHierarchy()).rejects.toThrow('Failed to build tree');
 
@@ -600,21 +609,24 @@ describe('runSyncHierarchy command', () => {
 
 // Test Helper Functions
 
-function createTestHubConfig(overrides?: Partial<HubConfig>): HubConfig {
+function createTestHubConfig(overrides?: Partial<Amplience.HubConfig>): Amplience.HubConfig {
   return {
     name: 'Test Hub',
+    hubId: 'test-hub-id',
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
     ...overrides,
   };
 }
 
-function createTestRepository(overrides?: Partial<Amplience.Repository>): Amplience.Repository {
+function createTestRepository(
+  overrides?: Partial<Amplience.ContentRepository>
+): Amplience.ContentRepository {
   return {
     id: 'test-repo-id',
     label: 'Test Repository',
     ...overrides,
-  } as Amplience.Repository;
+  } as Amplience.ContentRepository;
 }
 
 function createTestContentItem(overrides?: Partial<Amplience.ContentItem>): Amplience.ContentItem {
@@ -635,13 +647,13 @@ function createTestContentItem(overrides?: Partial<Amplience.ContentItem>): Ampl
 }
 
 function setupSuccessfulFlow(
-  sourceHub: HubConfig,
-  targetHub: HubConfig,
-  repo: Amplience.Repository,
+  sourceHub: Amplience.HubConfig,
+  targetHub: Amplience.HubConfig,
+  repo: Amplience.ContentRepository,
   rootItem: Amplience.ContentItem,
   tree: Amplience.HierarchyNode,
-  buildHierarchyTreeMock?: any
-) {
+  buildHierarchyTreeMock?: unknown
+): void {
   vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
   vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
   vi.mocked(promptForRepository).mockResolvedValue(repo);
@@ -664,6 +676,8 @@ function setupSuccessfulFlow(
     buildHierarchyTree: buildHierarchyTreeMock || vi.fn().mockResolvedValue(tree),
   };
 
-  vi.mocked(HierarchyService).mockImplementation(() => mockHierarchyService as any);
+  vi.mocked(HierarchyService).mockImplementation(
+    () => mockHierarchyService as unknown as HierarchyService
+  );
   vi.mocked(syncHierarchy).mockResolvedValue(undefined);
 }

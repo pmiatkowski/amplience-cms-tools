@@ -247,25 +247,34 @@ All operations generate detailed reports in the `reports/` directory with:
 - **Dry Run Default**: All operations default to simulation mode
 - **Explicit Confirmation**: Live execution requires user confirmation
 
-## 🧪 Testing
+## 🧪 Testing & Coverage
 
-Run the test suite:
-
-```bash
-npm test
-```
-
-Run tests in watch mode:
+### Run Tests
 
 ```bash
-npm run test:watch
+npm test                    # Run all tests
+npm run test:watch          # Run tests in watch mode
 ```
 
-Generate coverage report:
+### Generate Coverage Reports
 
 ```bash
-npm run test:coverage
+npm run test:coverage       # Generate coverage reports
+npm run coverage:open       # Open HTML coverage report in browser
+npm run coverage:report     # Process and analyze coverage (via scripts/process-coverage.ts)
 ```
+
+**Coverage Thresholds:** 80% for lines, statements, functions, and branches
+
+The coverage system generates multiple report formats:
+
+- **HTML Report** (`coverage/index.html`) - Interactive, line-by-line coverage
+  view
+- **Terminal Output** - Color-coded summary with file-level details
+- **JSON Reports** (`reports/coverage-report-*.json`) - Detailed analysis for
+  CI/CD
+
+Reports are excluded from version control but saved locally for analysis.
 
 ## 📝 Development
 
@@ -297,11 +306,26 @@ This project uses:
 
 ### Scripts Reference
 
+#### Development & Code Quality
+
 - `npm run lint` - Check for linting errors
 - `npm run lint:fix` - Fix auto-fixable linting errors
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check if code is properly formatted
 - `npm run type-check` - Run TypeScript type checking
+
+#### Testing & Coverage
+
+- `npm test` - Run all tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
+- `npm run test:coverage:watch` - Run tests with coverage in watch mode
+- `npm run test:coverage:ui` - Run tests with coverage UI
+- `npm run coverage:report` - Process coverage and generate detailed report
+- `npm run coverage:open` - Open HTML coverage report in browser
+
+For detailed coverage documentation, see
+[docs/coverage-reports.md](./docs/coverage-reports.md).
 
 ## 🤝 Contributing
 

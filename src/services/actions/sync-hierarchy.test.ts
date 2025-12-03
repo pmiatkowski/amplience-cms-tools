@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ItemCleanupResult } from '~/services/actions/archive-content-item';
-import type { RemovalPreparationResult } from '~/services/actions/item-removal';
-import * as itemRemovalModule from '~/services/actions/item-removal';
-import { syncHierarchy, type SyncHierarchyOptions } from '~/services/actions/sync-hierarchy';
-import { AmplienceService } from '~/services/amplience-service';
-import { HierarchyService } from '~/services/hierarchy-service';
+import { AmplienceService } from '../amplience-service';
+import { HierarchyService } from '../hierarchy-service';
+import * as itemRemovalModule from './item-removal';
+import { syncHierarchy, type SyncHierarchyOptions } from './sync-hierarchy';
+import type { ItemCleanupResult } from './archive-content-item';
+import type { RemovalPreparationResult } from './item-removal';
 
 type ViMock = ReturnType<typeof vi.fn>;
 
@@ -325,6 +325,7 @@ describe('syncHierarchy creation operations', () => {
     let callCount = 0;
     vi.mocked(targetService.createContentItem).mockImplementation(async () => {
       callCount++;
+
       return {
         success: true,
         updatedItem: {
@@ -362,7 +363,6 @@ describe('syncHierarchy creation operations', () => {
         {
           action: 'CREATE',
           sourceItem: rootItem,
-          targetParentId: null,
         },
       ],
       itemsToRemove: [],

@@ -816,6 +816,187 @@ describe('syncHierarchy locale transformation', () => {
   });
 });
 
+describe('syncHierarchy locale assignment', () => {
+  const sourceService = { __service: 'source' } as unknown as AmplienceService;
+  const targetService = {
+    __service: 'target',
+    createContentItem: vi.fn(),
+  } as unknown as AmplienceService;
+
+  let generateSyncPlanMock: ViMock;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    generateSyncPlanMock = vi.spyOn(
+      HierarchyService.prototype,
+      'generateSyncPlan'
+    ) as unknown as ViMock;
+
+    vi.spyOn(HierarchyService.prototype, 'displaySyncPlan').mockImplementation(() => {});
+
+    vi.mocked(targetService.createContentItem).mockResolvedValue({
+      success: true,
+      updatedItem: { id: 'new-id', version: 1 } as Amplience.ContentItemWithDetails,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should assign source locale to new items when using keep strategy', async () => {
+    const item = createTestContentItem({
+      id: 'item-1',
+      label: 'Test Item',
+      locale: 'en-US',
+      body: { _meta: { deliveryKey: 'en-us/test-key' } },
+    });
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
+      itemsToRemove: [],
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'keep' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    expect(targetService.createContentItem).toHaveBeenCalledWith(
+      'target-repo',
+      expect.objectContaining({
+        locale: 'en-US',
+      })
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should not assign locale when source item has no locale and using keep strategy', async () => {
+    const item = createTestContentItem({
+      id: 'item-1',
+      label: 'Test Item',
+      body: { _meta: { deliveryKey: 'test-key' } },
+    });
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
+      itemsToRemove: [],
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'keep' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    expect(targetService.createContentItem).toHaveBeenCalledWith(
+      'target-repo',
+      expect.not.objectContaining({
+        locale: expect.anything(),
+      })
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should assign target locale to new items when using replace strategy', async () => {
+    const item = createTestContentItem({
+      id: 'item-1',
+      label: 'Test Item',
+      locale: 'en-US',
+      body: { _meta: { deliveryKey: 'en-us/test-key' } },
+    });
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
+      itemsToRemove: [],
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'replace', targetLocale: 'de-DE' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    expect(targetService.createContentItem).toHaveBeenCalledWith(
+      'target-repo',
+      expect.objectContaining({
+        locale: 'de-DE',
+      })
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should not assign locale when using remove strategy', async () => {
+    const item = createTestContentItem({
+      id: 'item-1',
+      label: 'Test Item',
+      locale: 'en-US',
+      body: { _meta: { deliveryKey: 'en-us/test-key' } },
+    });
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
+      itemsToRemove: [],
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'remove' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    expect(targetService.createContentItem).toHaveBeenCalledWith(
+      'target-repo',
+      expect.not.objectContaining({
+        locale: expect.anything(),
+      })
+    );
+
+    consoleSpy.mockRestore();
+  });
+});
+
 describe('syncHierarchy core flow', () => {
   const sourceService = { __service: 'source' } as unknown as AmplienceService;
   const targetService = { __service: 'target' } as unknown as AmplienceService;

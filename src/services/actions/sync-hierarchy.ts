@@ -247,9 +247,11 @@ async function executeSyncPlan(
         }
 
         // Create the content item request (no folderId for hierarchy relationships)
+        const targetLocale = getTargetLocale(item.sourceItem.locale, localeStrategy);
         const createRequest: Amplience.CreateContentItemRequest = {
           body: transformedBody,
           label: item.sourceItem.label,
+          ...(targetLocale && { locale: targetLocale }),
         };
 
         // Create the content item
@@ -516,4 +518,29 @@ function transformDeliveryKey(body: Amplience.Body, strategy: LocaleStrategy): A
   }
 
   return transformedBody;
+}
+
+/**
+ * Determine the target locale for a content item based on the locale strategy
+ * @param sourceLocale - The locale from the source content item
+ * @param localeStrategy - The strategy for handling locale
+ * @returns The locale to assign to the new item, or undefined if no locale should be assigned
+ */
+function getTargetLocale(
+  sourceLocale: string | undefined,
+  localeStrategy: LocaleStrategy
+): string | undefined {
+  switch (localeStrategy.strategy) {
+    case 'keep':
+      // Preserve source locale - return undefined if source has no locale
+      return sourceLocale;
+    case 'replace':
+      // Use the target locale from the strategy
+      return localeStrategy.targetLocale;
+    case 'remove':
+      // No locale assignment
+      return undefined;
+    default:
+      return undefined;
+  }
 }

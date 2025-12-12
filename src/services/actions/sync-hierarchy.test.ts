@@ -853,7 +853,7 @@ describe('syncHierarchy locale assignment', () => {
       body: { _meta: { deliveryKey: 'en-us/test-key' } },
     });
     const plan: Amplience.SyncPlan = {
-      itemsToCreate: [{ action: 'CREATE', sourceItem: item, targetParentId: null }],
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
       itemsToRemove: [],
     };
 
@@ -890,7 +890,7 @@ describe('syncHierarchy locale assignment', () => {
       body: { _meta: { deliveryKey: 'test-key' } },
     });
     const plan: Amplience.SyncPlan = {
-      itemsToCreate: [{ action: 'CREATE', sourceItem: item, targetParentId: null }],
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
       itemsToRemove: [],
     };
 
@@ -928,7 +928,7 @@ describe('syncHierarchy locale assignment', () => {
       body: { _meta: { deliveryKey: 'en-us/test-key' } },
     });
     const plan: Amplience.SyncPlan = {
-      itemsToCreate: [{ action: 'CREATE', sourceItem: item, targetParentId: null }],
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
       itemsToRemove: [],
     };
 
@@ -966,7 +966,7 @@ describe('syncHierarchy locale assignment', () => {
       body: { _meta: { deliveryKey: 'en-us/test-key' } },
     });
     const plan: Amplience.SyncPlan = {
-      itemsToCreate: [{ action: 'CREATE', sourceItem: item, targetParentId: null }],
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item }],
       itemsToRemove: [],
     };
 

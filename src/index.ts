@@ -11,9 +11,11 @@ import { runSyncContentTypeProperties } from './commands/sync-content-type-prope
 import { runSyncHierarchy } from './commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from './commands/update-delivery-keys-locale';
 import { promptForCommand } from './prompts';
+import { getAppVersion } from './utils/version';
 
 async function main(): Promise<void> {
   try {
+    console.log(`Amplience CMS Tools v${getAppVersion()}`);
     const command = await promptForCommand();
 
     switch (command) {

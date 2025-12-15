@@ -17,4 +17,5 @@ export { promptForRepository } from './prompt-for-repository';
 export { promptForSchemaIdFilter } from './prompt-for-schema-id-filter';
 export { promptForSchemasToArchive } from './prompt-for-schemas-to-archive';
 export { promptForSchemasToSync } from './prompt-for-schemas-to-sync';
+export { promptForUpdate } from './update-prompt';
 export { promptForValidateSchemas } from './prompt-for-validate-schemas';

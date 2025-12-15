@@ -14,7 +14,7 @@ export function getAppVersion(): string {
     const pkg = JSON.parse(content);
 
     return pkg.version || '0.0.0-development';
-  } catch (error) {
+  } catch {
     return '0.0.0-development';
   }
 }

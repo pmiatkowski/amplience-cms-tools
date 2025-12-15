@@ -327,6 +327,25 @@ This project uses:
 For detailed coverage documentation, see
 [docs/coverage-reports.md](./docs/coverage-reports.md).
 
+## 📦 Release & Versioning
+
+This project uses automated semantic releases. The version is determined by the
+**Pull Request Title** when merged into `main`.
+
+We follow [Conventional Commits](https://www.conventionalcommits.org/).
+
+### Examples
+
+- **Patch** (`v1.0.0` → `v1.0.1`):
+  - `fix: correct error message in cleanup command`
+- **Minor** (`v1.0.0` → `v1.1.0`):
+  - `feat: add new sync-hierarchy command`
+- **Major** (`v1.0.0` → `v2.0.0`):
+  - `feat!: remove support for legacy config` (Note the `!`)
+- **No Release**:
+  - `docs: update installation guide`
+  - `chore: update dependencies`
+
 ## 🤝 Contributing
 
 1. Follow the established code style and conventions

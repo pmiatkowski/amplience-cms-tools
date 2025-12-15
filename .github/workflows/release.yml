@@ -29,6 +29,6 @@ jobs:
 
       - name: Release
         env:
-          # GITHUB_TOKEN is automatically provided by GitHub Actions
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use the custom token if available (to bypass branch protection), otherwise default
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: npx semantic-release

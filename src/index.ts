@@ -1,4 +1,5 @@
 import { runArchiveContentTypeSchemas } from './commands/archive-content-type-schemas';
+import { runBulkSyncHierarchies } from './commands/bulk-sync-hierarchies';
 import { runCleanRepository } from './commands/clean-repository';
 import { runCleanupFolderCommand } from './commands/cleanup-folder';
 import { copyContentTypeSchemas } from './commands/copy-content-type-schemas';
@@ -64,6 +65,9 @@ async function main(): Promise<void> {
         break;
       case 'sync-hierarchy':
         await runSyncHierarchy();
+        break;
+      case 'bulk-sync-hierarchies':
+        await runBulkSyncHierarchies();
         break;
       case 'update-locale':
         await runUpdateDeliveryKeysLocale();

@@ -117,7 +117,7 @@ npm start
 
 ## 🎯 Available Commands
 
-The CLI tool provides 12 specialized commands for different bulk operations:
+The CLI tool provides 13 specialized commands for different bulk operations:
 
 ### 1. Clean Repository
 
@@ -210,7 +210,17 @@ Synchronizes content item hierarchies between hubs, comparing source and target
 hierarchical structures to create, remove, or update items while preserving
 parent-child relationships and handling locale strategies for delivery keys.
 
-### 12. Update Delivery Keys Locale
+### 12. Bulk Sync Hierarchies
+
+**Command**: Bulk Sync Hierarchies  
+**Documentation**: [bulk-sync-hierarchies.md](docs/bulk-sync-hierarchies.md)
+
+Synchronize multiple content item hierarchies from source to target
+hub/repository in a single operation. Features multi-select interface, automatic
+matching by delivery key and schema ID, missing hierarchies reporting, and
+sequential processing with comprehensive error handling.
+
+### 13. Update Delivery Keys Locale
 
 **Command**: Update Delivery Keys Locale  
 **Documentation**: [update-delivery-keys-locale.md](docs/update-delivery-keys-locale.md)

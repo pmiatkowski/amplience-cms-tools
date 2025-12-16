@@ -2,7 +2,6 @@ import { getHubConfigs } from '~/app-config';
 import {
   promptForHub,
   promptForRepository,
-  promptForContentItem,
   promptForDryRun,
   promptForConfirmation,
 } from '~/prompts';
@@ -10,7 +9,7 @@ import { bulkSyncHierarchies } from '~/services/actions';
 import { AmplienceService } from '~/services/amplience-service';
 import { HierarchyService } from '~/services/hierarchy-service';
 import { promptForLocaleStrategy } from '../sync-hierarchy/prompts';
-import { promptForMultipleHierarchies } from './prompts';
+import { promptForHierarchyFilters, promptForMultipleHierarchies } from './prompts';
 import {
   generateMissingHierarchiesReport,
   matchHierarchies,
@@ -60,14 +59,24 @@ export async function runBulkSyncHierarchies(): Promise<void> {
     }
     console.log(`✅ Selected source: ${sourceHub.name} / ${sourceRepo.label}`);
 
-    const sourceResult = await promptForContentItem(sourceService, sourceRepo.id, undefined);
-    if (!sourceResult) {
-      console.log('❌ No content items selected. Aborting.');
+    // Get filter criteria
+    const filters = await promptForHierarchyFilters();
+
+    // Fetch and filter hierarchies
+    console.log('Searching for hierarchies...');
+    const { filteredItems, allItems: sourceAllItems } = await sourceService.getContentItemsBy(
+      sourceRepo.id,
+      filters.schemaId,
+      filters.label,
+      filters.deliveryKey
+    );
+
+    if (filteredItems.length === 0) {
+      console.log('❌ No hierarchies found matching the criteria. Aborting.');
 
       return;
     }
 
-    const { filteredItems, allItems: sourceAllItems } = sourceResult;
     console.log(`Found ${filteredItems.length} matching hierarchies\n`);
 
     const selectedSourceItems = await promptForMultipleHierarchies(filteredItems);

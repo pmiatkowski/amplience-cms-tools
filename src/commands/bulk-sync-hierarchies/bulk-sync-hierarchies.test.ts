@@ -3,7 +3,6 @@ import { getHubConfigs } from '~/app-config';
 import {
   promptForHub,
   promptForRepository,
-  promptForContentItem,
   promptForDryRun,
   promptForConfirmation,
 } from '~/prompts';
@@ -12,7 +11,7 @@ import { AmplienceService } from '~/services/amplience-service';
 import { HierarchyService } from '~/services/hierarchy-service';
 import { promptForLocaleStrategy } from '../sync-hierarchy/prompts';
 import { runBulkSyncHierarchies } from './bulk-sync-hierarchies';
-import { promptForMultipleHierarchies } from './prompts';
+import { promptForHierarchyFilters, promptForMultipleHierarchies } from './prompts';
 import {
   generateMissingHierarchiesReport,
   matchHierarchies,
@@ -111,10 +110,11 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce(null);
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: [], filteredItems: [] }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -125,24 +125,25 @@ describe('runBulkSyncHierarchies command', () => {
       expect(promptForRepository).toHaveBeenCalledWith([repo]);
     });
 
-    it('should use promptForContentItem for filtering', async () => {
+    it('should use promptForHierarchyFilters for filtering', async () => {
       const hubConfig = createTestHubConfig();
       const repo = createTestRepository();
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce(null);
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: [], filteredItems: [] }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
 
       await runBulkSyncHierarchies();
 
-      expect(promptForContentItem).toHaveBeenCalledTimes(1);
-      expect(promptForContentItem).toHaveBeenCalledWith(expect.any(Object), repo.id, undefined);
+      expect(promptForHierarchyFilters).toHaveBeenCalledTimes(1);
+      expect(promptForHierarchyFilters).toHaveBeenCalledWith();
     });
 
     it('should use promptForMultipleHierarchies for selection', async () => {
@@ -152,15 +153,12 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce([]);
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -178,15 +176,12 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce([]);
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -203,22 +198,24 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce([]);
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: [] }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
 
       await runBulkSyncHierarchies();
 
-      expect(promptForContentItem).toHaveBeenCalledWith(expect.any(Object), repo.id, undefined);
+      expect(mockService.getContentItemsBy).toHaveBeenCalledWith(
+        repo.id,
+        undefined,
+        undefined,
+        undefined
+      );
     });
   });
 
@@ -232,17 +229,14 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing: [] });
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue([]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -261,17 +255,14 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing: [] });
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue([]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -290,17 +281,14 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing: [] });
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue([]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -322,17 +310,17 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: sourceItems[0],
-        allItems: sourceItems,
-        filteredItems: sourceItems,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(sourceItems);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing: [] });
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue(targetItems),
+        getContentItemsBy: vi.fn().mockResolvedValue({
+          allItems: sourceItems,
+          filteredItems: sourceItems,
+        }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -367,11 +355,7 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing });
       vi.mocked(generateMissingHierarchiesReport).mockReturnValue('Missing report');
@@ -380,6 +364,7 @@ describe('runBulkSyncHierarchies command', () => {
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue([]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -407,11 +392,7 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing });
       vi.mocked(generateMissingHierarchiesReport).mockReturnValue('Missing report');
@@ -420,6 +401,7 @@ describe('runBulkSyncHierarchies command', () => {
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue([]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -447,11 +429,7 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
       vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
       vi.mocked(promptForRepository).mockResolvedValue(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
       vi.mocked(matchHierarchies).mockReturnValue({ matched: [], missing });
       vi.mocked(generateMissingHierarchiesReport).mockReturnValue('Missing report');
@@ -460,6 +438,7 @@ describe('runBulkSyncHierarchies command', () => {
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
         getAllContentItems: vi.fn().mockResolvedValue([]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -924,6 +903,7 @@ describe('runBulkSyncHierarchies command', () => {
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: [], filteredItems: [] }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -941,10 +921,11 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce(null);
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: [], filteredItems: [] }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -952,7 +933,7 @@ describe('runBulkSyncHierarchies command', () => {
       await runBulkSyncHierarchies();
 
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('No content items selected')
+        expect.stringContaining('No hierarchies found matching the criteria')
       );
     });
 
@@ -963,15 +944,12 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(getHubConfigs).mockReturnValue([hubConfig]);
       vi.mocked(promptForHub).mockResolvedValueOnce(hubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce([]);
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -990,15 +968,12 @@ describe('runBulkSyncHierarchies command', () => {
         .mockResolvedValueOnce(sourceHub)
         .mockResolvedValueOnce(null as unknown as Amplience.HubConfig);
       vi.mocked(promptForRepository).mockResolvedValueOnce(repo);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -1020,15 +995,12 @@ describe('runBulkSyncHierarchies command', () => {
       vi.mocked(promptForRepository)
         .mockResolvedValueOnce(repo)
         .mockResolvedValueOnce(null as unknown as Amplience.ContentRepository);
-      vi.mocked(promptForContentItem).mockResolvedValueOnce({
-        selectedItem: items[0],
-        allItems: items,
-        filteredItems: items,
-      });
+      vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
       vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
 
       const mockService = {
         getRepositories: vi.fn().mockResolvedValue([repo]),
+        getContentItemsBy: vi.fn().mockResolvedValue({ allItems: items, filteredItems: items }),
       } as unknown as AmplienceService;
 
       vi.mocked(AmplienceService).mockImplementation(() => mockService);
@@ -1206,11 +1178,7 @@ function setupBasicMocks(): {
   vi.mocked(getHubConfigs).mockReturnValue([sourceHub, targetHub]);
   vi.mocked(promptForHub).mockResolvedValueOnce(sourceHub).mockResolvedValueOnce(targetHub);
   vi.mocked(promptForRepository).mockResolvedValue(repo);
-  vi.mocked(promptForContentItem).mockResolvedValueOnce({
-    selectedItem: items[0],
-    allItems: items,
-    filteredItems: items,
-  });
+  vi.mocked(promptForHierarchyFilters).mockResolvedValueOnce({});
   vi.mocked(promptForMultipleHierarchies).mockResolvedValueOnce(items);
   vi.mocked(promptForLocaleStrategy).mockResolvedValue({ strategy: 'keep' });
   vi.mocked(promptForDryRun).mockResolvedValue(false);
@@ -1225,6 +1193,10 @@ function setupBasicMocks(): {
   const mockService = {
     getRepositories: vi.fn().mockResolvedValue([repo]),
     getAllContentItems: vi.fn().mockResolvedValue(items),
+    getContentItemsBy: vi.fn().mockResolvedValue({
+      allItems: items,
+      filteredItems: items,
+    }),
   } as unknown as AmplienceService;
 
   vi.mocked(AmplienceService).mockImplementation(() => mockService);

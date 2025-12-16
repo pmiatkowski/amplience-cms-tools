@@ -1,6 +1,6 @@
 {
   "name": "amplience-cms-tools",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "CLI tool for automating bulk operations within Amplience CMS",
   "author": "Pawel Miatkowski",
   "license": "MIT",

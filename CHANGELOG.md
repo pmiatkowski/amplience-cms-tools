@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.1.0...v1.2.0) (2025-12-16)
+
+
+### Features
+
+* bulk sync hierarchies ([#9](https://github.com/pmiatkowski/amplience-cms-tools/issues/9)) ([b25f3c2](https://github.com/pmiatkowski/amplience-cms-tools/commit/b25f3c23bb89f2b5dbd61d25e3dd8e53236321f9))
+
 # [1.1.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.0.0...v1.1.0) (2025-12-15)
 
 # 1.0.0 (2025-12-15)

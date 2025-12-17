@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.2.0...v1.3.0) (2025-12-17)
+
+
+### Features
+
+* Add PAT_TOKEN support ([#10](https://github.com/pmiatkowski/amplience-cms-tools/issues/10)) ([291d344](https://github.com/pmiatkowski/amplience-cms-tools/commit/291d3448ba6382b3beb63109fdff22342de93775))
+
 # [1.2.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.1.0...v1.2.0) (2025-12-16)
 
 

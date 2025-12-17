@@ -57,33 +57,105 @@ prompts, advanced filtering, and detailed reporting.
 
 ## 🔧 Configuration
 
-The tool requires environment-specific configuration in the `.env` file. The
-tool automatically discovers hub configurations using the following naming
-convention:
+### Authentication Methods
+
+The tool supports two authentication methods:
+
+1. **OAuth Credentials (Client ID + Client Secret)** - Recommended for service
+   accounts and per-hub access control
+2. **Personal Access Token (PAT)** - Recommended for individual users and
+   simplified configuration
+
+Both methods are equally secure. Choose the one that best fits your workflow.
+
+#### OAuth Credentials Configuration
 
 ```env
 # Hub Configuration Pattern: AMP_HUB_<HUBNAME>_<PROPERTY>
-# All four properties must be present for a hub to be recognized
 
-# Development Environment
+# Development Environment (OAuth)
 AMP_HUB_DEV_CLIENT_ID=your_dev_client_id
 AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
 
-# Production Environment
+# Production Environment (OAuth)
 AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
 AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
-
-# You can add any number of hubs by following this pattern
 ```
 
-**Key Benefits of New Configuration:**
+#### Personal Access Token (PAT) Configuration
+
+PAT authentication uses a **single generic token** that works across all
+configured hubs:
+
+```env
+# Single PAT Token for all hubs
+PAT_TOKEN=your_personal_access_token_here
+
+# Development Environment
+AMP_HUB_DEV_HUB_ID=your_dev_hub_id
+AMP_HUB_DEV_HUB_NAME=DEV
+
+# Production Environment
+AMP_HUB_PROD_HUB_ID=your_prod_hub_id
+AMP_HUB_PROD_HUB_NAME=PROD
+```
+
+**Important:** When `PAT_TOKEN` is set, it applies to **all** configured hubs.
+The token must have permissions for all hubs you want to manage.
+
+#### Mixed Configuration
+
+You can use different authentication methods across environments. If `PAT_TOKEN`
+is not set, the tool falls back to OAuth credentials per hub:
+
+```env
+# Development with OAuth
+AMP_HUB_DEV_CLIENT_ID=your_dev_client_id
+AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
+AMP_HUB_DEV_HUB_ID=your_dev_hub_id
+AMP_HUB_DEV_HUB_NAME=DEV
+
+# Production also with OAuth (no PAT_TOKEN set)
+AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
+AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
+AMP_HUB_PROD_HUB_ID=your_prod_hub_id
+AMP_HUB_PROD_HUB_NAME=PROD
+```
+
+Or use PAT for all hubs:
+
+```env
+# Single PAT token for all environments
+PAT_TOKEN=your_personal_access_token_here
+
+# Development Environment
+AMP_HUB_DEV_HUB_ID=your_dev_hub_id
+AMP_HUB_DEV_HUB_NAME=DEV
+
+# Production Environment
+AMP_HUB_PROD_HUB_ID=your_prod_hub_id
+AMP_HUB_PROD_HUB_NAME=PROD
+```
+
+**Authentication Priority:**
+
+- If `PAT_TOKEN` is set, it takes precedence for all hubs (OAuth credentials are
+  ignored)
+- If `PAT_TOKEN` is not set, OAuth credentials (CLIENT_ID + CLIENT_SECRET) are
+  required per hub
+
+### Configuration Features
+
+**Key Benefits:**
 
 - **Auto-Discovery**: No need to maintain a central list of hubs
-- **Simplified Setup**: Just add the four required variables for each hub
+- **Flexible Authentication**: Choose OAuth or PAT based on your needs
+- **Simplified PAT Setup**: Single token for all hubs reduces configuration
+  complexity
 - **Reduced Errors**: Misconfigurations are automatically detected
 
 **Migration from Previous Version:**
@@ -92,7 +164,9 @@ If you're upgrading from a previous version that used `AMP_HUBS`, simply:
 
 1. Remove the `AMP_HUBS` variable from your `.env` file
 2. Rename your hub variables from `AMP_<HUBNAME>_*` to `AMP_HUB_<HUBNAME>_*`
-3. Ensure all four properties are present for each hub
+3. Choose your authentication method:
+   - For PAT: Set `PAT_TOKEN` and configure HUB_ID/HUB_NAME for each hub
+   - For OAuth: Configure CLIENT_ID/CLIENT_SECRET/HUB_ID/HUB_NAME per hub
 
 ## 🚀 Usage
 

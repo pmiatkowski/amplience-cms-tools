@@ -1,6 +1,3 @@
-import { exec } from 'child_process';
-import * as path from 'path';
-import { promisify } from 'util';
 import { getHubConfigs } from '~/app-config';
 import {
   promptForHub,
@@ -9,16 +6,7 @@ import {
   promptForContentTypeStatus,
   type ContentTypeStatusFilter,
 } from '~/prompts';
-import { createProgressBar } from '~/utils';
-
-const execAsync = promisify(exec);
-
-type HubConfig = {
-  name: string;
-  clientId: string;
-  clientSecret: string;
-  hubId: string;
-};
+import { createProgressBar, checkDcCliAvailability, createDcCliCommand } from '~/utils';
 
 type ContentType = {
   id: string;
@@ -43,51 +31,8 @@ type SyncResult = {
   failedContentTypes: { contentTypeId: string; error: string }[]; // Failed content types with errors
   totalCount: number; // Total number of content types processed
 };
-
 type SyncContentTypePropertiesOptions = {
   context?: SyncContext;
-};
-
-/**
- * Get the path to the local dc-cli binary
- */
-const getDcCliPath = (): string => {
-  // Use local node_modules/.bin/dc-cli
-  const binPath = path.join(process.cwd(), 'node_modules', '.bin', 'dc-cli');
-
-  // On Windows, check for .cmd extension
-  if (process.platform === 'win32') {
-    return binPath + '.cmd';
-  }
-
-  return binPath;
-};
-
-/**
- * Check if dc-cli is available in the system
- */
-const checkDcCliAvailability = async (): Promise<boolean> => {
-  try {
-    const dcCliPath = getDcCliPath();
-    await execAsync(`"${dcCliPath}" --version`);
-
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const runDcCli = async (
-  command: string,
-  hub: HubConfig
-): Promise<{ stdout: string; stderr: string }> => {
-  const { clientId, clientSecret, hubId } = hub;
-  const dcCliPath = getDcCliPath();
-  const fullCommand = `"${dcCliPath}" ${command} --clientId "${clientId}" --clientSecret "${clientSecret}" --hubId "${hubId}"`;
-
-  const result = await execAsync(fullCommand);
-
-  return result;
 };
 
 /**
@@ -167,8 +112,11 @@ export const syncContentTypeProperties = async (
 
     // 3. List content types from the hub
     console.log(`\n🔍 Listing content types from ${targetHub.name}...`);
-    const listCommand = 'content-type list --json';
-    const listResult = await runDcCli(listCommand, targetHub);
+    const listResult = await createDcCliCommand()
+      .withHub(targetHub)
+      .withCommand('content-type list')
+      .withArg('--json')
+      .execute();
 
     let contentTypes: ContentType[] = [];
     try {
@@ -235,8 +183,11 @@ export const syncContentTypeProperties = async (
 
     for (const contentType of filteredContentTypes) {
       try {
-        const syncCommand = `content-type sync ${contentType.id} --json`;
-        await runDcCli(syncCommand, targetHub);
+        await createDcCliCommand()
+          .withHub(targetHub)
+          .withCommand('content-type sync')
+          .withArgs(contentType.id, '--json')
+          .execute();
 
         result.processedContentTypes.push(contentType.id);
         progressBar.increment();

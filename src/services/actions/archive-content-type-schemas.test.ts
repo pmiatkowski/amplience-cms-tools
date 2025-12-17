@@ -34,13 +34,14 @@ describe('archiveContentTypeSchemas', () => {
 
   describe('Mock Data Factories', () => {
     // Factory functions for creating test data
-    const createMockHub = (overrides?: Partial<Amplience.HubConfig>): Amplience.HubConfig => ({
-      name: 'Test Hub',
-      hubId: 'test-hub-id',
-      clientId: 'test-client-id',
-      clientSecret: 'test-client-secret',
-      ...overrides,
-    });
+    const createMockHub = (overrides?: Partial<Amplience.HubOAuthConfig>): Amplience.HubConfig =>
+      ({
+        name: 'Test Hub',
+        hubId: 'test-hub-id',
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+        ...overrides,
+      }) as Amplience.HubConfig;
 
     const createMockSchema = (
       overrides?: Partial<Amplience.ContentTypeSchema>

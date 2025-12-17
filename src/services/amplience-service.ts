@@ -39,11 +39,24 @@ export class AmplienceService {
   }
 
   private async _getAccessToken(): Promise<void> {
+    // Check if PAT token is present in config
+    const patConfig = this._hubConfig as Amplience.HubPATConfig;
+    if (patConfig.patToken) {
+      // Use PAT token directly
+      this._accessToken = patConfig.patToken;
+      // Set expiry to a very high value since PATs don't expire in normal operation
+      this._tokenExpiry = Number.MAX_SAFE_INTEGER;
+
+      return;
+    }
+
+    // Fall back to OAuth flow if PAT is not present
+    const oauthConfig = this._hubConfig as Amplience.HubOAuthConfig;
     const authUrl = 'https://auth.amplience.net/oauth/token';
     const body = new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: this._hubConfig.clientId,
-      client_secret: this._hubConfig.clientSecret,
+      client_id: oauthConfig.clientId,
+      client_secret: oauthConfig.clientSecret,
     });
 
     try {

@@ -19,7 +19,7 @@ export async function promptForHierarchyFilters(): Promise<HierarchyFilterCriter
       type: 'input',
       name: 'schemaId',
       message: 'Filter by schema ID (leave blank for any):',
-      default: 'https://greenfield.gn/content/schema/translation-root',
+      default: `${process.env.AMP_DEFAULT_SCHEMA_ID || ''}/content/schema/translation-root`,
     },
     {
       type: 'input',
@@ -31,7 +31,7 @@ export async function promptForHierarchyFilters(): Promise<HierarchyFilterCriter
       type: 'input',
       name: 'deliveryKey',
       message: 'Filter by delivery key (partial match, leave blank for any):',
-      default: 'translations-en-gb',
+      default: '-translations-en-gb',
     },
   ]);
 

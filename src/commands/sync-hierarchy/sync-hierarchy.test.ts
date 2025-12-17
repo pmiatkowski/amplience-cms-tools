@@ -799,14 +799,14 @@ describe('runSyncHierarchy command', () => {
 
 // Test Helper Functions
 
-function createTestHubConfig(overrides?: Partial<Amplience.HubConfig>): Amplience.HubConfig {
+function createTestHubConfig(overrides?: Partial<Amplience.HubOAuthConfig>): Amplience.HubConfig {
   return {
     name: 'Test Hub',
     hubId: 'test-hub-id',
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
     ...overrides,
-  };
+  } as Amplience.HubConfig;
 }
 
 function createTestRepository(

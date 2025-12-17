@@ -1,4 +1,10 @@
 export {
+  checkDcCliAvailability,
+  createDcCliCommand,
+  DcCliCommandBuilder,
+  getDcCliPath,
+} from './dc-cli-executor';
+export {
   countTotalFolders,
   findAllDescendants,
   type FolderTreeNode,

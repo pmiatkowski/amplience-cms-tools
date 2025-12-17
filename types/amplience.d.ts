@@ -177,15 +177,33 @@ declare global {
       operations: UpdateOperation[];
     }
 
+    type HubConfigCommon = {
+      name: string;
+      hubId: string;
+    };
+
     /**
      * Represents the structure of a Hub configuration loaded from .env.
      */
-    interface HubConfig {
-      name: string;
-      hubId: string;
+    type HubOAuthConfig = HubConfigCommon & {
       clientId: string;
       clientSecret: string;
-    }
+      patToken?: undefined;
+    };
+
+    type HubPATConfig = HubConfigCommon & {
+      patToken: string;
+      clientId?: undefined;
+      clientSecret?: undefined;
+    };
+
+    /**
+     * Represents a hub configuration that supports either OAuth credentials or a PAT token.
+     *
+     * If patToken is present, clientId/clientSecret are not required and are ignored.
+     * If patToken is absent, clientId/clientSecret are required.
+     */
+    type HubConfig = HubOAuthConfig | HubPATConfig;
 
     /**
      * Represents the result of a PATCH operation to update a delivery key.

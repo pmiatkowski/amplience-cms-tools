@@ -1,8 +1,6 @@
-import { exec } from 'child_process';
 import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { promisify } from 'util';
 import { getHubConfigs } from '~/app-config';
 import {
   promptForHub,
@@ -13,16 +11,8 @@ import {
   promptForDryRun,
   promptForValidateSchemas,
 } from '~/prompts';
+import { checkDcCliAvailability, createDcCliCommand } from '~/utils';
 import { syncContentTypeProperties } from '../sync-content-type-properties';
-
-const execAsync = promisify(exec);
-
-type HubConfig = {
-  name: string;
-  clientId: string;
-  clientSecret: string;
-  hubId: string;
-};
 
 type SchemaValidationResult = {
   isValid: boolean;
@@ -46,35 +36,6 @@ type CopyResult = {
 
 type CopyContentTypeSchemasOptions = {
   context?: CopyContext;
-};
-
-/**
- * Get the path to the local dc-cli binary
- */
-const getDcCliPath = (): string => {
-  // Use local node_modules/.bin/dc-cli
-  const binPath = path.join(process.cwd(), 'node_modules', '.bin', 'dc-cli');
-
-  // On Windows, check for .cmd extension
-  if (process.platform === 'win32') {
-    return binPath + '.cmd';
-  }
-
-  return binPath;
-};
-
-/**
- * Check if dc-cli is available in the system
- */
-const checkDcCliAvailability = async (): Promise<boolean> => {
-  try {
-    const dcCliPath = getDcCliPath();
-    await execAsync(`"${dcCliPath}" --version`);
-
-    return true;
-  } catch {
-    return false;
-  }
 };
 
 /**
@@ -141,24 +102,6 @@ const validateSchemaFile = async (configFilePath: string): Promise<SchemaValidat
       errors: [`Failed to parse schema: ${error instanceof Error ? error.message : String(error)}`],
     };
   }
-};
-
-const runDcCli = async (
-  command: string,
-  hub: HubConfig
-): Promise<{ stdout: string; stderr: string }> => {
-  const { clientId, clientSecret, hubId } = hub;
-  const dcCliPath = getDcCliPath();
-  const fullCommand = `"${dcCliPath}" ${command} --clientId "${clientId}" --clientSecret "${clientSecret}" --hubId "${hubId}"`;
-
-  // Log command with length info for debugging
-  console.log(
-    `Executing: ${fullCommand.substring(0, 200)}${fullCommand.length > 200 ? '...' : ''}`
-  );
-
-  const result = await execAsync(fullCommand);
-
-  return result;
 };
 
 export const copyContentTypeSchemas = async (
@@ -239,7 +182,15 @@ export const copyContentTypeSchemas = async (
     try {
       console.log(`Exporting all schemas from source hub: ${sourceHub.name}...`);
       const archiveFlag = includeArchived ? '--archived' : '';
-      await runDcCli(`content-type-schema export "${tempDir}" ${archiveFlag}`, sourceHub);
+      const exportArgs = [`content-type-schema export "${tempDir}"`];
+      if (archiveFlag) {
+        exportArgs.push(archiveFlag);
+      }
+      await createDcCliCommand()
+        .withHub(sourceHub)
+        .withCommand(exportArgs[0])
+        .withArgs(...exportArgs.slice(1))
+        .execute();
 
       // Get only the configuration files (not the actual schema files in the schemas/ subdirectory)
       const allFiles = await fs.readdir(tempDir);
@@ -443,7 +394,11 @@ export const copyContentTypeSchemas = async (
 
       try {
         // Import all schemas at once using bulk operation
-        await runDcCli(`content-type-schema import "${tempDir}"`, targetHub);
+        await createDcCliCommand()
+          .withHub(targetHub)
+          .withCommand('content-type-schema import')
+          .withArg(`"${tempDir}"`)
+          .execute();
 
         // Populate result object
         result.processedSchemas = schemasToCopy.map(file => {

@@ -19,8 +19,7 @@ precedence over OAuth credentials.
 
 ### Files to Create/Modify
 
-- `src/types/hub-config.ts` - Create new type definitions for
-  `HubConfigWithPAT`.
+- `src/types/hub-config.ts` - Create new type definitions for `HubConfig`.
 - app-config.ts - Modify validation logic to accept `PAT_TOKEN`.
 - app-config.test.ts - Create/Modify tests for configuration logic.
 
@@ -31,8 +30,9 @@ precedence over OAuth credentials.
     - Write tests to verify current behavior: requires Client ID/Secret,
       validates missing env vars.
 2.  **Define Types**
-    - Create `src/types/hub-config.ts`.
-    - Define `HubConfigWithPAT` union type as specified in the PRD.
+    - Update `/types/amplience.d.ts.ts`.
+    - Define `HubConfigCommon`, `HubOAuthConfig`, `HubPATConfig` and `HubConfig`
+      as union type of `HubOAuthConfig | HubPATConfig`.
 3.  **Implement PAT Logic in Config**
     - Update app-config.ts to read `process.env.PAT_TOKEN`.
     - Modify validation logic:
@@ -72,7 +72,7 @@ the OAuth flow when a PAT token is present.
 1.  **Verify Existing Tests**
     - Ensure amplience-service.test.ts passes.
 2.  **Update Service Constructor**
-    - Modify `AmplienceService` constructor to accept `HubConfigWithPAT`.
+    - Modify `AmplienceService` constructor to accept `HubConfig`.
 3.  **Implement PAT Auth Flow**
     - Modify `_getAccessToken()` method.
     - Add check: if `patToken` exists in config, set `this._accessToken`
@@ -158,8 +158,8 @@ Ensure code quality, type safety, and test coverage.
     - Fix all errors and warnings without using eslint-disable comments
 2.  **Type Checking**
     - Run `npm run type-check`
-    - Resolve all TypeScript errors, especially around the new
-      `HubConfigWithPAT` union type.
+    - Resolve all TypeScript errors, especially around the new `HubConfig` union
+      type.
 3.  **Testing**
     - Run `npm run test`
     - Fix all failing tests

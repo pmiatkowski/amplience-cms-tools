@@ -27,6 +27,72 @@ describe('app-config', () => {
   });
 
   describe('getHubConfigs', () => {
+    it('should load config successfully when PAT_TOKEN is provided', async () => {
+      process.env.PAT_TOKEN = 'pat-token-123';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      process.env.AMP_HUB_PROD_HUB_ID = 'prod-hub-id';
+      process.env.AMP_HUB_PROD_HUB_NAME = 'Production';
+
+      const { getHubConfigs } = await import('./app-config');
+      const configs = getHubConfigs();
+      expect(configs).toHaveLength(2);
+      expect(configs).toEqual(
+        expect.arrayContaining([
+          { name: 'Development', hubId: 'dev-hub-id', patToken: 'pat-token-123' },
+          { name: 'Production', hubId: 'prod-hub-id', patToken: 'pat-token-123' },
+        ])
+      );
+    });
+
+    it('should fail validation when no authentication method is provided', async () => {
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      // No PAT_TOKEN, no clientId/clientSecret
+      const { getHubConfigs } = await import('./app-config');
+      expect(() => getHubConfigs()).toThrow(
+        'No complete hub configurations found. Please ensure you have configured at least one hub'
+      );
+    });
+
+    it('should prioritize PAT_TOKEN over Client ID/Secret', async () => {
+      process.env.PAT_TOKEN = 'pat-token-abc';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      process.env.AMP_HUB_DEV_CLIENT_ID = 'dev-client-id';
+      process.env.AMP_HUB_DEV_CLIENT_SECRET = 'dev-client-secret';
+
+      const { getHubConfigs } = await import('./app-config');
+      const configs = getHubConfigs();
+      expect(configs).toHaveLength(1);
+      expect(configs[0]).toEqual({
+        name: 'Development',
+        hubId: 'dev-hub-id',
+        patToken: 'pat-token-abc',
+      });
+    });
+
+    it('should return HubConfig with patToken property when configured', async () => {
+      process.env.PAT_TOKEN = 'pat-token-xyz';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+
+      const { getHubConfigs } = await import('./app-config');
+      const configs = getHubConfigs();
+      expect(configs[0]).toHaveProperty('patToken', 'pat-token-xyz');
+      expect(configs[0]).not.toHaveProperty('clientId');
+      expect(configs[0]).not.toHaveProperty('clientSecret');
+    });
+
+    it('should fail if PAT_TOKEN is empty', async () => {
+      process.env.PAT_TOKEN = '';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      const { getHubConfigs } = await import('./app-config');
+      expect(() => getHubConfigs()).toThrow(
+        'No complete hub configurations found. Please ensure you have configured at least one hub'
+      );
+    });
     it('should discover and return hub configurations with new pattern', async () => {
       // Setup environment variables for two hubs
       process.env.AMP_HUB_DEV_CLIENT_ID = 'dev-client-id';

@@ -12,6 +12,10 @@ export async function promptForCommand(): Promise<CommandChoice> {
           value: 'sync-hierarchy',
         },
         {
+          name: 'Bulk synchronize multiple hierarchies (synchronize multiple hierarchies at once)',
+          value: 'bulk-sync-hierarchies',
+        },
+        {
           name: 'Copy content-type-schemas (Copies schemas between hubs with optional validation)',
           value: 'copy-content-type-schemas',
         },
@@ -59,4 +63,5 @@ type CommandChoice =
   | 'copy-content-types'
   | 'sync-content-type-properties'
   | 'archive-content-type-schemas'
-  | 'sync-hierarchy';
+  | 'sync-hierarchy'
+  | 'bulk-sync-hierarchies';

@@ -1,6 +1,7 @@
 export * from './archive-content-item';
 export * from './archive-content-item-with-descendants';
 export * from './archive-content-type-schemas';
+export * from './bulk-sync-hierarchies';
 export * from './cleanup-folder';
 export * from './item-removal';
 export * from './list-nested-subfolders';

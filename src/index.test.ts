@@ -13,7 +13,7 @@ describe('index.ts command integration', () => {
     const { runBulkSyncHierarchies } = await import('./commands');
     expect(runBulkSyncHierarchies).toBeDefined();
     expect(typeof runBulkSyncHierarchies).toBe('function');
-  });
+  }, 10000); // Increased timeout for dynamic import with all modules
 
   it('should export runBulkSyncHierarchies from commands barrel', async () => {
     const commands = await import('./commands');

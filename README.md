@@ -158,6 +158,21 @@ AMP_HUB_PROD_HUB_NAME=PROD
   complexity
 - **Reduced Errors**: Misconfigurations are automatically detected
 
+**Rate Limiting Configuration:**
+
+The tool automatically handles API rate limits (HTTP 429 responses) with configurable retry behavior:
+
+```env
+# Retry Configuration (optional)
+RETRIES_COUNT=3           # Maximum number of retry attempts (default: 3)
+RETRY_AWAIT_TIME=60       # Base wait time in seconds before retry (default: 60)
+```
+
+- When a rate limit is encountered, the tool will automatically retry the request
+- If the API provides a `Retry-After` header, that value is used
+- Otherwise, exponential backoff is applied: `RETRY_AWAIT_TIME * (2 ^ attempt)`
+- After `RETRIES_COUNT` attempts, the operation will fail with an error
+
 **Migration from Previous Version:**
 
 If you're upgrading from a previous version that used `AMP_HUBS`, simply:

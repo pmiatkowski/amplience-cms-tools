@@ -2,9 +2,47 @@ export class AmplienceService {
   private _accessToken: string | null = null;
   private _tokenExpiry: number = 0;
   private _hubConfig: Amplience.HubConfig;
+  private readonly _maxRetries: number;
+  private readonly _defaultRetryAwaitTime: number;
 
   public constructor(hubConfig: Amplience.HubConfig) {
     this._hubConfig = hubConfig;
+    // Read retry configuration from environment variables
+    const retriesCount = parseInt(process.env.RETRIES_COUNT || '3', 10);
+    const retryAwaitTime = parseInt(process.env.RETRY_AWAIT_TIME || '60', 10);
+
+    // Handle invalid values by falling back to defaults
+    this._maxRetries = isNaN(retriesCount) || retriesCount < 0 ? 3 : retriesCount;
+    this._defaultRetryAwaitTime =
+      (isNaN(retryAwaitTime) || retryAwaitTime < 0 ? 60 : retryAwaitTime) * 1000; // Convert to milliseconds
+  }
+
+  // Private method for calculating retry delay based on response and attempt number
+  private _calculateRetryDelay(response: Response, attempt: number): number {
+    const retryAfterHeader = response.headers.get('Retry-After');
+
+    if (retryAfterHeader) {
+      // Check if it's a number (seconds) or a date
+      const secondsToWait = parseInt(retryAfterHeader, 10);
+      if (!isNaN(secondsToWait)) {
+        return secondsToWait * 1000; // Convert seconds to milliseconds
+      }
+
+      // Try to parse as HTTP date
+      const retryDate = new Date(retryAfterHeader);
+      if (!isNaN(retryDate.getTime())) {
+        return Math.max(0, retryDate.getTime() - Date.now());
+      }
+    }
+
+    // Use exponential backoff if no Retry-After header
+    // Formula: RETRY_AWAIT_TIME * (2 ^ attempt)
+    return this._defaultRetryAwaitTime * Math.pow(2, attempt);
+  }
+
+  // Helper method to wait for specified milliseconds
+  private async _wait(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // Private method for making authenticated requests
@@ -24,18 +62,55 @@ export class AmplienceService {
       headers.set('Content-Type', 'application/json');
     }
 
-    const response = await fetch(url, { ...options, headers });
+    let lastError: Error | null = null;
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody}`);
+    // Retry loop
+    for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, { ...options, headers });
+
+        // Handle rate limiting (429)
+        if (response.status === 429) {
+          if (attempt < this._maxRetries) {
+            const delayMs = this._calculateRetryDelay(response, attempt + 1);
+            const delaySec = Math.round(delayMs / 1000);
+            console.warn(
+              `Rate limit hit. Waiting ${delaySec} seconds before retry ${attempt + 1}/${this._maxRetries}...`
+            );
+            await this._wait(delayMs);
+            continue; // Retry the request
+          } else {
+            // All retries exhausted
+            const errorBody = await response.text();
+            throw new Error(
+              `API Error: 429 Too Many Requests - Failed after ${this._maxRetries} retries. ${errorBody}`
+            );
+          }
+        }
+
+        // Handle other non-OK responses
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody}`);
+        }
+
+        // Success - return the response
+        if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+          return undefined as T;
+        }
+
+        return response.json() as T;
+      } catch (error) {
+        // If it's not a 429 error, rethrow immediately
+        if (error instanceof Error && !error.message.includes('Rate limit')) {
+          throw error;
+        }
+        lastError = error as Error;
+      }
     }
 
-    if (response.status === 204 || response.headers.get('Content-Length') === '0') {
-      return undefined as T;
-    }
-
-    return response.json() as T;
+    // This should not be reached, but just in case
+    throw lastError || new Error('Request failed after retries');
   }
 
   private async _getAccessToken(): Promise<void> {

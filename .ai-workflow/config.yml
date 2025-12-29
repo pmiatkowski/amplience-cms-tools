@@ -1,0 +1,71 @@
+# .ai-workflow/config.yml
+# Configuration for AI Feature Workflow
+
+version: 1
+
+# Directory paths (relative to project root)
+paths:
+  features: .ai-workflow/features
+  bugs: .ai-workflow/bugs          # Bug workflow storage
+  prompts: .ai-workflow/prompts
+  scripts: .ai-workflow/scripts
+  memory: .ai-workflow/memory      # Global workflow state
+
+# Default values
+defaults:
+  date_format: "%Y-%m-%d"
+  workflow_type: feature
+
+# Workflow type definitions
+workflow_types:
+  feature:
+    base_path: features
+    states: [clarifying, prd-draft, prd-approved, planning, in-progress]
+    initial_state: clarifying
+    artifacts:
+      - state.yml
+      - request.md
+      - context.md
+      - clarifications/
+      - prd.md
+      - updates/
+      - implementation-plan/
+    classification_keywords:
+      - add
+      - implement
+      - create
+      - allow
+      - enable
+      - support
+
+  bug:
+    base_path: bugs
+    states: [reported, triaged, fixing, resolved, closed]
+    initial_state: reported
+    artifacts:
+      - state.yml
+      - report.md
+      - context.md
+      - clarifications/
+      - triage.md
+      - fix-plan.md
+    classification_keywords:
+      - fix
+      - bug
+      - error
+      - broken
+      - crash
+      - issue
+      - failing
+      - timeout
+
+# Future expansion: polyglot script support
+# runner: python | bash | powershell
+#
+# When enabled, scripts will be organized as:
+# scripts/
+#   run.py              # dispatcher
+#   impl/
+#     python/
+#     bash/
+#     powershell/

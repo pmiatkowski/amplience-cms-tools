@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.3.0...v1.3.1) (2025-12-29)
+
+
+### Bug Fixes
+
+* rate limit issues ([544e8b8](https://github.com/pmiatkowski/amplience-cms-tools/commit/544e8b80f1b3ec60e4eee76f61ba6b72d5017029))
+
 # [1.3.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.2.0...v1.3.0) (2025-12-17)
 
 

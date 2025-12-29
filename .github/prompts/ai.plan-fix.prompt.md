@@ -1,17 +1,7 @@
-# Prompt: plan-fix
-
-## Purpose
-Create a lightweight fix implementation checklist.
-
-## Usage
-```
-User: /plan-fix           # Uses current context
-User: /plan-fix {bug-name} # Explicit bug
-```
-
 ---
-
-## Instructions
+agent: agent
+description: Create a lightweight fix implementation checklist.
+---
 
 You are creating a simple fix plan checklist.
 
@@ -48,6 +38,7 @@ Please either:
 Check if `.ai-workflow/bugs/{name}/triage.md` exists.
 
 If not found:
+
 ```
 ⚠ Bug must be triaged first.
 
@@ -81,24 +72,29 @@ Create `.ai-workflow/bugs/{name}/fix-plan.md`:
 - [ ] Update documentation (if needed)
 
 ## Estimated Complexity
+
 [Simple / Medium / Complex]
 
 ## Testing Strategy
+
 [How to verify the fix works]
 
 ## Created
+
 {date}
 ```
 
 ### 4. Update State
 
 Update `.ai-workflow/bugs/{bug-name}/state.yml`:
+
 - Change `status: triaged` → `status: fixing`
 - Update `updated: {today}`
 
 ### 5. Next Steps
 
 Suggest:
+
 ```
 ✓ Fix plan created: {bug-name}
 
@@ -111,6 +107,7 @@ Ready to implement! The checklist is in:
 ## Example
 
 **User:**
+
 ```
 /plan-fix login-timeout
 ```
@@ -131,9 +128,11 @@ Ready to implement! The checklist is in:
 - [ ] Update documentation with new timeout configuration
 
 ## Estimated Complexity
+
 Simple
 
 ## Testing Strategy
+
 1. Login to application
 2. Wait 5 minutes without activity
 3. Verify session is still active
@@ -141,10 +140,12 @@ Simple
 5. Verify session has expired
 
 ## Created
+
 2025-01-15
 ```
 
 **AI responds:**
+
 ```
 ✓ Fix plan created: login-timeout
 

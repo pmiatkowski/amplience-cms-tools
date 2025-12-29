@@ -1,21 +1,12 @@
-# Prompt: update-feature
-
-## Purpose
-Handle requirement changes after PRD exists. Captures the change, triggers clarification if needed, and refines the PRD.
-
-## Usage
-```
-User: /update-feature                # Uses current context
-User: /update-feature {feature-name} # Explicit feature
-```
-
-Then user describes what changed.
-
+---
+agent: agent
+description:
+  Handle requirement changes after PRD exists. Captures the change, triggers
+  clarification if needed, and refines the PRD.
 ---
 
-## Instructions
-
-You are managing a requirements change. Your goal is to capture the change, assess its impact, and update documentation accordingly.
+You are managing a requirements change. Your goal is to capture the change,
+assess its impact, and update documentation accordingly.
 
 ### 1. Determine Feature Name
 
@@ -54,6 +45,7 @@ Check if `.ai-workflow/features/{name}/` exists.
 Check `.ai-workflow/features/{name}/prd.md` exists.
 
 If not:
+
 ```
 ⚠ No PRD found for '{feature-name}'.
 
@@ -85,18 +77,23 @@ Create `updates/update-{n}.md`:
 # Feature Update {n}
 
 ## Date
+
 {YYYY-MM-DD}
 
 ## Change Description
+
 {user's description of what changed}
 
 ## Reason
+
 {why it's changing, or "Not specified"}
 
 ## Impact Assessment
+
 <!-- AI fills this -->
 
 **Affected PRD sections:**
+
 - {section 1}
 - {section 2}
 
@@ -116,6 +113,7 @@ Read current `prd.md` and determine:
 3. Whether clarification is needed
 
 **Clarification needed if:**
+
 - Change introduces ambiguity
 - Change conflicts with existing requirements
 - Change has unclear scope
@@ -124,6 +122,7 @@ Read current `prd.md` and determine:
 ### 5. Branch Based on Severity
 
 **Minor changes:**
+
 ```
 This appears to be a minor change affecting:
   - {affected sections}
@@ -134,6 +133,7 @@ I can update the PRD directly. Proceed? (yes/no)
 If yes → Update PRD inline, skip clarification.
 
 **Moderate/Major changes:**
+
 ```
 This change affects:
   - {affected sections}
@@ -154,6 +154,7 @@ Or if you're confident, I can update the PRD directly.
 When updating PRD:
 
 1. Add update reference at top:
+
 ```markdown
 > **Last Updated**: {YYYY-MM-DD}  
 > **Updates**: See updates/update-{n}.md
@@ -167,9 +168,10 @@ When updating PRD:
 ### 7. Update State
 
 Update `state.yml`:
+
 ```yaml
-status: prd-draft  # reset to draft if was approved
-updated: {YYYY-MM-DD}
+status: prd-draft # reset to draft if was approved
+updated: { YYYY-MM-DD }
 ```
 
 ### 8. Confirm Completion
@@ -198,6 +200,7 @@ Next step:
 ## Example Session
 
 **User:**
+
 ```
 /update-feature user-auth
 
@@ -232,6 +235,7 @@ Then run /create-prd user-auth to regenerate PRD with changes.
 ## Example: Minor Change
 
 **User:**
+
 ```
 /update-feature user-auth
 
@@ -239,6 +243,7 @@ Change the session timeout from 24 hours to 12 hours for non-remembered sessions
 ```
 
 **AI responds:**
+
 ```
 ✓ Saved updates/update-02.md
 
@@ -254,6 +259,7 @@ Proceed? (yes/no)
 **User:** yes
 
 **AI updates PRD and responds:**
+
 ```
 ✓ Updated prd.md
 
@@ -268,11 +274,11 @@ Status reset to: prd-draft
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| Feature doesn't exist | Error: "Feature '{name}' not found" |
-| No PRD exists | Redirect to normal flow (add-context → clarify → create-prd) |
-| Implementation already started | Warn that plan may need updating too |
-| Contradicts existing requirement | Flag conflict, require user resolution |
-| Vague change description | Ask clarifying questions before saving |
-| Multiple changes at once | Save as single update, assess combined impact |
+| Situation                        | Behavior                                                     |
+| -------------------------------- | ------------------------------------------------------------ |
+| Feature doesn't exist            | Error: "Feature '{name}' not found"                          |
+| No PRD exists                    | Redirect to normal flow (add-context → clarify → create-prd) |
+| Implementation already started   | Warn that plan may need updating too                         |
+| Contradicts existing requirement | Flag conflict, require user resolution                       |
+| Vague change description         | Ask clarifying questions before saving                       |
+| Multiple changes at once         | Save as single update, assess combined impact                |

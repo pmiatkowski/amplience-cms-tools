@@ -1,27 +1,18 @@
-# Prompt: add-context
-
-## Purpose
-Add or update codebase and business context for a workflow (feature or bug).
-
-## Usage
-```
-User: /add-context                    # Uses current context
-User: /add-context {workflow-name}     # Explicit workflow
-```
-
-Then user provides context (code snippets, file references, business rules, etc.)
-
+---
+agent: agent
+description:
+  Add or update codebase and business context for a workflow (feature or bug).
 ---
 
-## Instructions
-
-You are helping the user document relevant context for a workflow. Your goal is to organize provided information into a structured `context.md` file.
+You are helping the user document relevant context for a workflow. Your goal is
+to organize provided information into a structured `context.md` file.
 
 ### 1. Determine Workflow Name
 
 **Parameter resolution:**
 
-1. If user provided explicit name in command (`/add-context workflow-name`), use it
+1. If user provided explicit name in command (`/add-context workflow-name`), use
+   it
 2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
 3. If no current context set, error:
 
@@ -41,6 +32,7 @@ Example:
 Check if `.ai-workflow/features/{name}/` or `.ai-workflow/bugs/{name}/` exists.
 
 If not found:
+
 ```
 ✗ Workflow '{name}' not found.
 
@@ -75,39 +67,47 @@ Paste or describe the context, and I'll organize it into context.md.
 
 Take user's input and organize into `context.md` structure:
 
-```markdown
+````markdown
 # Context
 
 ## Relevant Files
+
 <!-- Files this feature will interact with -->
 
 - `path/to/file.ts` — {brief description}
 - `path/to/another.ts` — {brief description}
 
 ## Code Snippets
+
 <!-- Existing code relevant to this feature -->
 
 ### {Snippet description}
+
 ```{language}
 {code}
 ```
+````
 
 ## Business Logic
+
 <!-- Rules, constraints, existing behavior -->
 
 - {rule 1}
 - {rule 2}
 
 ## Technical Constraints
+
 <!-- Stack, dependencies, limitations -->
 
 - {constraint 1}
 - {constraint 2}
 
 ## Notes
+
 <!-- Any other relevant context -->
 
 {notes}
+
 ```
 
 ### 5. Merge or Replace
@@ -115,11 +115,13 @@ Take user's input and organize into `context.md` structure:
 If context.md already has content:
 
 ```
+
 context.md already has content. How should I proceed?
 
 1. **Merge** — Add new context to existing sections
 2. **Replace** — Overwrite with new context
 3. **Cancel** — Keep existing, don't change
+
 ```
 
 ### 6. Save and Confirm
@@ -127,16 +129,20 @@ context.md already has content. How should I proceed?
 After saving:
 
 ```
+
 ✓ Updated context.md
 
 Added:
-  - {X} relevant files
-  - {Y} code snippets
-  - {summary of other additions}
+
+- {X} relevant files
+- {Y} code snippets
+- {summary of other additions}
 
 Next steps:
-  - Run /add-context again to add more
-  - Run /clarify to start requirements clarification
+
+- Run /add-context again to add more
+- Run /clarify to start requirements clarification
+
 ```
 
 ---
@@ -145,21 +151,26 @@ Next steps:
 
 **User:**
 ```
+
 /add-context user-auth
 
 Here's what's relevant:
 
-We have an existing User model at src/models/user.ts that has email and passwordHash fields.
+We have an existing User model at src/models/user.ts that has email and
+passwordHash fields.
 
-The auth should use our existing Redis setup for sessions - config is in src/config/redis.ts.
+The auth should use our existing Redis setup for sessions - config is in
+src/config/redis.ts.
 
 Business rules:
+
 - Passwords must be 8+ chars
 - Email must be verified before login (we have isVerified field)
 - Max 5 login attempts per hour
 
 We're using Express + TypeScript.
-```
+
+````
 
 **AI saves to `context.md`:**
 
@@ -187,9 +198,10 @@ We're using Express + TypeScript.
 
 ## Notes
 <!-- No additional notes -->
-```
+````
 
 **AI responds:**
+
 ```
 ✓ Updated context.md
 
@@ -207,13 +219,13 @@ Next steps:
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| Feature doesn't exist | Error: "Feature '{name}' not found" |
-| Empty context provided | Ask user to provide at least some context |
-| Only code snippets provided | Fill other sections with placeholder comments |
-| User pastes large file | Summarize and ask if full content needed |
-| Conflicting info with existing | Flag conflict, ask user to resolve |
+| Situation                      | Behavior                                      |
+| ------------------------------ | --------------------------------------------- |
+| Feature doesn't exist          | Error: "Feature '{name}' not found"           |
+| Empty context provided         | Ask user to provide at least some context     |
+| Only code snippets provided    | Fill other sections with placeholder comments |
+| User pastes large file         | Summarize and ask if full content needed      |
+| Conflicting info with existing | Flag conflict, ask user to resolve            |
 
 ---
 

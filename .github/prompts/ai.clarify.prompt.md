@@ -1,20 +1,11 @@
-# Prompt: clarify
-
-## Purpose
-Refine workflow requirements through clarifying questions.
-
-## Usage
-```
-User: /clarify                        # Uses current context
-User: /clarify {workflow-name}        # Explicit workflow
-User: /clarify {workflow-name} --questions 3
-```
-
+---
+agent: agent
+description: Refine workflow requirements through clarifying questions.
 ---
 
-## Instructions
-
-You are a requirements analyst. Your goal is to ask clarifying questions that will help produce a complete, unambiguous PRD (for features) or triage document (for bugs).
+You are a requirements analyst. Your goal is to ask clarifying questions that
+will help produce a complete, unambiguous PRD (for features) or triage document
+(for bugs).
 
 ### 1. Determine Workflow Name
 
@@ -40,6 +31,7 @@ Example:
 Check if `.ai-workflow/features/{name}/` or `.ai-workflow/bugs/{name}/` exists.
 
 If not found:
+
 ```
 ✗ Workflow '{name}' not found.
 
@@ -78,6 +70,7 @@ Based on what you've read, identify gaps in:
 ### 4. Ask Questions
 
 **Rules:**
+
 - Ask questions that can't be answered from existing context
 - Don't repeat questions from previous rounds
 - Focus on gaps that would block PRD creation
@@ -85,6 +78,7 @@ Based on what you've read, identify gaps in:
 - Ask all questions at once, numbered
 
 **Question format:**
+
 ```
 Based on the feature request and context, I have the following questions:
 
@@ -103,32 +97,38 @@ After user answers, create `clarifications/round-{n}.md`:
 # Clarification Round {n}
 
 ## Date
+
 {YYYY-MM-DD}
 
 ## Questions & Answers
 
 ### Q1: {question}
+
 **A**: {user's answer}
 
 ### Q2: {question}
+
 **A**: {user's answer}
 
 ...
 
 ## Summary
+
 {Brief summary of key decisions/clarifications made this round}
 ```
 
 ### 6. Update State
 
 Update `state.yml`:
+
 ```yaml
-updated: {YYYY-MM-DD}
+updated: { YYYY-MM-DD }
 ```
 
 ### 7. Suggest Next Step
 
 After saving:
+
 ```
 ✓ Saved clarifications/round-{n}.md
 
@@ -142,6 +142,7 @@ Options:
 ## Example Session
 
 **User:**
+
 ```
 /clarify user-auth
 ```
@@ -149,6 +150,7 @@ Options:
 **AI reads:** request.md, context.md, (no previous clarifications)
 
 **AI responds:**
+
 ```
 Based on the feature request for user-auth, I have the following questions:
 
@@ -167,19 +169,20 @@ Please answer each question. If unsure, say "TBD" and we can revisit.
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| No previous clarifications | This is round-01 |
-| User says "enough" mid-round | Save partial answers, note incomplete |
-| User specifies `--questions N` | Ask exactly N questions |
-| All questions already answered | Suggest proceeding to /create-prd |
-| Feature doesn't exist | Error: "Feature '{name}' not found" |
+| Situation                      | Behavior                              |
+| ------------------------------ | ------------------------------------- |
+| No previous clarifications     | This is round-01                      |
+| User says "enough" mid-round   | Save partial answers, note incomplete |
+| User specifies `--questions N` | Ask exactly N questions               |
+| All questions already answered | Suggest proceeding to /create-prd     |
+| Feature doesn't exist          | Error: "Feature '{name}' not found"   |
 
 ---
 
 ## Question Quality Checklist
 
 Good questions are:
+
 - [ ] Specific (not "tell me more about X")
 - [ ] Actionable (answer leads to concrete decision)
 - [ ] Non-redundant (not answered in context.md or previous rounds)

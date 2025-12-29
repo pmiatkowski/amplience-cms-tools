@@ -1,17 +1,7 @@
-# Prompt: triage-bug
-
-## Purpose
-Diagnose root cause and identify fix approach for a bug.
-
-## Usage
-```
-User: /triage-bug           # Uses current context
-User: /triage-bug {bug-name} # Explicit bug
-```
-
 ---
-
-## Instructions
+agent: agent
+description: Diagnose root cause and identify fix approach for a bug.
+---
 
 You are triaging a bug to diagnose the root cause and plan the fix.
 
@@ -52,12 +42,14 @@ Check if `.ai-workflow/bugs/{name}/` exists.
 Read:
 
 - `.ai-workflow/bugs/{name}/report.md` — bug description and reproduction steps
-- `.ai-workflow/bugs/{name}/context.md` — relevant codebase context (if provided)
+- `.ai-workflow/bugs/{name}/context.md` — relevant codebase context (if
+  provided)
 - `.ai-workflow/bugs/{name}/state.yml` — current status
 
 ### 3. Ask Diagnostic Questions
 
 If information is missing, ask 2-3 focused questions:
+
 - What are the exact reproduction steps?
 - What error messages appear (if any)?
 - Which components/files are affected?
@@ -66,6 +58,7 @@ If information is missing, ask 2-3 focused questions:
 ### 3. Diagnose Root Cause
 
 Based on report + context + answers, identify:
+
 - **Root cause**: What's actually broken?
 - **Affected components**: Which files/modules are involved?
 - **Impact**: How severe is this bug?
@@ -79,34 +72,42 @@ Create `.ai-workflow/bugs/{bug-name}/triage.md`:
 # Triage: {bug-name}
 
 ## Root Cause
+
 [What's actually broken and why]
 
 ## Affected Components
+
 - File/module 1
 - File/module 2
 
 ## Severity
+
 [Critical / High / Medium / Low]
 
 ## Fix Approach
+
 [High-level strategy for fixing this]
 
 ## Notes
+
 [Any additional context or considerations]
 
 ## Triaged
+
 {date}
 ```
 
 ### 5. Update State
 
 Update `.ai-workflow/bugs/{bug-name}/state.yml`:
+
 - Change `status: reported` → `status: triaged`
 - Update `updated: {today}`
 
 ### 6. Next Steps
 
 Suggest:
+
 ```
 ✓ Bug triaged: {bug-name}
 
@@ -119,15 +120,18 @@ Next step:
 ## Example
 
 **User:**
+
 ```
 /triage-bug login-timeout
 ```
 
 **AI reads:**
+
 - `.ai-workflow/bugs/login-timeout/report.md`
 - `.ai-workflow/bugs/login-timeout/context.md`
 
 **AI asks questions** (if needed):
+
 ```
 To help diagnose the issue, I need a bit more information:
 
@@ -139,6 +143,7 @@ To help diagnose the issue, I need a bit more information:
 **After getting answers, AI creates triage.md and updates state.yml**
 
 **AI responds:**
+
 ```
 ✓ Bug triaged: login-timeout
 

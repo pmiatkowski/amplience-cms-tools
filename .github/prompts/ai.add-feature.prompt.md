@@ -1,26 +1,21 @@
-# Prompt: add-feature
-
-## Purpose
-Initialize a new feature. AI invokes the init script and confirms setup.
-
-## Usage
-```
-User: /add-feature {feature-name} {description}
-```
-
+---
+agent: agent
+description:
+  Initialize a new feature. AI invokes the init script and confirms setup.
 ---
 
-## Instructions
-
-You are initializing a new feature. Execute the setup script and guide the user to next steps.
+You are initializing a new feature. Execute the setup script and guide the user
+to next steps.
 
 ### 1. Parse Input
 
 Extract from user message:
+
 - **feature-name**: Identifier (will be converted to kebab-case)
 - **description**: Brief description of the feature
 
 If missing:
+
 ```
 Please provide feature name and description:
 
@@ -33,6 +28,7 @@ Example:
 ### 2. Execute Init Script
 
 Run:
+
 ```bash
 python .ai-workflow/scripts/init-feature.py "{feature-name}" "{description}"
 ```
@@ -40,6 +36,7 @@ python .ai-workflow/scripts/init-feature.py "{feature-name}" "{description}"
 ### 3. Handle Result
 
 **On success:**
+
 ```
 ✓ Feature initialized: {feature-name}
 
@@ -57,6 +54,7 @@ Next steps:
 ```
 
 **On error (feature exists):**
+
 ```
 ✗ Feature '{feature-name}' already exists.
 
@@ -71,16 +69,19 @@ Options:
 ## Example
 
 **User:**
+
 ```
 /add-feature user-auth Allow users to login with email and password
 ```
 
 **AI executes:**
+
 ```bash
 python .ai-workflow/scripts/init-feature.py "user-auth" "Allow users to login with email and password"
 ```
 
 **AI responds:**
+
 ```
 ✓ Feature initialized: user-auth
 

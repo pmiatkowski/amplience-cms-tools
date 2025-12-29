@@ -1,16 +1,9 @@
-# Prompt: add
-
-## Purpose
-Add a new work item (feature, bug, etc.). AI classifies the type automatically.
-
-## Usage
-```
-User: /add {description}
-```
-
 ---
-
-## Instructions
+agent: agent
+description:
+  Add a new work item (feature, bug, etc.). AI classifies the type
+  automatically.
+---
 
 You are adding a new work item. Classify the type and initialize appropriately.
 
@@ -19,6 +12,7 @@ You are adding a new work item. Classify the type and initialize appropriately.
 Parse the user's description from the `/add` command.
 
 If missing:
+
 ```
 Please provide a description:
 
@@ -33,12 +27,15 @@ Examples:
 
 Analyze the description to determine if this is a **feature** or **bug**:
 
-**Bug indicators** (fix, bug, error, broken, crash, issue, failing, timeout, etc.):
+**Bug indicators** (fix, bug, error, broken, crash, issue, failing, timeout,
+etc.):
+
 - "Fix timeout on login page" → bug
 - "Login button is broken" → bug
 - "Error when submitting form" → bug
 
 **Feature indicators** (add, implement, create, allow, enable, support, etc.):
+
 - "Allow users to reset password" → feature
 - "Add email notifications" → feature
 - "Implement dark mode" → feature
@@ -48,12 +45,14 @@ Analyze the description to determine if this is a **feature** or **bug**:
 ### 3. Generate Name
 
 Create a kebab-case name from the description:
+
 - "Fix timeout on login page" → "login-timeout"
 - "Allow users to reset password" → "user-password-reset"
 
 ### 4. Execute Init Script
 
 Run:
+
 ```bash
 python .ai-workflow/scripts/init-workflow.py "{name}" "{description}" --type {type}
 ```
@@ -61,6 +60,7 @@ python .ai-workflow/scripts/init-workflow.py "{name}" "{description}" --type {ty
 ### 5. Confirm to User
 
 **Example for bug:**
+
 ```
 ✓ Classified as: bug
 ✓ Bug initialized: login-timeout
@@ -74,6 +74,7 @@ Next steps:
 ```
 
 **Example for feature:**
+
 ```
 ✓ Classified as: feature
 ✓ Feature initialized: user-password-reset
@@ -91,6 +92,7 @@ Next steps:
 ## Example
 
 **User:**
+
 ```
 /add Fix timeout on login page
 ```
@@ -98,11 +100,13 @@ Next steps:
 **AI classifies:** bug (keyword "Fix")
 
 **AI executes:**
+
 ```bash
 python .ai-workflow/scripts/init-workflow.py "login-timeout" "Fix timeout on login page" --type bug
 ```
 
 **AI responds:**
+
 ```
 ✓ Classified as: bug
 ✓ Bug initialized: login-timeout

@@ -1,7 +1,0 @@
-version: 1
-current:
-  name: http-429-retry
-  workflow_type: feature
-  set_date: 2025-12-29
-  set_method: auto
-last_updated: 2025-12-29

@@ -1,6 +1,6 @@
 {
   "files.eol": "\n",
   "chat.promptFilesLocations": {
-    ".ai-workflow/prompts": true
+    ".ai/prompts": true
   }
 }

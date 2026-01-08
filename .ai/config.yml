@@ -1,0 +1,95 @@
+# .ai/config.yml
+# Configuration for AI Feature Workflow
+
+version: 1
+
+# Directory paths (relative to project root)
+paths:
+  features: .ai/features
+  bugs: .ai/bugs          # Bug workflow storage
+  ideas: .ai/ideas        # Idea workflow storage
+  prompts: .ai/prompts
+  scripts: .ai/scripts
+  memory: .ai/memory      # Global workflow state
+  tech_stack: .ai/memory/tech-stack.md     # Global tech stack definition
+  coding_rules: .ai/memory/coding-rules    # Coding standards and best practices
+  reports: .ai/reports    # Verification reports storage
+
+# Default values
+defaults:
+  date_format: "%Y-%m-%d"
+  workflow_type: feature
+
+# Clarification system settings
+clarification:
+  format_version: 2.0              # Sequential one-by-one format
+  default_question_count: 5        # Default number of planned questions
+  allow_followups: true            # Allow dynamic follow-up questions
+  show_progress: true              # Show "Question 3/5+" progress indicator
+  max_followups_per_round: 2       # Limit follow-up questions to prevent explosion
+
+# Workflow type definitions
+workflow_types:
+  feature:
+    base_path: features
+    states: [clarifying, prd-draft, prd-approved, planning, in-progress]
+    initial_state: clarifying
+    artifacts:
+      - state.yml
+      - request.md
+      - context.md
+      - clarifications/
+      - prd.md
+      - updates/
+      - implementation-plan/
+    classification_keywords:
+      - add
+      - implement
+      - create
+      - allow
+      - enable
+      - support
+
+  bug:
+    base_path: bugs
+    states: [reported, triaged, fixing, resolved, closed]
+    initial_state: reported
+    artifacts:
+      - state.yml
+      - report.md
+      - context.md
+      - clarifications/
+      - triage.md
+      - fix-plan.md
+    classification_keywords:
+      - fix
+      - bug
+      - error
+      - broken
+      - crash
+      - issue
+      - failing
+      - timeout
+
+  idea:
+    base_path: ideas
+    states: [exploring, refined, shelved, converted]
+    initial_state: exploring
+    artifacts:
+      - state.yml
+      - description.md
+      - context.md
+      - refinement/
+      - refined-idea.md
+    classification_keywords: []  # Ideas don't auto-classify
+
+# Future expansion: polyglot script support
+# runner: python | bash | powershell
+#
+# When enabled, scripts will be organized as:
+# scripts/
+#   run.py              # dispatcher
+#   impl/
+#     python/
+#     bash/
+#     powershell/

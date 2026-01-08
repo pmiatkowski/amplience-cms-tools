@@ -1,5 +1,0 @@
-workflow_type: feature
-name: http-429-retry
-status: prd-approved
-created: 2025-12-29
-updated: 2025-12-29

@@ -340,15 +340,25 @@ prefix/suffix patterns and optional publishing workflow.
 
 ### 14. Manage Extensions
 
-**Command**: Manage Extensions  
-**Documentation**: [export-extensions.md](docs/export-extensions.md)
+**Command**: Manage Extensions
+**Documentation**: [export-extensions.md](docs/export-extensions.md) |
+[import-extensions.md](docs/import-extensions.md)
 
-Provides a submenu for extension management operations. Currently supports bulk
-export of extensions from a hub with intelligent regex-based filtering and
-flexible handling of existing exports. Includes three export modes: full
-overwrite, selective overwrite (matching only), and incremental addition (get
-missing only). Features file validation, preview mode, and configurable default
-filters. Future phases will add import and delete capabilities.
+Provides a submenu for extension management operations with two capabilities:
+
+**Export Extensions**: Bulk export extensions from a hub with intelligent
+regex-based filtering and flexible handling of existing exports. Includes three
+export modes: full overwrite, selective overwrite (matching only), and
+incremental addition (get missing only). Features file validation, preview mode,
+and configurable default filters.
+
+**Import Extensions**: Bulk import extensions to a hub with automatic
+hub-specific field updates (hub IDs and URL origins). Uses temporary directory
+workflow to preserve source files, supports regex-based filtering, file
+validation, and preview mode. Ideal for cross-environment deployment and
+migration scenarios.
+
+Future enhancements will add delete capabilities.
 
 ## 📊 Common Features Across All Commands
 

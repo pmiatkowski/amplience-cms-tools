@@ -1,4 +1,5 @@
 import { runExportExtensions } from './export-extensions';
+import { runImportExtensions } from './import-extensions';
 import { promptForExtensionOperation } from './prompts';
 
 /**
@@ -19,7 +20,7 @@ export async function runManageExtensions(): Promise<void> {
         await runExportExtensions();
         break;
       case 'import':
-        console.log('⚠️  Import functionality coming soon');
+        await runImportExtensions();
         break;
       case 'delete':
         console.log('⚠️  Delete functionality coming soon');

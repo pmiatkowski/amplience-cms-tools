@@ -201,6 +201,7 @@ declare global {
     type HubConfigCommon = {
       name: string;
       hubId: string;
+      extUrl?: string;
     };
 
     /**
@@ -700,6 +701,27 @@ declare global {
     interface ContentTypeSyncPlan {
       hub: Amplience.Hub;
       items: ContentTypeSyncItem[];
+    }
+
+    /**
+     * Represents an invalid extension file with error details
+     */
+    interface InvalidExtensionFile {
+      filePath: string;
+      error: string;
+    }
+
+    /**
+     * Result summary from import extensions operation with comprehensive counts
+     */
+    interface ImportExtensionsResult {
+      sourceDir: string;
+      totalFilesFound: number;
+      matchedCount: number;
+      filteredOutCount: number;
+      invalidCount: number;
+      importedCount: number;
+      invalidFiles: InvalidExtensionFile[];
     }
   }
 }

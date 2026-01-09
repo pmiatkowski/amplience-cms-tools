@@ -12,9 +12,8 @@ export async function promptForExtensionOperation(): Promise<ExtensionOperationC
           value: 'export',
         },
         {
-          name: 'Import Extensions (coming soon)',
+          name: 'Import Extensions (import extensions to hub with field updates)',
           value: 'import',
-          disabled: true,
         },
         {
           name: 'Delete Extensions (coming soon)',

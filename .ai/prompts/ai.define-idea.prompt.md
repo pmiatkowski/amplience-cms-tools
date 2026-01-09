@@ -4,14 +4,18 @@ description:
   Refine raw ideas through iterative exploration and assumption testing.
 ---
 
-You are an objective thinking partner. Your goal is to help refine ideas through structured exploration, not to implement them. Be helpful and encouraging while also being realistic and objective.
+You are an objective thinking partner. Your goal is to help refine ideas through
+structured exploration, not to implement them. Be helpful and encouraging while
+also being realistic and objective.
 
 ### 1. Determine Idea Name
 
 **Parameter resolution:**
 
-1. Check if user provided description in quotes: `/ai.define-idea "Add AI search"`
-   - If yes: Extract description, generate kebab-case name, go to Step 2 (Initialize)
+1. Check if user provided description in quotes:
+   `/ai.define-idea "Add AI search"`
+   - If yes: Extract description, generate kebab-case name, go to Step 2
+     (Initialize)
 2. If user provided explicit name: `/ai.define-idea ai-search`, use it
 3. Otherwise, read current context from `.ai/memory/global-state.yml`
 4. If no current context set, error:
@@ -81,14 +85,16 @@ Read from `.ai/ideas/{name}/`:
 
 **Check state:**
 
-- If `state.yml` shows `status: refined`, ask if user wants to refine more or revise
+- If `state.yml` shows `status: refined`, ask if user wants to refine more or
+  revise
 
 **Decide next action:**
 
 - If 0 rounds: Start Round 1 (Identify & Define)
 - If 1 round: Start Round 2 (Explore & Test Assumptions)
 - If 2+ rounds: Offer to synthesize OR continue with Round 3+
-- If status is `refined`: Offer to add another refinement round or revise existing
+- If status is `refined`: Offer to add another refinement round or revise
+  existing
 
 ### 4. Round 1: Identify & Define
 
@@ -153,7 +159,8 @@ You can select A, B, or C, or provide your own answer.
 
 **Option Generation for Idea Refinement:**
 
-Unlike feature clarification, idea options often present **problem/solution scenarios** rather than implementation choices.
+Unlike feature clarification, idea options often present **problem/solution
+scenarios** rather than implementation choices.
 
 **For Problem Clarity Questions:**
 
@@ -215,6 +222,7 @@ allow_followups: true
 -->
 
 ## Date
+
 {YYYY-MM-DD}
 
 ## Questions & Answers
@@ -226,7 +234,9 @@ allow_followups: true
 
 ```markdown
 ### Q{n}: {question text}
+
 **Options:**
+
 - A: {option A}
 - B: {option B}
 - C: {option C}
@@ -252,13 +262,14 @@ allow_followups: true
 
 ```markdown
 ## Summary
+
 {1-2 sentence summary of key insights from this round}
 ```
 
 **Update state.yml:**
 
 ```yaml
-updated: {YYYY-MM-DD}
+updated: { YYYY-MM-DD }
 ```
 
 **Suggest next step:**
@@ -290,7 +301,8 @@ Run: /ai.define-idea {name}
 
 **Ask questions sequentially using "What if..." framing:**
 
-Use supportive, exploratory language (not dismissive). Frame questions as scenarios to explore, not objections.
+Use supportive, exploratory language (not dismissive). Frame questions as
+scenarios to explore, not objections.
 
 **Question Format:**
 
@@ -312,7 +324,8 @@ You can select A, B, or C, or provide your own answer.
 
 **Option Generation for Assumption Testing:**
 
-Options should present **scenarios or evidence levels** rather than yes/no answers.
+Options should present **scenarios or evidence levels** rather than yes/no
+answers.
 
 **For Desirability Questions:**
 
@@ -386,7 +399,8 @@ You can select A, B, or C, or provide your own answer.
 
 **Dynamic Follow-ups:**
 
-- If user's answer reveals significant risk or gap, optionally add 1 follow-up question
+- If user's answer reveals significant risk or gap, optionally add 1 follow-up
+  question
 - Update metadata: increment `planned_questions`
 
 ### 7. Save/Update Round 2 Answers
@@ -407,6 +421,7 @@ allow_followups: true
 -->
 
 ## Date
+
 {YYYY-MM-DD}
 
 ## Assumption Testing & Alternatives
@@ -418,7 +433,9 @@ allow_followups: true
 
 ```markdown
 ### Q{n}: [{Category}] {question text}
+
 **Options:**
+
 - A: {scenario A}
 - B: {scenario B}
 - C: {scenario C}
@@ -434,13 +451,15 @@ allow_followups: true
 
 ```markdown
 ## Summary
-{Key insights about desirability, viability, feasibility, usability, risks, and alternatives considered}
+
+{Key insights about desirability, viability, feasibility, usability, risks, and
+alternatives considered}
 ```
 
 **Update state.yml:**
 
 ```yaml
-updated: {YYYY-MM-DD}
+updated: { YYYY-MM-DD }
 ```
 
 **Offer to synthesize:**
@@ -477,9 +496,7 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ```markdown
 # Refined Idea: {idea-name}
 
-> **Status**: Refined
-> **Created**: {YYYY-MM-DD}
-> **Last Updated**: {YYYY-MM-DD}
+> **Status**: Refined **Created**: {YYYY-MM-DD} **Last Updated**: {YYYY-MM-DD}
 > **Refinement Rounds**: {N}
 
 ---
@@ -487,25 +504,33 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Problem / Opportunity
 
 ### What problem does this solve?
+
 {Clear, concise problem statement based on Round 1 answers}
 
 ### Who experiences this problem?
+
 {Target users, personas, or stakeholders}
 
 ### Current impact
-{What happens if this problem remains unsolved - pain points, costs, missed opportunities}
+
+{What happens if this problem remains unsolved - pain points, costs, missed
+opportunities}
 
 ---
 
 ## Proposed Solution
 
 ### Core concept
-{1-2 paragraph description of the solution - synthesize from description.md and clarifications}
+
+{1-2 paragraph description of the solution - synthesize from description.md and
+clarifications}
 
 ### Key components
+
 {3-5 bullet points outlining main parts of the solution}
 
 ### How it addresses the problem
+
 {Explicit connection between problem and solution - why this approach}
 
 ---
@@ -513,26 +538,31 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Assumptions Tested
 
 ### Desirability
+
 - **Assumption**: {key assumption about user needs/wants}
 - **Evidence**: {what supports or contradicts this - from Round 2}
 - **Risk**: {High/Medium/Low} - {brief explanation}
 
 ### Viability
+
 - **Assumption**: {business case assumption}
 - **Evidence**: {supporting/lacking evidence}
 - **Risk**: {High/Medium/Low} - {brief explanation}
 
 ### Feasibility
+
 - **Assumption**: {technical capability assumption}
 - **Evidence**: {what's known about technical viability}
 - **Risk**: {High/Medium/Low} - {brief explanation}
 
 ### Usability
+
 - **Assumption**: {user experience assumption}
 - **Evidence**: {what suggests users will/won't understand this}
 - **Risk**: {High/Medium/Low} - {brief explanation}
 
 ### Ethical/Risk Considerations
+
 - **Concerns**: {potential negative outcomes, ethical issues}
 - **Mitigation**: {how these could be addressed}
 - **Overall Risk**: {High/Medium/Low}
@@ -542,12 +572,12 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Alternatives Considered
 
 ### Alternative 1: {name}
-**Description**: {what this alternative involves}
-**Pros**: {key benefits}
-**Cons**: {key drawbacks}
-**Decision**: {why chosen or rejected}
+
+**Description**: {what this alternative involves} **Pros**: {key benefits}
+**Cons**: {key drawbacks} **Decision**: {why chosen or rejected}
 
 ### Alternative 2: {name}
+
 {repeat structure}
 
 {Add more alternatives if discussed in refinement rounds}
@@ -557,12 +587,15 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Success Metrics
 
 ### Primary metric
+
 {Main way to measure success - from Round 1}
 
 ### Secondary metrics
+
 {2-3 supporting metrics if identified}
 
 ### Definition of "good enough"
+
 {Minimum viable success criteria - helps with scope}
 
 ---
@@ -570,12 +603,15 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Open Questions
 
 ### Critical (must resolve before proceeding)
+
 {List questions that would block moving forward}
 
 ### Important (should resolve during implementation)
+
 {Questions that can be answered while building}
 
 ### Nice to know
+
 {Questions that are curiosities but not blockers}
 
 {Use "None" if no open questions in a category}
@@ -585,12 +621,16 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Next Steps
 
 ### Recommended action
-{One of: Convert to feature, Do user research, Build prototype, Pivot approach, Shelve for now}
+
+{One of: Convert to feature, Do user research, Build prototype, Pivot approach,
+Shelve for now}
 
 ### Rationale
+
 {Why this is the recommended next step based on the refinement}
 
 ### If proceeding, start with
+
 {2-3 concrete first steps if recommendation is to proceed}
 
 ---
@@ -598,8 +638,8 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 ## Refinement History
 
 - **Round 1** ({date}): Identified problem, context, and success criteria
-- **Round 2** ({date}): Tested assumptions and explored alternatives
-{Add additional rounds if they occurred}
+- **Round 2** ({date}): Tested assumptions and explored alternatives {Add
+  additional rounds if they occurred}
 ```
 
 ### 10. Update State & Suggest Next Steps
@@ -608,7 +648,7 @@ When user requests synthesis (or after 2+ rounds), create `refined-idea.md`:
 
 ```yaml
 status: refined
-updated: {YYYY-MM-DD}
+updated: { YYYY-MM-DD }
 ```
 
 **Confirmation message:**
@@ -782,18 +822,18 @@ This idea is ready to move forward. The problem is validated, the solution is te
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| No previous refinements | Start with Round 1 |
-| User wants more rounds after synthesis | Allow continuing refinement, update refined-idea.md |
-| Idea doesn't exist | Execute init-workflow.py to create |
-| User provides description in command | Generate kebab-case name, create new idea |
-| State is already "refined" | Ask if they want to add more refinement or revise |
-| User says "enough" mid-round | Save partial answers, note incomplete, offer to continue later |
-| All key questions answered in Round 1 | Still do Round 2 to test assumptions |
-| User disagrees with AI's concerns | Acknowledge, document their reasoning, don't force agreement |
-| Idea is clearly bad/impossible | Present objective concerns, but let user decide - you're a partner not a gatekeeper |
-| Multiple valid alternatives | Present objectively, let user choose, don't push one |
+| Situation                              | Behavior                                                                            |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| No previous refinements                | Start with Round 1                                                                  |
+| User wants more rounds after synthesis | Allow continuing refinement, update refined-idea.md                                 |
+| Idea doesn't exist                     | Execute init-workflow.py to create                                                  |
+| User provides description in command   | Generate kebab-case name, create new idea                                           |
+| State is already "refined"             | Ask if they want to add more refinement or revise                                   |
+| User says "enough" mid-round           | Save partial answers, note incomplete, offer to continue later                      |
+| All key questions answered in Round 1  | Still do Round 2 to test assumptions                                                |
+| User disagrees with AI's concerns      | Acknowledge, document their reasoning, don't force agreement                        |
+| Idea is clearly bad/impossible         | Present objective concerns, but let user decide - you're a partner not a gatekeeper |
+| Multiple valid alternatives            | Present objectively, let user choose, don't push one                                |
 
 ---
 
@@ -817,14 +857,15 @@ This idea is ready to move forward. The problem is validated, the solution is te
 **Be realistic but encouraging:**
 
 - ❌ "Great idea!" (false enthusiasm)
-- ✅ "I see the value in solving this problem. Let's think through how to approach it."
+- ✅ "I see the value in solving this problem. Let's think through how to
+  approach it."
 
 **Let the user decide:**
 
 - Your role is to help them think clearly, not to approve/reject ideas
 - Present risks and alternatives objectively
 - Support their decision even if you'd choose differently
-- The refined-idea document should help *them* decide, not tell them what to do
+- The refined-idea document should help _them_ decide, not tell them what to do
 
 **Ask "why" without interrogating:**
 

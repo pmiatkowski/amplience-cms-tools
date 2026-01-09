@@ -1,14 +1,14 @@
 ---
 agent: agent
-description:
-  Verify implementation plan or actual code against coding standards.
+description: Verify implementation plan or actual code against coding standards.
 ---
 
 ## Important: This Is Verification Only
 
 ⚠️ **ANALYZE AND REPORT, DO NOT FIX**
 
-Your role is to identify discrepancies between implementation plans/code and coding standards, then generate a report. Nothing more.
+Your role is to identify discrepancies between implementation plans/code and
+coding standards, then generate a report. Nothing more.
 
 **Do:**
 
@@ -40,18 +40,21 @@ User: /ai.verify {workflow-name} code  # Verify actual code implementation
 
 ## Instructions
 
-You are a quality assurance analyst verifying alignment between implementation artifacts and coding standards. Your goal is to identify and categorize discrepancies without making fixes.
+You are a quality assurance analyst verifying alignment between implementation
+artifacts and coding standards. Your goal is to identify and categorize
+discrepancies without making fixes.
 
 ### 1. Determine Workflow Name and Type
 
 **Parameter resolution:**
 
-1. If user provided explicit name (`/ai.verify feature-name` or `/ai.verify bug-name`), use it
+1. If user provided explicit name (`/ai.verify feature-name` or
+   `/ai.verify bug-name`), use it
 2. Otherwise, read current context from `.ai/memory/global-state.yml`
 
 ```yaml
 current:
-  name: {workflow-name}
+  name: { workflow-name }
   workflow_type: feature|bug|idea
 ```
 
@@ -84,6 +87,7 @@ Available workflows:
 **Default mode**: Plan verification
 
 **Detect mode from:**
+
 1. User command includes "code" → Code verification mode
 2. User provides file paths → Code verification mode
 3. Otherwise → Plan verification mode (default)
@@ -110,8 +114,10 @@ Please respond with 1 or 2.
 **For Plan Verification Mode:**
 
 **If workflow is a feature:**
+
 - Read `.ai/features/{name}/implementation-plan/plan.md`
 - If missing:
+
   ```
   ⚠ Implementation plan not found for '{name}'.
 
@@ -119,8 +125,10 @@ Please respond with 1 or 2.
   ```
 
 **If workflow is a bug:**
+
 - Read `.ai/bugs/{name}/fix-plan.md`
 - If missing:
+
   ```
   ⚠ Fix plan not found for '{name}'.
 
@@ -128,6 +136,7 @@ Please respond with 1 or 2.
   ```
 
 **If workflow is an idea:**
+
 ```
 ⚠ Ideas don't have implementation plans.
 
@@ -176,9 +185,11 @@ Generate a minimal PASS report and skip to step 7.
 **Step 2: Read coding standards hierarchy**
 
 Read in this order:
+
 1. `.ai/memory/coding-rules/index.md` - General principles and methodology
 2. Check for category-specific rules mentioned in index.md
-3. Read relevant category indices (e.g., `react/index.md`, `typescript/index.md`)
+3. Read relevant category indices (e.g., `react/index.md`,
+   `typescript/index.md`)
 4. Read up to 10-15 most relevant individual rule files based on:
    - Tech stack (from `.ai/memory/tech-stack.md` if exists)
    - Plan/code content (technologies mentioned)
@@ -187,6 +198,7 @@ Read in this order:
 **Step 3: Organize standards for analysis**
 
 Group standards into categories:
+
 - **Development Methodology** (TDD, BDD, testing approach)
 - **Architectural Principles** (SOLID, DRY, patterns)
 - **Testing Requirements** (coverage, types of tests)
@@ -199,16 +211,22 @@ Group standards into categories:
 
 **Analysis Strategy:**
 
-Compare the implementation plan/code against coding standards and identify discrepancies across three severity levels.
+Compare the implementation plan/code against coding standards and identify
+discrepancies across three severity levels.
 
 **Critical Issues (Blocks Implementation):**
+
 - Plan/code violates architectural constraints from coding rules
-- Missing required testing strategy per standards (e.g., standards require TDD but plan has no test tasks)
-- Inconsistent with tech stack requirements (e.g., using wrong framework version)
-- Security standards violations (e.g., no input validation when standards require it)
+- Missing required testing strategy per standards (e.g., standards require TDD
+  but plan has no test tasks)
+- Inconsistent with tech stack requirements (e.g., using wrong framework
+  version)
+- Security standards violations (e.g., no input validation when standards
+  require it)
 - Missing error handling when standards mandate it
 
 **Warnings (Should Address):**
+
 - Plan tasks don't reference relevant coding rules where they should
 - Naming conventions not aligned with standards
 - Incomplete documentation standards application
@@ -216,6 +234,7 @@ Compare the implementation plan/code against coding standards and identify discr
 - Code review requirements not addressed in plan
 
 **Info (Suggestions):**
+
 - Could leverage additional coding standards for better quality
 - Opportunities to enhance with best practices from standards
 - Alternative approaches mentioned in standards worth considering
@@ -224,6 +243,7 @@ Compare the implementation plan/code against coding standards and identify discr
 **Verification Checks by Mode:**
 
 **Plan Verification:**
+
 - Does each phase align with development methodology?
 - Are testing tasks included per testing standards?
 - Do architectural decisions match architectural principles?
@@ -232,6 +252,7 @@ Compare the implementation plan/code against coding standards and identify discr
 - Is error handling strategy consistent with standards?
 
 **Code Verification:**
+
 - Does code structure match architectural standards?
 - Are naming conventions followed?
 - Is test coverage adequate per standards?
@@ -264,22 +285,23 @@ Use this template:
 ```markdown
 # Verification Report: {workflow-name}
 
-> **Verified**: {YYYY-MM-DD HH:MM:SS}
-> **Workflow**: {workflow-name}
-> **Workflow Type**: {feature | bug | idea}
-> **Verification Mode**: {plan | code | both}
-> **Coding Standards**: {last updated date from coding-rules/index.md, or "Not defined"}
+> **Verified**: {YYYY-MM-DD HH:MM:SS} **Workflow**: {workflow-name} **Workflow
+> Type**: {feature | bug | idea} **Verification Mode**: {plan | code | both}
+> **Coding Standards**: {last updated date from coding-rules/index.md, or "Not
+> defined"}
 
 ---
 
 ## Summary
 
 **Total Issues**: {count}
+
 - 🔴 Critical: {count}
 - 🟡 Warning: {count}
 - 🔵 Info: {count}
 
 **Verdict**: {PASS | PASS WITH WARNINGS | FAIL}
+
 - PASS: No critical issues, warnings acceptable
 - PASS WITH WARNINGS: No critical issues, but warnings exist
 - FAIL: One or more critical issues found
@@ -288,48 +310,44 @@ Use this template:
 
 ## Critical Issues
 
-{If no critical issues:}
-None found.
+{If no critical issues:} None found.
 
 {Otherwise, for each critical issue:}
 
 ### C-{N}: {Issue Title}
 
-**Location**: `{file path or plan section reference}`
-**Standard**: `{coding-rules/category/rule.md}` or "General principles from index.md"
-**Issue**: {Clear description of what violates the standard}
-**Recommendation**: {Specific action to fix, e.g., "Add unit test tasks for authentication logic per TDD methodology"}
+**Location**: `{file path or plan section reference}` **Standard**:
+`{coding-rules/category/rule.md}` or "General principles from index.md"
+**Issue**: {Clear description of what violates the standard} **Recommendation**:
+{Specific action to fix, e.g., "Add unit test tasks for authentication logic per
+TDD methodology"}
 
 ---
 
 ## Warnings
 
-{If no warnings:}
-None found.
+{If no warnings:} None found.
 
 {Otherwise, for each warning:}
 
 ### W-{N}: {Issue Title}
 
-**Location**: `{file path or plan section reference}`
-**Standard**: `{coding-rules/category/rule.md}`
-**Issue**: {Description of the warning}
+**Location**: `{file path or plan section reference}` **Standard**:
+`{coding-rules/category/rule.md}` **Issue**: {Description of the warning}
 **Recommendation**: {Suggested action}
 
 ---
 
 ## Info
 
-{If no info items:}
-None.
+{If no info items:} None.
 
 {Otherwise, for each info item:}
 
 ### I-{N}: {Issue Title}
 
-**Location**: `{file path or plan section reference}`
-**Standard**: `{coding-rules/category/rule.md}`
-**Observation**: {What was noticed}
+**Location**: `{file path or plan section reference}` **Standard**:
+`{coding-rules/category/rule.md}` **Observation**: {What was noticed}
 **Suggestion**: {Optional improvement}
 
 ---
@@ -339,24 +357,28 @@ None.
 ### Standards Checked
 
 {List all coding rule files that were read and applied:}
+
 - `coding-rules/index.md` - General principles and methodology
 - `coding-rules/{category}/index.md` - {Category description}
 - `coding-rules/{category}/{rule}.md` - {Rule description}
 
-{If no standards exist:}
-⚠ No coding standards defined. Verification could not be performed comprehensively.
+{If no standards exist:} ⚠ No coding standards defined. Verification could not
+be performed comprehensively.
 
 ### Standards Not Applicable
 
 {List standards that were read but not relevant:}
-- `coding-rules/{category}/{rule}.md` - Reason: {why not applicable, e.g., "Mobile-specific rules, but project is web-only"}
 
-{If all standards were applicable:}
-All loaded standards were applicable to this verification.
+- `coding-rules/{category}/{rule}.md` - Reason: {why not applicable, e.g.,
+  "Mobile-specific rules, but project is web-only"}
+
+{If all standards were applicable:} All loaded standards were applicable to this
+verification.
 
 ### Coverage Analysis
 
 **For Plan Verification:**
+
 - Total phases: {count}
 - Total tasks: {count}
 - Tasks referencing standards: {X} of {Y} ({percentage}%)
@@ -364,6 +386,7 @@ All loaded standards were applicable to this verification.
 - Phases with documentation tasks: {X} of {Y}
 
 **For Code Verification:**
+
 - Files checked: {count}
 - Total lines analyzed: {count}
 - Standards violations: {count}
@@ -376,20 +399,24 @@ All loaded standards were applicable to this verification.
 {Provide recommendations based on severity:}
 
 **If FAIL (Critical issues found):**
+
 1. Address all critical issues before proceeding with implementation
 2. Update implementation plan or fix code as needed
 3. Re-run /ai.verify to confirm issues are resolved
 4. Review coding standards at `coding-rules/`
 
 **If PASS WITH WARNINGS:**
+
 1. Consider addressing warnings before execution (recommended)
 2. Document any warnings you choose not to address
 3. Proceed with implementation: /ai.execute
 4. Run /ai.verify again after implementation to check code
 
 **If PASS:**
+
 1. Proceed with implementation: /ai.execute
-2. Run /ai.verify after implementation to validate code against plan and standards
+2. Run /ai.verify after implementation to validate code against plan and
+   standards
 3. Keep coding standards in mind during development
 
 ---
@@ -402,24 +429,26 @@ All loaded standards were applicable to this verification.
 {If previous reports exist, list the 5 most recent:}
 
 **Previous verifications:**
+
 1. `verification-{workflow-name}-{timestamp-1}.report.md` - {verdict-1}
-2. `verification-{workflow-name}-{timestamp-2}.report.md` - {verdict-2}
-...
+2. `verification-{workflow-name}-{timestamp-2}.report.md` - {verdict-2} ...
 
 ---
 
-*This verification was performed automatically and does not modify any files.*
+_This verification was performed automatically and does not modify any files._
 ```
 
 **Step 5: Create symlink to latest report**
 
 **On Windows:**
+
 ```bash
 # Create copy as "latest" (Windows may not support symlinks without admin)
 copy .ai\reports\verification-{name}-{timestamp}.report.md .ai\reports\verification-{name}-latest.report.md
 ```
 
 **On Linux/Mac:**
+
 ```bash
 # Create symlink
 ln -sf verification-{name}-{timestamp}.report.md .ai/reports/verification-{name}-latest.report.md
@@ -427,9 +456,11 @@ ln -sf verification-{name}-{timestamp}.report.md .ai/reports/verification-{name}
 
 ### 7. Update State (Optional)
 
-**Do NOT update workflow state** - verification is read-only and doesn't change workflow status.
+**Do NOT update workflow state** - verification is read-only and doesn't change
+workflow status.
 
 The workflow remains in its current state:
+
 - Features: prd-approved, planning, or in-progress
 - Bugs: reported, triaged, or fixing
 
@@ -467,22 +498,22 @@ Next steps:
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| No coding standards exist | Generate minimal report with warning: "No standards defined. Run /ai.define-coding-instructions first." Mark verdict as PASS (can't fail without standards). |
-| No implementation plan exists | For plan mode: Error and suggest /ai.define-implementation-plan or /ai.plan-fix. For code mode: Skip plan comparison. |
-| Workflow is a bug | Use fix-plan.md instead of implementation-plan/plan.md. Apply simplified verification (bugs have lighter planning). |
-| Workflow is an idea | Error: Ideas don't have implementation plans. Suggest converting to feature first. |
-| No current context | Error: Require explicit workflow name or /ai.set-current. |
-| Reports directory doesn't exist | Create it automatically with mkdir. |
-| No discrepancies found | Generate PASS report with congratulations message. |
-| Coding rules incomplete | Use available rules, note missing categories in "Standards Not Applicable" section. |
-| User provides file paths for code verification | Read those files and verify against plan (if exists) and standards. |
-| Plan references coding standards correctly | Mark as Info: "Plan appropriately references coding standards." |
-| Multiple verification runs | List previous reports in "Report History" section (up to 5 most recent). |
-| Symlink creation fails on Windows | Fall back to copying file instead of creating symlink. |
-| Very large plan/code | Limit analysis to most critical standards (testing, architecture, security) and note in report. |
-| Standards contradict each other | Mark as Warning: "Coding standards contain contradictions" and list them. |
+| Situation                                      | Behavior                                                                                                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| No coding standards exist                      | Generate minimal report with warning: "No standards defined. Run /ai.define-coding-instructions first." Mark verdict as PASS (can't fail without standards). |
+| No implementation plan exists                  | For plan mode: Error and suggest /ai.define-implementation-plan or /ai.plan-fix. For code mode: Skip plan comparison.                                        |
+| Workflow is a bug                              | Use fix-plan.md instead of implementation-plan/plan.md. Apply simplified verification (bugs have lighter planning).                                          |
+| Workflow is an idea                            | Error: Ideas don't have implementation plans. Suggest converting to feature first.                                                                           |
+| No current context                             | Error: Require explicit workflow name or /ai.set-current.                                                                                                    |
+| Reports directory doesn't exist                | Create it automatically with mkdir.                                                                                                                          |
+| No discrepancies found                         | Generate PASS report with congratulations message.                                                                                                           |
+| Coding rules incomplete                        | Use available rules, note missing categories in "Standards Not Applicable" section.                                                                          |
+| User provides file paths for code verification | Read those files and verify against plan (if exists) and standards.                                                                                          |
+| Plan references coding standards correctly     | Mark as Info: "Plan appropriately references coding standards."                                                                                              |
+| Multiple verification runs                     | List previous reports in "Report History" section (up to 5 most recent).                                                                                     |
+| Symlink creation fails on Windows              | Fall back to copying file instead of creating symlink.                                                                                                       |
+| Very large plan/code                           | Limit analysis to most critical standards (testing, architecture, security) and note in report.                                                              |
+| Standards contradict each other                | Mark as Warning: "Coding standards contain contradictions" and list them.                                                                                    |
 
 ---
 

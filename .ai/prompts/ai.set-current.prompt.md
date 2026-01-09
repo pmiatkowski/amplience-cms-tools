@@ -1,10 +1,10 @@
 ---
 agent: agent
-description:
-  Manually set the current workflow context (feature or bug).
+description: Manually set the current workflow context (feature or bug).
 ---
 
-You are setting the current workflow context that will be used by other commands when no explicit name is provided.
+You are setting the current workflow context that will be used by other commands
+when no explicit name is provided.
 
 ### 1. Parse Input
 
@@ -111,7 +111,9 @@ Next steps:
 
 ## Notes
 
-- The `--type` parameter is optional; the script auto-detects if a workflow is a feature or bug
+- The `--type` parameter is optional; the script auto-detects if a workflow is a
+  feature or bug
 - This command does NOT create new workflows; use `/add` for that
 - Current context is stored in `.ai/memory/global-state.yml`
-- All subsequent commands (`/ai.clarify`, `/ai.add-context`, etc.) will use this context when no explicit name is provided
+- All subsequent commands (`/ai.clarify`, `/ai.add-context`, etc.) will use this
+  context when no explicit name is provided

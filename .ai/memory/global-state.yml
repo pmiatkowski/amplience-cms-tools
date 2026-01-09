@@ -1,0 +1,7 @@
+version: 1
+current:
+  name: extensions-export
+  workflow_type: feature
+  set_date: 2026-01-08
+  set_method: auto
+last_updated: 2026-01-08

@@ -1,10 +1,12 @@
 ---
 agent: agent
 description:
-  Handle requirement changes after PRD exists. Captures the change, triggers clarification if needed, and refines the PRD.
+  Handle requirement changes after PRD exists. Captures the change, triggers
+  clarification if needed, and refines the PRD.
 ---
 
-You are managing a requirements change. Your goal is to capture the change, assess its impact, and update documentation accordingly.
+You are managing a requirements change. Your goal is to capture the change,
+assess its impact, and update documentation accordingly.
 
 ### 1. Determine Feature Name
 
@@ -75,18 +77,23 @@ Create `updates/update-{n}.md`:
 # Feature Update {n}
 
 ## Date
+
 {YYYY-MM-DD}
 
 ## Change Description
+
 {user's description of what changed}
 
 ## Reason
+
 {why it's changing, or "Not specified"}
 
 ## Impact Assessment
+
 <!-- AI fills this -->
 
 **Affected PRD sections:**
+
 - {section 1}
 - {section 2}
 
@@ -163,8 +170,8 @@ When updating PRD:
 Update `state.yml`:
 
 ```yaml
-status: prd-draft  # reset to draft if was approved
-updated: {YYYY-MM-DD}
+status: prd-draft # reset to draft if was approved
+updated: { YYYY-MM-DD }
 ```
 
 ### 8. Confirm Completion
@@ -267,11 +274,11 @@ Status reset to: prd-draft
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| Feature doesn't exist | Error: "Feature '{name}' not found" |
-| No PRD exists | Redirect to normal flow (add-context → clarify → create-prd) |
-| Implementation already started | Warn that plan may need updating too |
-| Contradicts existing requirement | Flag conflict, require user resolution |
-| Vague change description | Ask clarifying questions before saving |
-| Multiple changes at once | Save as single update, assess combined impact |
+| Situation                        | Behavior                                                     |
+| -------------------------------- | ------------------------------------------------------------ |
+| Feature doesn't exist            | Error: "Feature '{name}' not found"                          |
+| No PRD exists                    | Redirect to normal flow (add-context → clarify → create-prd) |
+| Implementation already started   | Warn that plan may need updating too                         |
+| Contradicts existing requirement | Flag conflict, require user resolution                       |
+| Vague change description         | Ask clarifying questions before saving                       |
+| Multiple changes at once         | Save as single update, assess combined impact                |

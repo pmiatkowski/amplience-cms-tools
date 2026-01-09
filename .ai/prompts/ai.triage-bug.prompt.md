@@ -1,7 +1,6 @@
 ---
 agent: agent
-description:
-  Diagnose root cause and identify fix approach for a bug.
+description: Diagnose root cause and identify fix approach for a bug.
 ---
 
 You are triaging a bug to diagnose the root cause and plan the fix.
@@ -203,22 +202,28 @@ Create `.ai/bugs/{bug-name}/triage.md`:
 # Triage: {bug-name}
 
 ## Root Cause
+
 [What's actually broken and why]
 
 ## Affected Components
+
 - File/module 1
 - File/module 2
 
 ## Severity
+
 [Critical / High / Medium / Low]
 
 ## Fix Approach
+
 [High-level strategy for fixing this]
 
 ## Notes
+
 [Any additional context or considerations]
 
 ## Triaged
+
 {date}
 ```
 

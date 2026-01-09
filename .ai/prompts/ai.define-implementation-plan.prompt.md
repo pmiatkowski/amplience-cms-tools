@@ -1,9 +1,7 @@
 ---
 agent: agent
-description:
-  Create a phased implementation plan from an approved PRD.
+description: Create a phased implementation plan from an approved PRD.
 ---
-
 
 ## Important: This Is Planning Only
 
@@ -38,13 +36,15 @@ User: /ai.define-implementation-plan {feature-name} # Explicit feature
 
 ## Instructions
 
-You are a technical lead planning implementation. Your goal is to break down the PRD into actionable phases with clear tasks and deliverables.
+You are a technical lead planning implementation. Your goal is to break down the
+PRD into actionable phases with clear tasks and deliverables.
 
 ### 1. Determine Feature Name
 
 **Parameter resolution:**
 
-1. If user provided explicit name (`/ai.define-implementation-plan feature-name`), use it
+1. If user provided explicit name
+   (`/ai.define-implementation-plan feature-name`), use it
 2. Otherwise, read current context from `.ai/memory/global-state.yml`
 3. If current context is a bug:
 
@@ -132,7 +132,8 @@ If `tech-stack.md` exists, use it to inform:
 If `coding-rules/index.md` exists:
 
 1. Read the index to understand available rule categories
-2. Read relevant category indices based on tech stack (e.g., react/index.md, typescript/index.md)
+2. Read relevant category indices based on tech stack (e.g., react/index.md,
+   typescript/index.md)
 3. Scan relevant rule files (limit to 3-5 most applicable rules)
 4. Incorporate rules into task descriptions
 
@@ -170,14 +171,17 @@ Fill `implementation-plan/plan.md` using this structure:
 **Goal**: {What this phase achieves — one sentence}
 
 ### Tasks
+
 - [ ] Task 1.1: {description}
 - [ ] Task 1.2: {description}
 - [ ] Task 1.3: {description}
 
 ### Deliverables
+
 - {What's completed/shippable after this phase}
 
 ### Dependencies
+
 - {What must exist before starting, or "None"}
 
 ---
@@ -187,13 +191,16 @@ Fill `implementation-plan/plan.md` using this structure:
 **Goal**: {What this phase achieves}
 
 ### Tasks
+
 - [ ] Task 2.1: {description}
 - [ ] Task 2.2: {description}
 
 ### Deliverables
+
 - {What's completed after this phase}
 
 ### Dependencies
+
 - Phase 1 complete
 - {Other dependencies}
 
@@ -210,6 +217,7 @@ Fill `implementation-plan/plan.md` using this structure:
 ### Coding Standards References
 
 {If coding rules exist, list key rules that apply to this implementation:}
+
 - {Rule category}: {Brief description or link to rule file}
 - {Rule category}: {Brief description or link to rule file}
 ```
@@ -231,8 +239,11 @@ Fill `implementation-plan/plan.md` using this structure:
 - Prefix with phase number (1.1, 1.2, 2.1, ...)
 - Be specific — "Implement login form" not "Build frontend"
 - **Include coding standards**: Reference specific coding rules when applicable
-  - Example: "Task 1.1: Create LoginForm component following React component architecture standards (see memory/coding-rules/react/component-architecture.md)"
-  - Example: "Task 2.3: Implement type-safe API client (see memory/coding-rules/typescript/type-safety.md)"
+  - Example: "Task 1.1: Create LoginForm component following React component
+    architecture standards (see
+    memory/coding-rules/react/component-architecture.md)"
+  - Example: "Task 2.3: Implement type-safe API client (see
+    memory/coding-rules/typescript/type-safety.md)"
 
 **Mapping from PRD:**
 
@@ -247,12 +258,12 @@ Fill `implementation-plan/plan.md` using this structure:
 ```yaml
 status: planning
 current_phase: 1
-created: {YYYY-MM-DD}
-updated: {YYYY-MM-DD}
+created: { YYYY-MM-DD }
+updated: { YYYY-MM-DD }
 phases:
-  - name: {Phase 1 name}
+  - name: { Phase 1 name }
     status: pending
-  - name: {Phase 2 name}
+  - name: { Phase 2 name }
     status: pending
 ```
 
@@ -260,10 +271,12 @@ phases:
 
 ```yaml
 status: planning
-updated: {YYYY-MM-DD}
+updated: { YYYY-MM-DD }
 ```
 
 ### 8. Confirm Completion
+
+Show completion summary:
 
 ```
 ✓ Created implementation plan
@@ -274,24 +287,109 @@ Phases:
   ...
 
 Scope: {Small | Medium | Large}
-
-Next steps for USER:
-  1. Review implementation-plan/plan.md
-  2. Run /ai.verify to check plan against coding standards (Recommended)
-  3. Adjust phases/tasks as needed
-  4. When ready, begin implementation: /ai.execute
 ```
 
-### 9. Stop Here
+**Do not proceed to section 10 yet** - user needs to see this completion message
+first.
 
-✓ Your task is complete once you have:
+### 9. Stop Planning Phase
+
+✓ Your planning task is complete once you have:
 
 - Created implementation-plan/plan.md
 - Updated plan-state.yml
 - Updated state.yml
 - Confirmed completion to user
 
-**Do not proceed to implementation.** Return control to the user.
+**Do not proceed to implementation.** Continue to section 10 for verification
+prompt.
+
+### 10. Offer Verification
+
+After confirming completion (section 8), present this interactive prompt:
+
+```
+Implementation plan created successfully.
+
+Would you like to verify the plan against coding standards now?
+
+1. Yes, verify the plan (Recommended)
+   - Check plan alignment with coding standards
+   - Identify potential issues before execution
+   - Generate verification report
+   - ~1 minute
+
+2. No, I'll review manually
+   - You can run /ai.verify later
+   - Proceed to review plan.md
+   - Run /ai.execute when ready
+
+Please respond with 1 or 2.
+```
+
+**Wait for user response.**
+
+#### If User Selects Option 1 (Verify):
+
+1. Inform user: `Starting verification...`
+2. Invoke verification internally:
+   - Read `.ai/prompts/ai.verify.prompt.md`
+   - Execute verification using current workflow context
+   - Use "plan verification mode" (default)
+3. After verification completes, display summary:
+
+```
+✓ Verification complete
+
+Report: .ai/reports/verification-{name}-{timestamp}.report.md
+
+{Display verdict from verification: PASS / PASS WITH WARNINGS / FAIL}
+
+Next steps:
+  1. Review verification report (if issues found)
+  2. Review implementation-plan/plan.md
+  3. Adjust plan if needed
+  4. Run /ai.execute when ready
+```
+
+#### If User Selects Option 2 (Skip):
+
+```
+✓ Verification skipped
+
+You can verify later with: /ai.verify {feature-name}
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Verify plan: /ai.verify {feature-name} (recommended before execution)
+  3. Run /ai.execute {feature-name} when ready
+```
+
+#### If User Provides Invalid Response:
+
+Accept flexible responses:
+
+- **Option 1**: "1", "yes", "y", "verify"
+- **Option 2**: "2", "no", "n", "skip", "later"
+
+If response doesn't match any pattern, re-prompt once:
+
+```
+Please respond with 1 or 2:
+  1 - Verify the plan now
+  2 - Skip verification
+```
+
+If still invalid, default to Option 2 (skip) and show skip message.
+
+#### Edge Cases
+
+| Situation                         | Behavior                                                                                     |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| No coding standards exist         | Proceed with verification - verify prompt handles this gracefully with minimal PASS report   |
+| Verification script fails         | Show error message, suggest manual review of plan.md, provide `/ai.verify` command for retry |
+| Verification returns FAIL verdict | Show critical issues summary, recommend fixing plan, but don't block user from proceeding    |
+| User wants to execute immediately | Accept "execute" as Option 2 with note to run `/ai.execute`                                  |
 
 ---
 
@@ -318,6 +416,7 @@ Next steps for USER:
 **Goal**: Enable basic login/logout functionality
 
 ### Tasks
+
 - [ ] Task 1.1: Create login API endpoint (`POST /auth/login`)
 - [ ] Task 1.2: Implement password verification with bcrypt
 - [ ] Task 1.3: Create session in Redis on successful login
@@ -326,10 +425,12 @@ Next steps for USER:
 - [ ] Task 1.6: Connect form to API with error handling
 
 ### Deliverables
+
 - User can log in and log out
 - Sessions persist across page refresh
 
 ### Dependencies
+
 - None
 
 ---
@@ -339,16 +440,19 @@ Next steps for USER:
 **Goal**: Implement "remember me" and session expiration
 
 ### Tasks
+
 - [ ] Task 2.1: Add "remember me" checkbox to login form
 - [ ] Task 2.2: Implement 24h vs 7d session expiration logic
 - [ ] Task 2.3: Add session refresh on activity
 - [ ] Task 2.4: Handle expired session gracefully (redirect to login)
 
 ### Deliverables
+
 - Sessions expire correctly based on "remember me"
 - Users redirected when session expires
 
 ### Dependencies
+
 - Phase 1 complete
 
 ---
@@ -358,6 +462,7 @@ Next steps for USER:
 **Goal**: Enable password reset and add rate limiting
 
 ### Tasks
+
 - [ ] Task 3.1: Create password reset request endpoint
 - [ ] Task 3.2: Generate and store reset tokens (1h expiry)
 - [ ] Task 3.3: Integrate email service for reset links
@@ -366,10 +471,12 @@ Next steps for USER:
 - [ ] Task 3.6: Add failed attempt tracking
 
 ### Deliverables
+
 - Users can reset password via email
 - Accounts lock after failed attempts
 
 ### Dependencies
+
 - Phase 1 complete
 - Email service configured
 
@@ -382,14 +489,106 @@ Next steps for USER:
 - Consider adding logging for security audit trail (future enhancement)
 ```
 
+### Example: User Chooses Verification
+
+```
+✓ Created implementation plan
+
+Phases:
+  1. Core Authentication — 6 tasks
+  2. Session Management — 4 tasks
+  3. Password Reset & Security — 6 tasks
+
+Scope: Medium
+
+---
+
+Implementation plan created successfully.
+
+Would you like to verify the plan against coding standards now?
+
+1. Yes, verify the plan (Recommended)
+   - Check plan alignment with coding standards
+   - Identify potential issues before execution
+   - Generate verification report
+   - ~1 minute
+
+2. No, I'll review manually
+   - You can run /ai.verify later
+   - Proceed to review plan.md
+   - Run /ai.execute when ready
+
+Please respond with 1 or 2.
+```
+
+**[User responds: 1]**
+
+```
+Starting verification...
+
+✓ Verification complete
+
+Report: .ai/reports/verification-user-auth-20250108-143022.report.md
+
+Verdict: PASS WITH WARNINGS
+- Critical issues: 0
+- Warnings: 2
+- Info: 3
+
+Next steps:
+  1. Review verification report
+  2. Review implementation-plan/plan.md
+  3. Consider addressing warnings (optional)
+  4. Run /ai.execute when ready
+```
+
+### Example: User Skips Verification
+
+```
+✓ Created implementation plan
+
+Phases:
+  1. Core Authentication — 6 tasks
+  2. Session Management — 4 tasks
+
+Scope: Medium
+
+---
+
+Implementation plan created successfully.
+
+Would you like to verify the plan against coding standards now?
+
+1. Yes, verify the plan (Recommended)
+   ...
+
+2. No, I'll review manually
+   ...
+
+Please respond with 1 or 2.
+```
+
+**[User responds: 2]**
+
+```
+✓ Verification skipped
+
+You can verify later with: /ai.verify user-auth
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Verify plan: /ai.verify user-auth (recommended before execution)
+  3. Run /ai.execute user-auth when ready
+```
+
 ---
 
 ## Edge Cases
 
-| Situation | Behavior |
-|-----------|----------|
-| PRD doesn't exist | Error with instructions to create PRD first |
-| Plan folder doesn't exist | Error with script command to run |
-| Plan already exists | Ask: overwrite, create plan-v2.md, or cancel |
-| PRD has many TBDs | Generate plan but flag uncertain areas in Notes |
-| Very small feature | Single phase is acceptable |
+| Situation                 | Behavior                                        |
+| ------------------------- | ----------------------------------------------- |
+| PRD doesn't exist         | Error with instructions to create PRD first     |
+| Plan folder doesn't exist | Error with script command to run                |
+| Plan already exists       | Ask: overwrite, create plan-v2.md, or cancel    |
+| PRD has many TBDs         | Generate plan but flag uncertain areas in Notes |
+| Very small feature        | Single phase is acceptable                      |

@@ -1,7 +1,6 @@
 ---
 agent: agent
-description:
-  Create a lightweight fix implementation checklist.
+description: Create a lightweight fix implementation checklist.
 ---
 
 You are creating a simple fix plan checklist.
@@ -73,12 +72,15 @@ Create `.ai/bugs/{name}/fix-plan.md`:
 - [ ] Update documentation (if needed)
 
 ## Estimated Complexity
+
 [Simple / Medium / Complex]
 
 ## Testing Strategy
+
 [How to verify the fix works]
 
 ## Created
+
 {date}
 ```
 
@@ -126,9 +128,11 @@ Ready to implement! The checklist is in:
 - [ ] Update documentation with new timeout configuration
 
 ## Estimated Complexity
+
 Simple
 
 ## Testing Strategy
+
 1. Login to application
 2. Wait 5 minutes without activity
 3. Verify session is still active
@@ -136,6 +140,7 @@ Simple
 5. Verify session has expired
 
 ## Created
+
 2025-01-15
 ```
 

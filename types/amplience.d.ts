@@ -177,6 +177,27 @@ declare global {
       operations: UpdateOperation[];
     }
 
+    interface Extension {
+      id: string;
+      name?: string;
+      url?: string;
+      description?: string;
+      category?: string;
+      label?: string;
+      snippet?: string;
+      height?: number;
+      status?: string;
+      _links?: {
+        self?: { href: string };
+      };
+    }
+
+    interface HalExtensionsResponse extends HalPage {
+      _embedded: {
+        extensions: Extension[];
+      };
+    }
+
     type HubConfigCommon = {
       name: string;
       hubId: string;

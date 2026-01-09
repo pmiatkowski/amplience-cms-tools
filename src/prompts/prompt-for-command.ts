@@ -8,6 +8,10 @@ export async function promptForCommand(): Promise<CommandChoice> {
       message: 'Select a command to run:',
       choices: [
         {
+          name: 'Manage Extensions (export, import, or delete extensions)',
+          value: 'manage-extensions',
+        },
+        {
           name: 'Synchronize content-item hierarchy (recreates missing items based on source hierarchy)',
           value: 'sync-hierarchy',
         },
@@ -52,6 +56,7 @@ export async function promptForCommand(): Promise<CommandChoice> {
 }
 
 type CommandChoice =
+  | 'manage-extensions'
   | 'update-locale'
   | 'clean-repo'
   | 'list-folder-tree'

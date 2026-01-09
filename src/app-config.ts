@@ -21,8 +21,13 @@ function getHubConfigs(): Amplience.HubConfig[] {
     hubNames.forEach(hubName => {
       const hubId = process.env[`AMP_HUB_${hubName}_HUB_ID`];
       const name = process.env[`AMP_HUB_${hubName}_HUB_NAME`];
+      const extUrl = process.env[`AMP_HUB_${hubName}_EXT_URL`];
       if (hubId && name) {
-        configs.push({ name, hubId, patToken });
+        const config: Amplience.HubConfig = { name, hubId, patToken };
+        if (extUrl) {
+          config.extUrl = extUrl;
+        }
+        configs.push(config);
       } else {
         console.warn(
           `Incomplete configuration for hub "${hubName}". Missing one or more of: ` +
@@ -46,9 +51,14 @@ function getHubConfigs(): Amplience.HubConfig[] {
     const clientSecret = process.env[`AMP_HUB_${hubName}_CLIENT_SECRET`];
     const hubId = process.env[`AMP_HUB_${hubName}_HUB_ID`];
     const name = process.env[`AMP_HUB_${hubName}_HUB_NAME`];
+    const extUrl = process.env[`AMP_HUB_${hubName}_EXT_URL`];
 
     if (clientId && clientSecret && hubId && name) {
-      configs.push({ name, clientId, clientSecret, hubId });
+      const config: Amplience.HubConfig = { name, clientId, clientSecret, hubId };
+      if (extUrl) {
+        config.extUrl = extUrl;
+      }
+      configs.push(config);
     } else {
       console.warn(
         `Incomplete configuration for hub "${hubName}". Missing one or more of: ` +

@@ -9,6 +9,7 @@ export * from './copy-content-type-schemas';
 export * from './copy-content-types';
 export * from './copy-folder-with-content';
 export * from './list-folder-tree';
+export * from './manage-extensions';
 export * from './recreate-content-items';
 export * from './recreate-folder-structure';
 export * from './sync-content-type-properties';

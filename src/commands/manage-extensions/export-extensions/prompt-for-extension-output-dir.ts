@@ -18,7 +18,8 @@ export async function promptForExtensionOutputDirectory(
       name: 'targetDir',
       message: 'Where should extensions be exported?',
       default: defaultPath,
-      validate: (input: string) => input.trim().length > 0 || 'Please enter a directory path.',
+      validate: (input: string): string | boolean =>
+        input.trim().length > 0 || 'Please enter a directory path.',
     },
   ]);
 

@@ -95,14 +95,15 @@ export async function runExportExtensions(): Promise<void> {
       outputDir,
       pattern,
       mode,
-      onBeforeFiltering:
-        previewMode === 'preview'
-          ? async summary => {
+      ...(previewMode === 'preview'
+        ? {
+            onBeforeFiltering: async (summary): Promise<boolean> => {
               displayPreview(summary);
 
               return promptForPreviewConfirmation(summary.kept.length, summary.removed.length);
-            }
-          : undefined,
+            },
+          }
+        : {}),
     });
 
     // Display results
@@ -143,7 +144,7 @@ function displayPreview(summary: ExportExtensionsResult): void {
   }));
 
   console.table(tableRows);
-  console.log(`Total matching: ${summary.kept.length}/${summary.totalFiles}\n`);
+  console.log(`Total matching: ${summary.kept.length}/${summary.totalFilesInHub}\n`);
 }
 
 function handleExportError(error: unknown, hub: Amplience.HubConfig | null): void {

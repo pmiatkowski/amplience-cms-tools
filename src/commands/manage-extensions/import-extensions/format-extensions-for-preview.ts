@@ -27,8 +27,18 @@ export function formatExtensionsForPreview(extensions: ExtensionWithPath[]): Pre
     ID: extension.id,
     URL: truncate(extension.url || 'N/A', 80),
     Description: truncate(extension.description || 'N/A', 100),
-    File: path.basename(filePath),
+    File: extractFilename(filePath),
   }));
+}
+
+/**
+ * Extract filename from path, handling both Unix and Windows separators
+ */
+function extractFilename(filePath: string): string {
+  // Normalize path separators to forward slashes
+  const normalizedPath = filePath.replace(/\\/g, '/');
+
+  return path.basename(normalizedPath);
 }
 
 /**

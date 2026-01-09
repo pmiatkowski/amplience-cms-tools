@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.3.2...v1.4.0) (2026-01-09)
+
+
+### Features
+
+* add export/download extensions ([#12](https://github.com/pmiatkowski/amplience-cms-tools/issues/12)) ([9e90010](https://github.com/pmiatkowski/amplience-cms-tools/commit/9e90010d600e82f4592931984ca72f80f9318ef4))
+
 ## [1.3.2](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.3.1...v1.3.2) (2026-01-05)
 
 ## [1.3.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.3.0...v1.3.1) (2025-12-29)

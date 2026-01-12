@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.4.0...v1.4.1) (2026-01-12)
+
+
+### Bug Fixes
+
+* import extensions fix ([#14](https://github.com/pmiatkowski/amplience-cms-tools/issues/14)) ([f790537](https://github.com/pmiatkowski/amplience-cms-tools/commit/f79053720330ebcd3de610c82398021a5ff54b29))
+
 # [1.4.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.3.2...v1.4.0) (2026-01-09)
 
 

@@ -1,14 +1,17 @@
 # Script: config.py
 
 ## Purpose
+
 Load and provide access to workflow configuration.
 
 ## Location
+
 ```
-.ai-workflow/scripts/config.py
+.ai/scripts/config.py
 ```
 
 ## Usage in Scripts
+
 ```python
 from config import cfg
 
@@ -41,8 +44,8 @@ except ImportError:
 @dataclass
 class PathsConfig:
     features: str = "features"
-    prompts: str = ".ai-workflow/prompts"
-    scripts: str = ".ai-workflow/scripts"
+    prompts: str = ".ai/prompts"
+    scripts: str = ".ai/scripts"
 
 
 @dataclass
@@ -84,7 +87,7 @@ class Config:
         current = Path.cwd()
         
         for _ in range(10):  # max 10 levels up
-            config_path = current / ".ai-workflow" / "config.yml"
+            config_path = current / ".ai" / "config.yml"
             if config_path.exists():
                 return config_path
             
@@ -106,8 +109,8 @@ class Config:
             version=data.get("version", 1),
             paths=PathsConfig(
                 features=paths_data.get("features", "features"),
-                prompts=paths_data.get("prompts", ".ai-workflow/prompts"),
-                scripts=paths_data.get("scripts", ".ai-workflow/scripts"),
+                prompts=paths_data.get("prompts", ".ai/prompts"),
+                scripts=paths_data.get("scripts", ".ai/scripts"),
             ),
             defaults=DefaultsConfig(
                 date_format=defaults_data.get("date_format", "%Y-%m-%d"),
@@ -186,13 +189,13 @@ def create_feature(feature_name: str, description: str) -> None:
 ## Output (when run directly)
 
 ```bash
-$ python .ai-workflow/scripts/config.py
+$ python .ai/scripts/config.py
 
 Config loaded:
   version: 1
   paths.features: features
-  paths.prompts: .ai-workflow/prompts
-  paths.scripts: .ai-workflow/scripts
+  paths.prompts: .ai/prompts
+  paths.scripts: .ai/scripts
   defaults.date_format: %Y-%m-%d
   runner: python
 ```
@@ -203,7 +206,7 @@ Config loaded:
 
 | Feature | Description |
 |---------|-------------|
-| Auto-discovery | Walks up directory tree to find `.ai-workflow/config.yml` |
+| Auto-discovery | Walks up directory tree to find `.ai/config.yml` |
 | Defaults | Works without config file (sensible defaults) |
 | No dependencies | Falls back gracefully if PyYAML not installed |
 | Typed | Dataclasses provide IDE autocomplete |

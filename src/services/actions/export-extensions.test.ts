@@ -60,8 +60,8 @@ const mockHub: Amplience.HubConfig = {
 const noopDcCliResponse = { stdout: '', stderr: '' };
 
 const mockExtensions: Amplience.Extension[] = [
-  { id: 'ext-1', url: 'https://example.com/ext1', description: 'Extension 1' },
-  { id: 'ext-2', url: 'https://example.com/ext2', description: 'Extension 2' },
+  { name: 'ext-1', id: 'ext-1', url: 'https://example.com/ext1', description: 'Extension 1' },
+  { name: 'ext-2', id: 'ext-2', url: 'https://example.com/ext2', description: 'Extension 2' },
 ];
 
 const writeExtensionFile = async (

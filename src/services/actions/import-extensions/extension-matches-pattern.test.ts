@@ -21,21 +21,21 @@ describe('extensionMatchesPattern', () => {
 
   describe('id matching', () => {
     it('should match extension by id', () => {
-      const extension = createExtension({ id: 'my-extension-123' });
+      const extension = createExtension({ name: 'my-extension-123' });
       const regex = /my-extension/i;
 
       expect(extensionMatchesPattern(extension, regex)).toBe(true);
     });
 
     it('should not match extension when id does not match pattern', () => {
-      const extension = createExtension({ id: 'my-extension-123' });
+      const extension = createExtension({ name: 'my-extension-123' });
       const regex = /other-extension/i;
 
       expect(extensionMatchesPattern(extension, regex)).toBe(false);
     });
 
     it('should match extension id case-insensitively', () => {
-      const extension = createExtension({ id: 'MY-EXTENSION' });
+      const extension = createExtension({ name: 'MY-EXTENSION' });
       const regex = /my-extension/i;
 
       expect(extensionMatchesPattern(extension, regex)).toBe(true);
@@ -173,6 +173,7 @@ describe('extensionMatchesPattern', () => {
     it('should handle extension with empty strings', () => {
       const extension = createExtension({
         id: '',
+        name: '',
         url: '',
         description: '',
       });

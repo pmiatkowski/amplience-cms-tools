@@ -14,7 +14,7 @@ describe('promptForImportConfirmation', () => {
 
   const createExtension = (id: string): ExtensionWithPath => ({
     extension: {
-      id,
+      name: id,
       url: `https://example.com/${id}.html`,
       description: `Description for ${id}`,
     },

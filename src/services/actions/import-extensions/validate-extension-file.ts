@@ -8,7 +8,7 @@ import * as path from 'path';
  * - Can be read from filesystem
  * - Contains valid JSON syntax
  * - Is a JSON object (not array, string, etc.)
- * - Has a non-empty id field
+ * - Has a non-empty name field (used as identifier for import)
  *
  * Invalid files are skipped with warnings, allowing import to continue with valid files.
  *
@@ -16,7 +16,7 @@ import * as path from 'path';
  * @example
  * const result = await validateExtensionFile('/path/to/extension.json');
  * if (result.isValid) {
- *   console.log('Valid extension:', result.extension.id);
+ *   console.log('Valid extension:', result.extension.name);
  * } else {
  *   console.warn('Invalid file:', result.error);
  * }
@@ -56,11 +56,11 @@ export async function validateExtensionFile(filePath: string): Promise<Validatio
 
   const extension = parsed as Amplience.Extension;
 
-  // Validate required field: id
-  if (!extension.id || typeof extension.id !== 'string' || extension.id.trim().length === 0) {
+  // Validate required field: name (used as identifier for import)
+  if (!extension.name || typeof extension.name !== 'string' || extension.name.trim().length === 0) {
     return {
       isValid: false,
-      error: `Missing required field: id in "${fileName}"`,
+      error: `Missing required field: name in "${fileName}"`,
     };
   }
 

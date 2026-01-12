@@ -3,7 +3,10 @@ import * as path from 'path';
 
 import { createProgressBar } from '~/utils';
 
+import { buildFilterRegex } from './import-extensions/build-filter-regex';
 import { copyAndPrepareExtensions } from './import-extensions/copy-and-prepare-extensions';
+import { filterExtensions } from './import-extensions/filter-extensions';
+import { runDcCliImport } from './import-extensions/run-dc-cli-import';
 import { updateExtensionFields } from './import-extensions/update-extension-fields';
 
 export {
@@ -13,6 +16,7 @@ export {
   importExtensions,
   ImportExtensionsError,
   InvalidPatternError,
+  previewExtensions,
   validateExtUrlExists,
 };
 
@@ -111,6 +115,7 @@ class HubAuthenticationError extends DcCliExecutionError {
 type ImportExtensionsParams = {
   hub: Amplience.HubConfig;
   sourceDir: string;
+  filterPattern?: string; // Optional regex pattern for filtering extensions
 };
 
 /**
@@ -136,7 +141,7 @@ type ImportExtensionsParams = {
 async function importExtensions(
   params: ImportExtensionsParams
 ): Promise<Amplience.ImportExtensionsResult> {
-  const { sourceDir, hub } = params;
+  const { sourceDir, hub, filterPattern = '.*' } = params;
   const resolvedSourceDir = path.resolve(sourceDir);
   const timestamp = Date.now();
   const tempDir = path.resolve(`./temp_import_${timestamp}/extensions`);
@@ -162,18 +167,47 @@ async function importExtensions(
       prepProgress.stop();
     }
 
-    // TODO: Phase 3 will add: filtering and validation
-    // TODO: Phase 4 will add: dc-cli import execution
+    // Phase 3: Filter and validate extensions
+    const pattern = buildFilterRegex(filterPattern);
+    const filterResult = await filterExtensions(copiedFiles, pattern);
 
-    // Phase 4: Construct comprehensive result summary
+    // Log warnings for invalid files
+    if (filterResult.invalid.length > 0) {
+      console.warn(`⚠️ Skipping ${filterResult.invalid.length} invalid file(s):`);
+      for (const invalid of filterResult.invalid) {
+        console.warn(`   - ${path.basename(invalid.filePath)}: ${invalid.error}`);
+      }
+      console.log();
+    }
+
+    // Early exit if no valid extensions match pattern
+    if (filterResult.kept.length === 0) {
+      const result: Amplience.ImportExtensionsResult = {
+        sourceDir: resolvedSourceDir,
+        totalFilesFound: copiedFiles.length,
+        matchedCount: 0,
+        filteredOutCount: filterResult.removed.length,
+        invalidCount: filterResult.invalid.length,
+        importedCount: 0,
+        invalidFiles: filterResult.invalid,
+      };
+      await cleanupTempDirectory(tempDir);
+
+      return result;
+    }
+
+    // Phase 4: Import extensions using dc-cli
+    await runDcCliImport(hub, tempDir);
+
+    // Construct result with actual counts
     const result: Amplience.ImportExtensionsResult = {
       sourceDir: resolvedSourceDir,
       totalFilesFound: copiedFiles.length,
-      matchedCount: copiedFiles.length, // Will be set by filtering in Phase 3 integration
-      filteredOutCount: 0, // Will be set by filtering in Phase 3 integration
-      invalidCount: 0, // Will be set by filtering in Phase 3 integration
-      importedCount: 0, // Will be set after dc-cli import
-      invalidFiles: [], // Will be populated by filtering in Phase 3 integration
+      matchedCount: filterResult.kept.length,
+      filteredOutCount: filterResult.removed.length,
+      invalidCount: filterResult.invalid.length,
+      importedCount: filterResult.kept.length, // DC-CLI imports all kept files
+      invalidFiles: filterResult.invalid,
     };
 
     // Cleanup temp directory after successful operation
@@ -193,6 +227,48 @@ async function importExtensions(
     const fallbackMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new ImportExtensionsError(`Failed to import extensions: ${fallbackMessage}`, error);
   }
+}
+
+/**
+ * Preview extensions before import (read-only operation)
+ *
+ * Performs filtering and validation without modifying any files or
+ * importing to hub. Returns metadata for preview display.
+ *
+ * @param params - Source directory and filter pattern
+ * @example
+ * const preview = await previewExtensions({
+ *   sourceDir: './exports/extensions',
+ *   filterPattern: 'my-extension'
+ * });
+ * console.log(`Will import ${preview.matchedCount} extensions`);
+ */
+async function previewExtensions(params: {
+  sourceDir: string;
+  filterPattern?: string;
+}): Promise<Amplience.PreviewExtensionsResult> {
+  const { sourceDir, filterPattern = '.*' } = params;
+  const resolvedSourceDir = path.resolve(sourceDir);
+
+  // Read all JSON files from source directory
+  const files = await fs.readdir(resolvedSourceDir);
+  const jsonFiles = files
+    .filter(f => f.endsWith('.json'))
+    .map(f => path.join(resolvedSourceDir, f));
+
+  // Filter and validate
+  const pattern = buildFilterRegex(filterPattern);
+  const filterResult = await filterExtensions(jsonFiles, pattern);
+
+  return {
+    sourceDir: resolvedSourceDir,
+    totalFilesFound: jsonFiles.length,
+    matchedCount: filterResult.kept.length,
+    filteredOutCount: filterResult.removed.length,
+    invalidCount: filterResult.invalid.length,
+    kept: filterResult.kept,
+    invalidFiles: filterResult.invalid,
+  };
 }
 
 /**

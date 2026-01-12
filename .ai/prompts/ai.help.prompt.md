@@ -1,10 +1,10 @@
 ---
 agent: agent
-description: Show workflow status and suggest next steps based on current state.
+description:
+  Show workflow status and suggest next steps based on current state.
 ---
 
-You are a workflow guidance assistant. Your goal is to help users understand
-where they are in the workflow and what to do next.
+You are a workflow guidance assistant. Your goal is to help users understand where they are in the workflow and what to do next.
 
 ### 1. Determine Workflow Name
 
@@ -107,21 +107,17 @@ If `workflow_type == "feature"`:
 
 **Status: clarifying**
 
-- If `artifacts.context_md == false`:
-  - Primary: `/ai.add-context` - Add codebase context
-  - Secondary: `/ai.clarify` - Start requirements gathering
-- Else if `artifacts.clarifications_count == 0`:
-  - Primary: `/ai.clarify` - Start requirements gathering
-- Else if `artifacts.prd_md == false`:
-  - Primary: `/ai.clarify` - Continue gathering requirements (or
-    `/ai.create-prd` if ready)
-  - Secondary: `/ai.create-prd` - Generate PRD when ready
+NOTE: This state should not occur with the new unified workflow. Features created with `/ai.add` go directly to `prd-draft`.
+
+- If found (legacy workflow):
+  - Review `request.md` to understand the feature
+  - If PRD doesn't exist: Feature was created with old workflow, manually add context and create PRD
+  - Suggest: `/ai.add-context` (optional) then review/approve manually
 
 **Status: prd-draft**
 
-- Primary: Review `prd.md` and manually update `state.yml` status to
-  `prd-approved`
-- Secondary: `/ai.update-feature` - If changes needed
+- Primary: Review `prd.md` and manually update `state.yml` status to `prd-approved`
+- Secondary: `/ai.clarify` - If changes needed (refines PRD directly)
 
 **Status: prd-approved**
 
@@ -144,12 +140,11 @@ If `workflow_type == "feature"`:
 - Else if `plan_state.status == "completed"`:
   - Primary: `/ai.verify` - Verify final implementation (recommended)
   - Secondary: Testing and validation
-  - Tertiary: `/ai.update-feature` - For any changes
 
 **Status: in-progress**
 
 - Primary: Continue implementation
-- Secondary: `/ai.update-feature` - For requirement changes
+- Secondary: `/ai.clarify` - For PRD changes (if needed)
 
 #### Bug Workflow
 
@@ -157,19 +152,15 @@ If `workflow_type == "bug"`:
 
 **Status: reported**
 
-- If `artifacts.context_md == false`:
-  - Primary: `/ai.add-context` - Add context (optional)
-  - Secondary: `/ai.triage-bug` - Start diagnosis
-- Else:
-  - Primary: `/ai.triage-bug` - Diagnose root cause
+- Primary: `/ai.triage-bug` - Diagnose root cause
+- Secondary: "Add more context by manually editing context.md if needed"
 
 **Status: triaged**
 
 - If `artifacts.fix_plan_md == false`:
   - Primary: `/ai.plan-fix` - Create fix checklist
 - Else:
-  - Primary: `/ai.verify` - Verify fix plan against coding standards
-    (recommended)
+  - Primary: `/ai.verify` - Verify fix plan against coding standards (recommended)
   - Secondary: Implement fix following `fix-plan.md`
 
 **Status: fixing**
@@ -200,16 +191,14 @@ If `workflow_type == "idea"`:
 - Else if `artifacts.refinement_count == 1`:
   - Primary: `/ai.define-idea` - Continue to Round 2 (Test Assumptions)
 - Else if `artifacts.refinement_count >= 2`:
-  - Primary: `/ai.define-idea` - Synthesize to refined-idea.md (or continue
-    Round 3+)
+  - Primary: `/ai.define-idea` - Synthesize to refined-idea.md (or continue Round 3+)
   - Secondary: `/ai.add-context` - Add more context if needed
 
 **Status: refined**
 
 - If `artifacts.refined_idea_md == true`:
   - Primary: Review `refined-idea.md` - Check recommendations and next steps
-  - Secondary: Convert to feature/bug with
-    `/add "{description based on refined idea}"`
+  - Secondary: Convert to feature/bug with `/add "{description based on refined idea}"`
   - Alternative: Manually update state to `shelved` if not proceeding
   - Alternative: `/ai.define-idea` - Add another refinement round if needed
 
@@ -223,21 +212,18 @@ If `workflow_type == "idea"`:
 
 - Status: Idea converted to {converted_to} (e.g., "feature:user-auth")
 - Primary: Work on the converted workflow
-- Secondary: `/ai.set-current {converted-workflow-name}` - Switch to converted
-  workflow
+- Secondary: `/ai.set-current {converted-workflow-name}` - Switch to converted workflow
 
 ### 6. Calculate Progress Indicator
 
 **For Features:**
 
 ```
-Step 1 of 7: Add context (clarifying)
-Step 2 of 7: Clarify requirements (clarifying with context)
-Step 3 of 7: Create PRD (clarifying → prd-draft → prd-approved)
-Step 4 of 7: Define implementation plan (prd-approved → planning)
-Step 5 of 7: Execute Phase 1 (planning → in-progress)
-Step 6 of 7: Execute remaining phases (in-progress)
-Step 7 of 7: Testing & completion (in-progress)
+Step 1 of 5: Create feature with clarifications and PRD (/ai.add)
+Step 2 of 5: Review and approve PRD (prd-draft → prd-approved)
+Step 3 of 5: Define implementation plan (prd-approved → planning)
+Step 4 of 5: Execute implementation phases (planning → in-progress)
+Step 5 of 5: Testing & completion (in-progress)
 ```
 
 **For Bugs:**
@@ -267,64 +253,53 @@ Step 4 of 4: Review & decide (refined → converted/shelved)
 
 ## Current Status
 
-**Type**: Feature | Bug **Status**: {status} **Progress**: Step X of Y **Last
-Updated**: {updated}
+**Type**: Feature | Bug
+**Status**: {status}
+**Progress**: Step X of Y
+**Last Updated**: {updated}
 
 [Optional: Progress visualization]
 
 ## Current Phase (if feature with implementation plan)
 
 Phase {current_phase} of {total_phases}: {phase_name}
-
 - Status: {phase_status}
 - {Brief description of current phase}
 
 ## Next Steps
 
 ### Recommended Action
-
 ✓ `{command}` - {description}
 
 ### Alternative Actions
-
 - `{command}` - {description}
 - `{command}` - {description}
 
 ## All Available Commands
 
 ### Universal Commands
-
 - `/add "description"` - Add new feature or bug
-- `/ai.add-context [name]` - Add codebase/business context
-- `/ai.clarify [name]` - Refine requirements through Q&A
+- `/ai.clarify [name]` - Refine existing PRD (post-PRD only, not for new features)
 - `/ai.set-current {name}` - Switch workflow context
 - `/ai.help [name]` - Show this help
 
 ### Setup Commands
-
 - `/ai.define-tech-stack` - Define global tech stack (one-time setup)
-- `/ai.define-coding-instructions` - Define coding standards and practices
-  (one-time setup)
+- `/ai.define-coding-instructions` - Define coding standards and practices (one-time setup)
 
 ### Quality Assurance Commands
-
-- `/ai.verify [name]` - Verify implementation plan or code against coding
-  standards
+- `/ai.verify [name]` - Verify implementation plan or code against coding standards
 
 ### Feature Commands
-
-- `/ai.create-prd [name]` - Generate PRD from clarifications
-- `/ai.update-feature [name]` - Update requirements after PRD
+- `/ai.clarify [name]` - Refine existing PRD through Q&A and direct updates (post-PRD only)
 - `/ai.define-implementation-plan [name]` - Create phased implementation plan
 - `/ai.execute [name]` - Execute implementation plan
 
 ### Bug Commands
-
 - `/ai.triage-bug [name]` - Diagnose root cause and fix approach
 - `/ai.plan-fix [name]` - Create lightweight fix checklist
 
 ### Idea Commands
-
 - `/ai.define-idea "description"` - Initialize new exploratory idea
 - `/ai.define-idea [name]` - Continue refinement rounds
 - `/ai.add-context [name]` - Add context to idea (optional)
@@ -332,8 +307,8 @@ Phase {current_phase} of {total_phases}: {phase_name}
 
 ---
 
-**Tip**: Commands in brackets `[name]` use current context if omitted. **Current
-Context**: {workflow-name} ({workflow-type})
+**Tip**: Commands in brackets `[name]` use current context if omitted.
+**Current Context**: {workflow-name} ({workflow-type})
 ```
 
 #### When No Current Context
@@ -410,13 +385,13 @@ Define coding instructions and development standards (automatically included in 
 ### Feature Workflow (Full PRD Process)
 For new functionality, enhancements, or capabilities.
 
-**States**: clarifying → prd-draft → prd-approved → planning → in-progress
+**States**: prd-draft → prd-approved → planning → in-progress
 
 **Typical Flow**:
-1. `/add "feature description"` - Create feature
-2. `/ai.add-context` - Provide codebase context
-3. `/ai.clarify` - Answer requirements questions
-4. `/ai.create-prd` - Generate PRD document
+1. `/ai.add "feature description"` - Create feature with optional context gathering + inline clarifications + PRD generation (all-in-one)
+2. Review prd.md
+3. `/ai.clarify` (optional) - Refine PRD if changes needed
+4. Update state.yml status to 'prd-approved'
 5. `/ai.define-implementation-plan` - Break into phases
 6. `/ai.verify` - Verify plan against coding standards (recommended)
 7. `/ai.execute` - Implement each phase
@@ -428,13 +403,12 @@ For fixes, issues, and errors.
 **States**: reported → triaged → fixing → resolved → closed
 
 **Typical Flow**:
-1. `/add "Fix X"` - Report bug
-2. `/ai.add-context` - Provide context (optional)
-3. `/ai.triage-bug` - Diagnose root cause
-4. `/ai.plan-fix` - Create fix checklist
-5. `/ai.verify` - Verify fix plan against coding standards (recommended)
-6. Implement and test fix
-7. `/ai.verify` - Verify implementation against plan and standards
+1. `/add "Fix X"` - Report bug (with optional context gathering during creation)
+2. `/ai.triage-bug` - Diagnose root cause
+3. `/ai.plan-fix` - Create fix checklist
+4. `/ai.verify` - Verify fix plan against coding standards (recommended)
+5. Implement and test fix
+6. `/ai.verify` - Verify implementation against plan and standards
 
 ### Idea Workflow (Exploratory Refinement)
 For exploring and refining ideas before committing to implementation.
@@ -455,8 +429,7 @@ For exploring and refining ideas before committing to implementation.
 
 ### Universal Commands
 - `/add "description"` - Add new feature or bug
-- `/ai.add-context [name]` - Add codebase/business context
-- `/ai.clarify [name]` - Refine requirements through Q&A
+- `/ai.clarify [name]` - Refine existing PRD (post-PRD only, not for new features)
 - `/ai.set-current {name}` - Switch workflow context
 - `/ai.help [name]` - Show this help
 
@@ -468,8 +441,7 @@ For exploring and refining ideas before committing to implementation.
 - `/ai.verify [name]` - Verify implementation plan or code against coding standards
 
 ### Feature Commands
-- `/ai.create-prd [name]` - Generate PRD from clarifications
-- `/ai.update-feature [name]` - Update requirements after PRD
+- `/ai.clarify [name]` - Refine existing PRD through Q&A and direct updates (post-PRD only)
 - `/ai.define-implementation-plan [name]` - Create phased implementation plan
 - `/ai.execute [name]` - Execute implementation plan
 
@@ -564,7 +536,7 @@ You haven't set a current workflow context yet.
       "implementation_plan": false
     }
   },
-  "plan_state": { "exists": false }
+  "plan_state": {"exists": false}
 }
 ```
 
@@ -575,20 +547,19 @@ You haven't set a current workflow context yet.
 
 ## Current Status
 
-**Type**: Feature **Status**: clarifying **Progress**: Step 1 of 7 **Last
-Updated**: 2025-01-15
+**Type**: Feature
+**Status**: clarifying
+**Progress**: Step 1 of 7
+**Last Updated**: 2025-01-15
 
 ## Next Steps
 
 ### Recommended Action
-
 ✓ `/ai.add-context` - Add codebase and business context
 
-Adding context helps generate better requirements questions and ensures the PRD
-aligns with your existing architecture.
+Adding context helps generate better requirements questions and ensures the PRD aligns with your existing architecture.
 
 ### Alternative Actions
-
 - `/ai.clarify` - Start requirements gathering (consider adding context first)
 
 {Rest of the help output...}
@@ -629,9 +600,9 @@ aligns with your existing architecture.
     "current_phase": 2,
     "total_phases": 3,
     "phases": [
-      { "name": "Database Schema & Models", "status": "completed" },
-      { "name": "Export Service Implementation", "status": "in-progress" },
-      { "name": "Frontend UI & Integration", "status": "pending" }
+      {"name": "Database Schema & Models", "status": "completed"},
+      {"name": "Export Service Implementation", "status": "in-progress"},
+      {"name": "Frontend UI & Integration", "status": "pending"}
     ]
   }
 }
@@ -644,26 +615,25 @@ aligns with your existing architecture.
 
 ## Current Status
 
-**Type**: Feature **Status**: planning **Progress**: Step 5 of 7 (Phase 2 of 3)
+**Type**: Feature
+**Status**: planning
+**Progress**: Step 5 of 7 (Phase 2 of 3)
 **Last Updated**: 2025-01-20
 
 ## Current Phase
 
 Phase 2 of 3: Export Service Implementation
-
 - Status: in-progress
 - Previous phase (Database Schema & Models) completed
 
 ## Next Steps
 
 ### Recommended Action
-
 ✓ `/ai.execute` - Continue implementing Phase 2: Export Service Implementation
 
 Follow the tasks defined in `implementation-plan/plan.md` for Phase 2.
 
 ### Alternative Actions
-
 - Review progress in `implementation-plan/plan-state.yml`
 - `/ai.update-feature` - If requirements changed
 
@@ -674,18 +644,18 @@ Follow the tasks defined in `implementation-plan/plan.md` for Phase 2.
 
 ## Edge Cases
 
-| Situation                             | Behavior                                  |
-| ------------------------------------- | ----------------------------------------- |
-| Script execution fails                | Show error message and basic command list |
-| Workflow doesn't exist                | Show error with `/add` suggestion         |
-| No current context                    | Show "Getting Started" guide              |
-| Corrupted state.yml                   | Show warning and basic help               |
-| Bug workflow (simpler)                | Show bug-specific guidance                |
-| Completed workflow                    | Show completion status, suggest archive   |
-| Multiple clarifications but no PRD    | Suggest creating PRD                      |
-| Plan exists but state is prd-approved | Note inconsistency, suggest review        |
-| Plan completed                        | Focus on testing/validation steps         |
-| Closed bug                            | Note completion, suggest new workflow     |
+| Situation | Behavior |
+|-----------|----------|
+| Script execution fails | Show error message and basic command list |
+| Workflow doesn't exist | Show error with `/add` suggestion |
+| No current context | Show "Getting Started" guide |
+| Corrupted state.yml | Show warning and basic help |
+| Bug workflow (simpler) | Show bug-specific guidance |
+| Completed workflow | Show completion status, suggest archive |
+| Multiple clarifications but no PRD | Suggest creating PRD |
+| Plan exists but state is prd-approved | Note inconsistency, suggest review |
+| Plan completed | Focus on testing/validation steps |
+| Closed bug | Note completion, suggest new workflow |
 
 ---
 

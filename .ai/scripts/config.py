@@ -57,45 +57,45 @@ class Config:
     defaults: DefaultsConfig = field(default_factory=DefaultsConfig)
     workflow_types: dict = field(default_factory=dict)
     runner: str = "python"  # future: bash | powershell
-    
+
     @classmethod
     def load(cls, config_path: Optional[Path] = None) -> "Config":
         """Load config from YAML file or return defaults."""
-        
+
         if config_path is None:
             config_path = cls._find_config()
-        
+
         if config_path is None or not config_path.exists():
             return cls()
-        
+
         if not HAS_YAML:
             print("⚠ PyYAML not installed. Using default config.", file=sys.stderr)
             print("  Install with: pip install pyyaml", file=sys.stderr)
             return cls()
-        
+
         with open(config_path) as f:
             data = yaml.safe_load(f) or {}
-        
+
         return cls._from_dict(data)
-    
+
     @classmethod
     def _find_config(cls) -> Optional[Path]:
         """Find config.yml by walking up from current directory."""
-        
+
         current = Path.cwd()
-        
+
         for _ in range(10):  # max 10 levels up
             config_path = current / ".ai" / "config.yml"
             if config_path.exists():
                 return config_path
-            
+
             parent = current.parent
             if parent == current:
                 break
             current = parent
-        
+
         return None
-    
+
     @classmethod
     def _from_dict(cls, data: dict) -> "Config":
         """Create Config from dictionary."""
@@ -133,7 +133,7 @@ class Config:
             workflow_types=workflow_types,
             runner=data.get("runner", "python"),
         )
-    
+
     def get_features_path(self) -> Path:
         """Get absolute path to features directory."""
         return Path(self.paths.features)

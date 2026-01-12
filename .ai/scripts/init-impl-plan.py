@@ -22,31 +22,31 @@ except ImportError:
 
 def init_impl_plan(feature_name: str) -> None:
     """Create implementation plan folder structure."""
-    
+
     today = date.today().strftime(cfg.defaults.date_format)
     feature_path = cfg.get_feature_path(feature_name)
     impl_path = feature_path / "implementation-plan"
-    
+
     # Check feature exists
     if not feature_path.exists():
         print(f"✗ Feature '{feature_name}' not found at {feature_path}")
         print(f"\nRun first: /add \"{feature_name} description\"")
         sys.exit(1)
-    
+
     # Check PRD exists (warning only)
     prd_path = feature_path / "prd.md"
     if not prd_path.exists():
         print(f"⚠ Warning: PRD not found at {prd_path}")
         print("  Recommendation: Run /create-prd before defining implementation plan\n")
-    
+
     # Check if impl plan already exists
     if impl_path.exists():
         print(f"✗ Implementation plan already exists at {impl_path}")
         sys.exit(1)
-    
+
     # Create directory
     impl_path.mkdir(parents=True)
-    
+
     # plan-state.yml
     state_content = f"""status: pending
 current_phase: 0
@@ -55,19 +55,19 @@ updated: {today}
 phases: []
 """
     (impl_path / "plan-state.yml").write_text(state_content)
-    
+
     # plan.md (empty template)
     plan_content = f"""# Implementation Plan: {feature_name}
 
-> **Status**: Pending  
-> **Created**: {today}  
+> **Status**: Pending
+> **Created**: {today}
 > **PRD Version**: TBD
 
 ---
 
 ## Summary
 
-**Total Phases**: TBD  
+**Total Phases**: TBD
 **Estimated Scope**: TBD
 
 ---
@@ -75,7 +75,7 @@ phases: []
 <!-- Run /define-implementation-plan to populate this file -->
 """
     (impl_path / "plan.md").write_text(plan_content)
-    
+
     # Update feature state.yml
     state_file = feature_path / "state.yml"
     if state_file.exists():
@@ -91,7 +91,7 @@ phases: []
             else:
                 new_lines.append(line)
         state_file.write_text('\n'.join(new_lines))
-    
+
     # Output
     print(f"""✓ Implementation plan initialized: {feature_name}
 
@@ -111,7 +111,7 @@ Next step:
 def main():
     parser = argparse.ArgumentParser(description="Initialize implementation plan structure")
     parser.add_argument("feature", help="Feature name (must already exist)")
-    
+
     args = parser.parse_args()
     init_impl_plan(args.feature)
 

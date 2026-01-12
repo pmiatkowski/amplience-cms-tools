@@ -123,6 +123,51 @@ def create_context_md(path: Path):
     (path / "context.md").write_text(content)
 
 
+def create_triage_md(path: Path, name: str):
+    """Create bug triage template."""
+    content = f"""# Triage: {name}
+
+## Root Cause
+<!-- To be filled during triage -->
+
+## Affected Components
+<!-- List files/modules involved -->
+
+## Severity
+<!-- Critical / High / Medium / Low -->
+
+## Fix Approach
+<!-- High-level strategy for fixing this -->
+
+## Notes
+<!-- Additional context or considerations -->
+
+## Triaged
+<!-- Date will be added during triage -->
+"""
+    (path / "triage.md").write_text(content)
+
+
+def create_fix_plan_md(path: Path, name: str):
+    """Create bug fix plan template."""
+    content = f"""# Fix Plan: {name}
+
+## Fix Checklist
+
+<!-- Tasks will be added during fix planning -->
+
+## Estimated Complexity
+<!-- Simple / Medium / Complex -->
+
+## Testing Strategy
+<!-- How to verify the fix works -->
+
+## Created
+<!-- Date will be added during fix planning -->
+"""
+    (path / "fix-plan.md").write_text(content)
+
+
 def create_workflow(name: str, description: str, workflow_type: str = "feature") -> None:
     """Create workflow folder structure based on type."""
 
@@ -165,6 +210,12 @@ updated: {today}
         elif artifact == "context.md":
             # Context template
             create_context_md(workflow_path)
+        elif artifact == "triage.md":
+            # Bug triage template
+            create_triage_md(workflow_path, name)
+        elif artifact == "fix-plan.md":
+            # Bug fix plan template
+            create_fix_plan_md(workflow_path, name)
 
     # Print confirmation
     print(f"✓ {workflow_type.capitalize()} initialized: {name}")

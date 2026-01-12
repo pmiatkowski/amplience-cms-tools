@@ -35,10 +35,10 @@ describe('validateExtensionFile', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should validate extension with only id field', async () => {
+    it('should validate extension with only name field', async () => {
       const filePath = path.join(testDir, 'minimal-extension.json');
       const extension = {
-        id: 'minimal-extension',
+        name: 'minimal-extension',
       };
       await fs.writeFile(filePath, JSON.stringify(extension));
 
@@ -129,10 +129,10 @@ describe('validateExtensionFile', () => {
   });
 
   describe('missing required fields', () => {
-    it('should return error when id field is missing', async () => {
-      const filePath = path.join(testDir, 'no-id.json');
+    it('should return error when name field is missing', async () => {
+      const filePath = path.join(testDir, 'no-name.json');
       const extension = {
-        name: 'Extension without ID',
+        label: 'Extension without name',
         url: 'https://example.com',
       };
       await fs.writeFile(filePath, JSON.stringify(extension));
@@ -140,36 +140,36 @@ describe('validateExtensionFile', () => {
       const result = await validateExtensionFile(filePath);
 
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('Missing required field: id');
-      expect(result.error).toContain('no-id.json');
+      expect(result.error).toContain('Missing required field: name');
+      expect(result.error).toContain('no-name.json');
     });
 
-    it('should return error when id is empty string', async () => {
-      const filePath = path.join(testDir, 'empty-id.json');
+    it('should return error when name is empty string', async () => {
+      const filePath = path.join(testDir, 'empty-name.json');
       const extension = {
-        id: '',
-        name: 'Extension with empty ID',
+        name: '',
+        label: 'Extension with empty name',
       };
       await fs.writeFile(filePath, JSON.stringify(extension));
 
       const result = await validateExtensionFile(filePath);
 
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('Missing required field: id');
+      expect(result.error).toContain('Missing required field: name');
     });
 
-    it('should return error when id is null', async () => {
-      const filePath = path.join(testDir, 'null-id.json');
+    it('should return error when name is null', async () => {
+      const filePath = path.join(testDir, 'null-name.json');
       const extension = {
-        id: null,
-        name: 'Extension with null ID',
+        name: null,
+        label: 'Extension with null name',
       };
       await fs.writeFile(filePath, JSON.stringify(extension));
 
       const result = await validateExtensionFile(filePath);
 
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('Missing required field: id');
+      expect(result.error).toContain('Missing required field: name');
     });
   });
 
@@ -231,7 +231,7 @@ describe('validateExtensionFile', () => {
   describe('edge cases', () => {
     it('should handle file path with spaces', async () => {
       const filePath = path.join(testDir, 'file with spaces.json');
-      const extension = { id: 'test' };
+      const extension = { name: 'test' };
       await fs.writeFile(filePath, JSON.stringify(extension));
 
       const result = await validateExtensionFile(filePath);
@@ -242,7 +242,7 @@ describe('validateExtensionFile', () => {
     it('should handle very large extension file', async () => {
       const filePath = path.join(testDir, 'large.json');
       const extension = {
-        id: 'large-extension',
+        name: 'large-extension',
         description: 'a'.repeat(10000), // Large description
       };
       await fs.writeFile(filePath, JSON.stringify(extension));

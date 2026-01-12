@@ -29,9 +29,9 @@ describe('filterExtensions', () => {
 
   describe('filtering by pattern', () => {
     it('should keep extensions matching the pattern', async () => {
-      await createExtensionFile('ext1.json', { id: 'my-extension-1' });
-      await createExtensionFile('ext2.json', { id: 'my-extension-2' });
-      await createExtensionFile('ext3.json', { id: 'other-extension' });
+      await createExtensionFile('ext1.json', { name: 'my-extension-1' });
+      await createExtensionFile('ext2.json', { name: 'my-extension-2' });
+      await createExtensionFile('ext3.json', { name: 'other-extension' });
 
       const filePaths = [
         path.join(testDir, 'ext1.json'),
@@ -43,15 +43,15 @@ describe('filterExtensions', () => {
       const result = await filterExtensions(filePaths, pattern);
 
       expect(result.kept).toHaveLength(2);
-      expect(result.kept[0].extension.id).toBe('my-extension-1');
-      expect(result.kept[1].extension.id).toBe('my-extension-2');
+      expect(result.kept[0].extension.name).toBe('my-extension-1');
+      expect(result.kept[1].extension.name).toBe('my-extension-2');
       expect(result.removed).toHaveLength(1);
-      expect(result.removed[0].extension.id).toBe('other-extension');
+      expect(result.removed[0].extension.name).toBe('other-extension');
     });
 
     it('should remove extensions not matching the pattern', async () => {
-      await createExtensionFile('ext1.json', { id: 'test-1' });
-      await createExtensionFile('ext2.json', { id: 'test-2' });
+      await createExtensionFile('ext1.json', { name: 'test-1' });
+      await createExtensionFile('ext2.json', { name: 'test-2' });
 
       const filePaths = [path.join(testDir, 'ext1.json'), path.join(testDir, 'ext2.json')];
       const pattern = /production/i;
@@ -63,10 +63,10 @@ describe('filterExtensions', () => {
     });
 
     it('should match pattern against id, url, and description', async () => {
-      await createExtensionFile('ext1.json', { id: 'abc', url: 'https://match-me.com' });
-      await createExtensionFile('ext2.json', { id: 'def', description: 'has match-me in text' });
-      await createExtensionFile('ext3.json', { id: 'match-me-id' });
-      await createExtensionFile('ext4.json', { id: 'xyz', url: 'https://other.com' });
+      await createExtensionFile('ext1.json', { name: 'abc', url: 'https://match-me.com' });
+      await createExtensionFile('ext2.json', { name: 'def', description: 'has match-me in text' });
+      await createExtensionFile('ext3.json', { name: 'match-me-id' });
+      await createExtensionFile('ext4.json', { name: 'xyz', url: 'https://other.com' });
 
       const filePaths = [
         path.join(testDir, 'ext1.json'),
@@ -80,13 +80,13 @@ describe('filterExtensions', () => {
 
       expect(result.kept).toHaveLength(3);
       expect(result.removed).toHaveLength(1);
-      expect(result.removed[0].extension.id).toBe('xyz');
+      expect(result.removed[0].extension.name).toBe('xyz');
     });
 
     it('should handle match-all pattern', async () => {
-      await createExtensionFile('ext1.json', { id: 'ext1' });
-      await createExtensionFile('ext2.json', { id: 'ext2' });
-      await createExtensionFile('ext3.json', { id: 'ext3' });
+      await createExtensionFile('ext1.json', { name: 'ext1' });
+      await createExtensionFile('ext2.json', { name: 'ext2' });
+      await createExtensionFile('ext3.json', { name: 'ext3' });
 
       const filePaths = [
         path.join(testDir, 'ext1.json'),
@@ -104,7 +104,7 @@ describe('filterExtensions', () => {
 
   describe('invalid file handling', () => {
     it('should skip invalid JSON files', async () => {
-      await createExtensionFile('valid.json', { id: 'valid-extension' });
+      await createExtensionFile('valid.json', { name: 'valid-extension' });
       const invalidPath = path.join(testDir, 'invalid.json');
       await fs.writeFile(invalidPath, '{ invalid json }');
 
@@ -114,31 +114,31 @@ describe('filterExtensions', () => {
       const result = await filterExtensions(filePaths, pattern);
 
       expect(result.kept).toHaveLength(1);
-      expect(result.kept[0].extension.id).toBe('valid-extension');
+      expect(result.kept[0].extension.name).toBe('valid-extension');
       expect(result.invalid).toHaveLength(1);
       expect(result.invalid[0].filePath).toBe(invalidPath);
       expect(result.invalid[0].error).toContain('Invalid JSON');
     });
 
-    it('should skip files with missing id field', async () => {
-      await createExtensionFile('valid.json', { id: 'valid-extension' });
-      await createExtensionFile('no-id.json', { name: 'Extension without ID' } as Record<
+    it('should skip files with missing name field', async () => {
+      await createExtensionFile('valid.json', { name: 'valid-extension' });
+      await createExtensionFile('no-name.json', { label: 'Extension without name' } as Record<
         string,
         unknown
       >);
 
-      const filePaths = [path.join(testDir, 'valid.json'), path.join(testDir, 'no-id.json')];
+      const filePaths = [path.join(testDir, 'valid.json'), path.join(testDir, 'no-name.json')];
       const pattern = /.*/i;
 
       const result = await filterExtensions(filePaths, pattern);
 
       expect(result.kept).toHaveLength(1);
       expect(result.invalid).toHaveLength(1);
-      expect(result.invalid[0].error).toContain('Missing required field: id');
+      expect(result.invalid[0].error).toContain('Missing required field: name');
     });
 
     it('should skip non-existent files', async () => {
-      await createExtensionFile('exists.json', { id: 'exists' });
+      await createExtensionFile('exists.json', { name: 'exists' });
       const nonExistentPath = path.join(testDir, 'does-not-exist.json');
 
       const filePaths = [path.join(testDir, 'exists.json'), nonExistentPath];
@@ -153,10 +153,10 @@ describe('filterExtensions', () => {
     });
 
     it('should continue processing after encountering invalid file', async () => {
-      await createExtensionFile('ext1.json', { id: 'ext1' });
+      await createExtensionFile('ext1.json', { name: 'ext1' });
       const invalidPath = path.join(testDir, 'invalid.json');
       await fs.writeFile(invalidPath, '{ invalid }');
-      await createExtensionFile('ext2.json', { id: 'ext2' });
+      await createExtensionFile('ext2.json', { name: 'ext2' });
 
       const filePaths = [
         path.join(testDir, 'ext1.json'),
@@ -174,7 +174,7 @@ describe('filterExtensions', () => {
 
   describe('result structure', () => {
     it('should include file paths in kept extensions', async () => {
-      await createExtensionFile('ext1.json', { id: 'test-extension' });
+      await createExtensionFile('ext1.json', { name: 'test-extension' });
 
       const filePath = path.join(testDir, 'ext1.json');
       const pattern = /.*/i;
@@ -182,11 +182,11 @@ describe('filterExtensions', () => {
       const result = await filterExtensions([filePath], pattern);
 
       expect(result.kept[0].filePath).toBe(filePath);
-      expect(result.kept[0].extension.id).toBe('test-extension');
+      expect(result.kept[0].extension.name).toBe('test-extension');
     });
 
     it('should include file paths in removed extensions', async () => {
-      await createExtensionFile('ext1.json', { id: 'other-extension' });
+      await createExtensionFile('ext1.json', { name: 'other-extension' });
 
       const filePath = path.join(testDir, 'ext1.json');
       const pattern = /test/i;
@@ -194,7 +194,7 @@ describe('filterExtensions', () => {
       const result = await filterExtensions([filePath], pattern);
 
       expect(result.removed[0].filePath).toBe(filePath);
-      expect(result.removed[0].extension.id).toBe('other-extension');
+      expect(result.removed[0].extension.name).toBe('other-extension');
     });
 
     it('should include file paths and errors in invalid files', async () => {
@@ -222,9 +222,9 @@ describe('filterExtensions', () => {
     });
 
     it('should handle all files matching', async () => {
-      await createExtensionFile('ext1.json', { id: 'match-1' });
-      await createExtensionFile('ext2.json', { id: 'match-2' });
-      await createExtensionFile('ext3.json', { id: 'match-3' });
+      await createExtensionFile('ext1.json', { name: 'match-1' });
+      await createExtensionFile('ext2.json', { name: 'match-2' });
+      await createExtensionFile('ext3.json', { name: 'match-3' });
 
       const filePaths = [
         path.join(testDir, 'ext1.json'),
@@ -240,8 +240,8 @@ describe('filterExtensions', () => {
     });
 
     it('should handle all files not matching', async () => {
-      await createExtensionFile('ext1.json', { id: 'other-1' });
-      await createExtensionFile('ext2.json', { id: 'other-2' });
+      await createExtensionFile('ext1.json', { name: 'other-1' });
+      await createExtensionFile('ext2.json', { name: 'other-2' });
 
       const filePaths = [path.join(testDir, 'ext1.json'), path.join(testDir, 'ext2.json')];
       const pattern = /test/i;
@@ -269,7 +269,7 @@ describe('filterExtensions', () => {
 
     it('should handle file paths with spaces', async () => {
       const fileName = 'file with spaces.json';
-      await createExtensionFile(fileName, { id: 'test' });
+      await createExtensionFile(fileName, { name: 'test' });
 
       const filePath = path.join(testDir, fileName);
       const pattern = /.*/i;
@@ -282,7 +282,7 @@ describe('filterExtensions', () => {
 
     it('should handle extensions with Unicode characters', async () => {
       await createExtensionFile('unicode.json', {
-        id: 'café-extension-日本語',
+        name: 'café-extension-日本語',
         description: '🎉 Test',
       });
 
@@ -292,7 +292,7 @@ describe('filterExtensions', () => {
       const result = await filterExtensions([filePath], pattern);
 
       expect(result.kept).toHaveLength(1);
-      expect(result.kept[0].extension.id).toBe('café-extension-日本語');
+      expect(result.kept[0].extension.name).toBe('café-extension-日本語');
     });
   });
 });

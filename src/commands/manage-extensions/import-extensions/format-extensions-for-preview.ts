@@ -11,20 +11,20 @@ type PreviewRow = Record<string, unknown>;
  * Format extensions for preview table display
  *
  * Converts extension data into table rows suitable for console.table display.
- * Shows ID, URL, Description, and filename for each extension.
+ * Shows Name, URL, Description, and filename for each extension.
  * Truncates long values for readability.
  *
  * @param extensions - List of extensions with file paths to format
  * @example
  * const extensions = [
- *   { extension: { id: 'test', url: 'https://example.com' }, filePath: '/path/to/test.json' }
+ *   { extension: { name: 'test', url: 'https://example.com' }, filePath: '/path/to/test.json' }
  * ];
  * const rows = formatExtensionsForPreview(extensions);
  * displayTable(rows);
  */
 export function formatExtensionsForPreview(extensions: ExtensionWithPath[]): PreviewRow[] {
   return extensions.map(({ extension, filePath }) => ({
-    ID: extension.id,
+    Name: extension.name || 'N/A',
     URL: truncate(extension.url || 'N/A', 80),
     Description: truncate(extension.description || 'N/A', 100),
     File: extractFilename(filePath),

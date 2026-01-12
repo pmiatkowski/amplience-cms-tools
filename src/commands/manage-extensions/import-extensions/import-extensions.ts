@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import { getHubConfigs } from '~/app-config';
 import { promptForHub } from '~/prompts';
 import {
@@ -7,11 +9,15 @@ import {
   ImportExtensionsError,
   importExtensions,
   InvalidPatternError,
+  previewExtensions,
 } from '~/services/actions/import-extensions';
 import { checkDcCliAvailability } from '~/utils';
 
+import { formatExtensionsForPreview } from './format-extensions-for-preview';
 import { formatImportSummary } from './format-import-summary';
+import { promptForExtensionFilterPattern } from './prompt-for-extension-filter-pattern';
 import { promptForExtensionInputDirectory } from './prompt-for-extension-input-directory';
+import { promptForImportConfirmation } from './prompt-for-import-confirmation';
 
 /**
  * Main command to orchestrate extension import from local filesystem to target hub
@@ -59,11 +65,56 @@ export async function runImportExtensions(): Promise<void> {
     // Get source directory
     const sourceDir = await promptForExtensionInputDirectory();
 
-    // Execute import action (Phase 1: minimal implementation)
+    // Prompt for filter pattern
+    const filterPattern = await promptForExtensionFilterPattern();
+
+    // Load and preview extensions before import
+    console.log('⏳ Loading extensions...\n');
+    const previewResult = await previewExtensions({ sourceDir, filterPattern });
+
+    // Show preview table
+    if (previewResult.kept.length > 0) {
+      const previewTable = formatExtensionsForPreview(previewResult.kept);
+      console.table(previewTable);
+    }
+
+    console.log(
+      `\n📊 Total: ${previewResult.totalFilesFound} | ` +
+        `Match: ${previewResult.matchedCount} | ` +
+        `Filtered: ${previewResult.filteredOutCount} | ` +
+        `Invalid: ${previewResult.invalidCount}\n`
+    );
+
+    // Show warnings for invalid files
+    if (previewResult.invalidFiles.length > 0) {
+      console.warn('⚠️ Invalid files (will be skipped):');
+      for (const invalid of previewResult.invalidFiles) {
+        console.warn(`   - ${path.basename(invalid.filePath)}: ${invalid.error}`);
+      }
+      console.log();
+    }
+
+    // Early exit if no extensions to import
+    if (previewResult.matchedCount === 0) {
+      console.log('ℹ️ No extensions match the filter pattern. Exiting.\n');
+
+      return;
+    }
+
+    // Confirmation prompt
+    const confirmed = await promptForImportConfirmation(previewResult.kept);
+    if (!confirmed) {
+      console.log('❌ Import cancelled by user.\n');
+
+      return;
+    }
+
+    // Execute import action
     console.log('⏳ Starting import...\n');
     const result = await importExtensions({
       hub,
       sourceDir,
+      filterPattern,
     });
 
     // Display comprehensive summary

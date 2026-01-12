@@ -315,7 +315,9 @@ async function prepareGetMissing(
   );
 
   // Find missing extensions
-  const missingExtensions = hubExtensions.filter(ext => !existingExtensionIds.has(ext.id));
+  const missingExtensions = hubExtensions.filter(
+    ext => !existingExtensionIds.has(ext.id || ext.name)
+  );
 
   // If no missing extensions, return early
   if (missingExtensions.length === 0) {

@@ -1545,4 +1545,40 @@ export class AmplienceService {
       );
     }
   }
+
+  /**
+   * Get all extensions from the hub
+   * @param onPageFetched Callback invoked after each page is fetched with (fetched, total) counts
+   * @returns Promise resolving to array of all extensions
+   */
+  public async getExtensions(
+    onPageFetched?: (fetched: number, total: number) => void
+  ): Promise<Amplience.Extension[]> {
+    let page = 0;
+    let allExtensions: Amplience.Extension[] = [];
+    let totalPages = 1;
+    let totalElements = 0;
+
+    do {
+      const url = `https://api.amplience.net/v2/content/hubs/${this._hubConfig.hubId}/extensions?size=100&page=${page}`;
+      const response = await this._request<Amplience.HalExtensionsResponse>(url);
+
+      if (response._embedded && response._embedded.extensions) {
+        allExtensions = allExtensions.concat(response._embedded.extensions);
+      }
+
+      totalPages = response.page.totalPages;
+      if (page === 0) {
+        totalElements = response.page.totalElements;
+      }
+
+      if (onPageFetched) {
+        onPageFetched(allExtensions.length, totalElements);
+      }
+
+      page++;
+    } while (page < totalPages);
+
+    return allExtensions;
+  }
 }

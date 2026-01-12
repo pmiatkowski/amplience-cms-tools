@@ -370,7 +370,9 @@ They are NOT included in PRDs, which focus on *what* to build rather than *how*.
 To update these instructions, run:
 
 ```
+
 /ai.define-coding-instructions
+
 ```
 
 Choose "Update existing" to modify specific sections.

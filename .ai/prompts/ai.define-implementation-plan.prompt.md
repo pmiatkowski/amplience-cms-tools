@@ -265,6 +265,8 @@ updated: {YYYY-MM-DD}
 
 ### 8. Confirm Completion
 
+Show completion summary:
+
 ```
 ✓ Created implementation plan
 
@@ -274,24 +276,107 @@ Phases:
   ...
 
 Scope: {Small | Medium | Large}
-
-Next steps for USER:
-  1. Review implementation-plan/plan.md
-  2. Run /ai.verify to check plan against coding standards (Recommended)
-  3. Adjust phases/tasks as needed
-  4. When ready, begin implementation: /ai.execute
 ```
 
-### 9. Stop Here
+**Do not proceed to section 10 yet** - user needs to see this completion message first.
 
-✓ Your task is complete once you have:
+### 9. Stop Planning Phase
+
+✓ Your planning task is complete once you have:
 
 - Created implementation-plan/plan.md
 - Updated plan-state.yml
 - Updated state.yml
 - Confirmed completion to user
 
-**Do not proceed to implementation.** Return control to the user.
+**Do not proceed to implementation.** Continue to section 10 for verification prompt.
+
+### 10. Offer Verification
+
+After confirming completion (section 8), present this interactive prompt:
+
+```
+Implementation plan created successfully.
+
+Would you like to verify the plan against coding standards now?
+
+1. Yes, verify the plan (Recommended)
+   - Check plan alignment with coding standards
+   - Identify potential issues before execution
+   - Generate verification report
+   - ~1 minute
+
+2. No, I'll review manually
+   - You can run /ai.verify later
+   - Proceed to review plan.md
+   - Run /ai.execute when ready
+
+Please respond with 1 or 2.
+```
+
+**Wait for user response.**
+
+#### If User Selects Option 1 (Verify)
+
+1. Inform user: `Starting verification...`
+2. Invoke verification internally:
+   - Read `.ai/prompts/ai.verify.prompt.md`
+   - Execute verification using current workflow context
+   - Use "plan verification mode" (default)
+3. After verification completes, display summary:
+
+```
+✓ Verification complete
+
+Report: .ai/reports/verification-{name}-{timestamp}.report.md
+
+{Display verdict from verification: PASS / PASS WITH WARNINGS / FAIL}
+
+Next steps:
+  1. Review verification report (if issues found)
+  2. Review implementation-plan/plan.md
+  3. Adjust plan if needed
+  4. Run /ai.execute when ready
+```
+
+#### If User Selects Option 2 (Skip)
+
+```
+✓ Verification skipped
+
+You can verify later with: /ai.verify {feature-name}
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Verify plan: /ai.verify {feature-name} (recommended before execution)
+  3. Run /ai.execute {feature-name} when ready
+```
+
+#### If User Provides Invalid Response
+
+Accept flexible responses:
+
+- **Option 1**: "1", "yes", "y", "verify"
+- **Option 2**: "2", "no", "n", "skip", "later"
+
+If response doesn't match any pattern, re-prompt once:
+
+```
+Please respond with 1 or 2:
+  1 - Verify the plan now
+  2 - Skip verification
+```
+
+If still invalid, default to Option 2 (skip) and show skip message.
+
+#### Edge Cases
+
+| Situation | Behavior |
+|-----------|----------|
+| No coding standards exist | Proceed with verification - verify prompt handles this gracefully with minimal PASS report |
+| Verification script fails | Show error message, suggest manual review of plan.md, provide `/ai.verify` command for retry |
+| Verification returns FAIL verdict | Show critical issues summary, recommend fixing plan, but don't block user from proceeding |
+| User wants to execute immediately | Accept "execute" as Option 2 with note to run `/ai.execute` |
 
 ---
 
@@ -380,6 +465,98 @@ Next steps for USER:
 - Redis must be provisioned before Phase 1
 - Email service credentials needed for Phase 3
 - Consider adding logging for security audit trail (future enhancement)
+```
+
+### Example: User Chooses Verification
+
+```
+✓ Created implementation plan
+
+Phases:
+  1. Core Authentication — 6 tasks
+  2. Session Management — 4 tasks
+  3. Password Reset & Security — 6 tasks
+
+Scope: Medium
+
+---
+
+Implementation plan created successfully.
+
+Would you like to verify the plan against coding standards now?
+
+1. Yes, verify the plan (Recommended)
+   - Check plan alignment with coding standards
+   - Identify potential issues before execution
+   - Generate verification report
+   - ~1 minute
+
+2. No, I'll review manually
+   - You can run /ai.verify later
+   - Proceed to review plan.md
+   - Run /ai.execute when ready
+
+Please respond with 1 or 2.
+```
+
+**[User responds: 1]**
+
+```
+Starting verification...
+
+✓ Verification complete
+
+Report: .ai/reports/verification-user-auth-20250108-143022.report.md
+
+Verdict: PASS WITH WARNINGS
+- Critical issues: 0
+- Warnings: 2
+- Info: 3
+
+Next steps:
+  1. Review verification report
+  2. Review implementation-plan/plan.md
+  3. Consider addressing warnings (optional)
+  4. Run /ai.execute when ready
+```
+
+### Example: User Skips Verification
+
+```
+✓ Created implementation plan
+
+Phases:
+  1. Core Authentication — 6 tasks
+  2. Session Management — 4 tasks
+
+Scope: Medium
+
+---
+
+Implementation plan created successfully.
+
+Would you like to verify the plan against coding standards now?
+
+1. Yes, verify the plan (Recommended)
+   ...
+
+2. No, I'll review manually
+   ...
+
+Please respond with 1 or 2.
+```
+
+**[User responds: 2]**
+
+```
+✓ Verification skipped
+
+You can verify later with: /ai.verify user-auth
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Verify plan: /ai.verify user-auth (recommended before execution)
+  3. Run /ai.execute user-auth when ready
 ```
 
 ---

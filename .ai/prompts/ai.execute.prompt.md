@@ -248,6 +248,79 @@ Next steps:
   3. Run /ai.execute to continue with Phase {N+1}: {Next Phase Name}
 ```
 
+**Step 7: Check for next phase**
+
+Read `.ai/features/{name}/implementation-plan/plan-state.yml` to determine if more phases remain.
+
+After completing Phase {N}, the script automatically increments `current_phase` to {N+1}.
+
+Check the state:
+
+```yaml
+status: in-progress
+current_phase: 2              # Already incremented to next phase
+phases:
+  - name: Phase 1
+    status: completed          # Just finished
+  - name: Phase 2
+    status: in-progress        # Ready to execute
+  - name: Phase 3
+    status: pending
+```
+
+**If more phases exist** (`current_phase` <= total number of phases):
+
+Ask user:
+
+```
+✓ Phase {N} complete!
+
+Phase {current_phase} is ready: {Next Phase Name} ({X} tasks)
+
+Would you like to proceed with Phase {current_phase}?
+
+1. Yes, execute Phase {current_phase} now
+   - Continue immediately without re-running command
+   - Recommended if Phase {N} deliverables look good
+
+2. No, stop here
+   - Review and test Phase {N} deliverables
+   - Run /ai.execute again when ready to continue
+
+Please respond with 1 or 2.
+```
+
+**Wait for user response.**
+
+- **If user responds "1":**
+  - Return to **Step 1** of Section 5A
+  - Use `current_phase` value from plan-state.yml as the new phase number {N}
+  - Execute the next phase
+  - After completion, return to this Step 7 again (creating a loop)
+
+- **If user responds "2":**
+  - Show final confirmation message (see below)
+  - Proceed to Section 6 (Update Feature State)
+
+- **If user provides invalid response:**
+  - Re-ask with: "Please respond with 1 or 2."
+
+**If no more phases exist** (all phases completed):
+
+Skip the question entirely. Show final confirmation and proceed to Section 6.
+
+```
+✓ All phases completed for '{feature-name}'!
+
+Implementation plan is complete. Feature is ready for testing.
+
+Next steps:
+  1. Run /ai.verify to validate implementation against plan and standards (Recommended)
+  2. Run tests to verify all deliverables
+  3. Review all changes
+  4. Consider updating feature state.yml if needed
+```
+
 ### 5B. Execute Entire Plan
 
 If user selects Option 2:
@@ -420,8 +493,53 @@ Deliverables:
   - Sessions persist across page refresh
 
 Next steps:
-  Run /ai.execute to continue with Phase 2: Session Management
-  OR review changes and test Phase 1 deliverables before proceeding
+  1. Run /ai.verify to validate implementation against plan and standards (Recommended)
+  2. Review changes and test Phase 1 deliverables
+  3. Run /ai.execute to continue with Phase 2: Session Management
+```
+
+---
+
+✓ Phase 1 complete!
+
+Phase 2 is ready: Session Management (4 tasks)
+
+Would you like to proceed with Phase 2?
+
+1. Yes, execute Phase 2 now
+   - Continue immediately without re-running command
+   - Recommended if Phase 1 deliverables look good
+
+2. No, stop here
+   - Review and test Phase 1 deliverables
+   - Run /ai.execute again when ready to continue
+
+Please respond with 1 or 2.
+
+---
+
+User: 1
+
+---
+
+✓ Starting Phase 2: Session Management
+
+[AI executes Phase 2 tasks...]
+
+✓ Phase 2 completed: Session Management
+
+[Similar completion flow, followed by another prompt for Phase 3]
+
+---
+
+User: 2
+
+---
+
+✓ Execution paused after Phase 2.
+
+You can review the changes and run /ai.execute again when ready to continue with Phase 3.
+
 ```
 
 ---

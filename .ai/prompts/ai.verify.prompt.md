@@ -55,7 +55,7 @@ current:
   workflow_type: feature|bug|idea
 ```
 
-3. If no current context:
+1. If no current context:
 
 ```
 ⚠ No workflow specified and no current context set.
@@ -84,6 +84,7 @@ Available workflows:
 **Default mode**: Plan verification
 
 **Detect mode from:**
+
 1. User command includes "code" → Code verification mode
 2. User provides file paths → Code verification mode
 3. Otherwise → Plan verification mode (default)
@@ -110,8 +111,10 @@ Please respond with 1 or 2.
 **For Plan Verification Mode:**
 
 **If workflow is a feature:**
+
 - Read `.ai/features/{name}/implementation-plan/plan.md`
 - If missing:
+
   ```
   ⚠ Implementation plan not found for '{name}'.
 
@@ -119,8 +122,10 @@ Please respond with 1 or 2.
   ```
 
 **If workflow is a bug:**
+
 - Read `.ai/bugs/{name}/fix-plan.md`
 - If missing:
+
   ```
   ⚠ Fix plan not found for '{name}'.
 
@@ -128,6 +133,7 @@ Please respond with 1 or 2.
   ```
 
 **If workflow is an idea:**
+
 ```
 ⚠ Ideas don't have implementation plans.
 
@@ -176,6 +182,7 @@ Generate a minimal PASS report and skip to step 7.
 **Step 2: Read coding standards hierarchy**
 
 Read in this order:
+
 1. `.ai/memory/coding-rules/index.md` - General principles and methodology
 2. Check for category-specific rules mentioned in index.md
 3. Read relevant category indices (e.g., `react/index.md`, `typescript/index.md`)
@@ -187,6 +194,7 @@ Read in this order:
 **Step 3: Organize standards for analysis**
 
 Group standards into categories:
+
 - **Development Methodology** (TDD, BDD, testing approach)
 - **Architectural Principles** (SOLID, DRY, patterns)
 - **Testing Requirements** (coverage, types of tests)
@@ -202,6 +210,7 @@ Group standards into categories:
 Compare the implementation plan/code against coding standards and identify discrepancies across three severity levels.
 
 **Critical Issues (Blocks Implementation):**
+
 - Plan/code violates architectural constraints from coding rules
 - Missing required testing strategy per standards (e.g., standards require TDD but plan has no test tasks)
 - Inconsistent with tech stack requirements (e.g., using wrong framework version)
@@ -209,6 +218,7 @@ Compare the implementation plan/code against coding standards and identify discr
 - Missing error handling when standards mandate it
 
 **Warnings (Should Address):**
+
 - Plan tasks don't reference relevant coding rules where they should
 - Naming conventions not aligned with standards
 - Incomplete documentation standards application
@@ -216,6 +226,7 @@ Compare the implementation plan/code against coding standards and identify discr
 - Code review requirements not addressed in plan
 
 **Info (Suggestions):**
+
 - Could leverage additional coding standards for better quality
 - Opportunities to enhance with best practices from standards
 - Alternative approaches mentioned in standards worth considering
@@ -224,6 +235,7 @@ Compare the implementation plan/code against coding standards and identify discr
 **Verification Checks by Mode:**
 
 **Plan Verification:**
+
 - Does each phase align with development methodology?
 - Are testing tasks included per testing standards?
 - Do architectural decisions match architectural principles?
@@ -232,6 +244,7 @@ Compare the implementation plan/code against coding standards and identify discr
 - Is error handling strategy consistent with standards?
 
 **Code Verification:**
+
 - Does code structure match architectural standards?
 - Are naming conventions followed?
 - Is test coverage adequate per standards?
@@ -414,12 +427,14 @@ All loaded standards were applicable to this verification.
 **Step 5: Create symlink to latest report**
 
 **On Windows:**
+
 ```bash
 # Create copy as "latest" (Windows may not support symlinks without admin)
 copy .ai\reports\verification-{name}-{timestamp}.report.md .ai\reports\verification-{name}-latest.report.md
 ```
 
 **On Linux/Mac:**
+
 ```bash
 # Create symlink
 ln -sf verification-{name}-{timestamp}.report.md .ai/reports/verification-{name}-latest.report.md
@@ -430,6 +445,7 @@ ln -sf verification-{name}-{timestamp}.report.md .ai/reports/verification-{name}
 **Do NOT update workflow state** - verification is read-only and doesn't change workflow status.
 
 The workflow remains in its current state:
+
 - Features: prd-approved, planning, or in-progress
 - Bugs: reported, triaged, or fixing
 

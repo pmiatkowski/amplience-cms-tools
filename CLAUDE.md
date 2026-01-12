@@ -1,12 +1,16 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Project Overview
 
-Amplience CMS Tools is a CLI application for automating bulk operations in Amplience CMS. It provides 13 specialized commands for content management tasks not available through the standard Amplience UI.
+Amplience CMS Tools is a CLI application for automating bulk operations in
+Amplience CMS. It provides 13 specialized commands for content management tasks
+not available through the standard Amplience UI.
 
 **Key Technologies:**
+
 - TypeScript 5+ with strict mode
 - Node.js v22+ (specified in package.json engines)
 - Vitest for testing
@@ -16,6 +20,7 @@ Amplience CMS Tools is a CLI application for automating bulk operations in Ampli
 ## Development Commands
 
 ### Essential Commands
+
 ```bash
 npm start                   # Run the CLI application
 npm test                    # Run all tests
@@ -29,6 +34,7 @@ npm run build               # Validate TypeScript compilation
 ```
 
 ### Coverage & Reporting
+
 ```bash
 npm run coverage:report     # Process coverage and generate detailed reports
 npm run coverage:open       # Open HTML coverage report in browser
@@ -38,7 +44,8 @@ npm run coverage:open       # Open HTML coverage report in browser
 
 ### Two-Layer Architecture
 
-The codebase follows a clear **Command-Action** pattern with separation of concerns:
+The codebase follows a clear **Command-Action** pattern with separation of
+concerns:
 
 1. **Commands Layer** (`src/commands/`)
    - User-facing CLI commands
@@ -56,6 +63,7 @@ The codebase follows a clear **Command-Action** pattern with separation of conce
 ### Key Services
 
 **AmplienceService** (`src/services/amplience-service.ts`):
+
 - Core API client for Amplience CMS
 - Handles authentication (OAuth and PAT)
 - Manages token refresh automatically
@@ -63,14 +71,17 @@ The codebase follows a clear **Command-Action** pattern with separation of conce
 - One instance per hub
 
 **FilterService** (`src/services/filter-service.ts`):
+
 - Centralizes content filtering logic
 - Filters by schema ID, status, publication state, delivery key patterns
 
 **HierarchyService** (`src/services/hierarchy-service.ts`):
+
 - Manages hierarchical content item relationships
 - Handles parent-child structures
 
 **ContentTypeService** (`src/services/content-type-service.ts`):
+
 - Manages content types and schemas
 - Handles schema validation and synchronization
 
@@ -122,30 +133,54 @@ The tool supports two authentication methods (configured via `.env`):
    - Tokens auto-refresh (handled by AmplienceService)
 
 **Hub Configuration Pattern:**
+
 - Auto-discovery from environment variables matching `AMP_HUB_*_HUB_ID`
 - Each hub requires: `HUB_ID`, `HUB_NAME`
 - OAuth requires additional: `CLIENT_ID`, `CLIENT_SECRET`
 - If `PAT_TOKEN` is set, it takes precedence for all hubs
+- Each hub can optionally include: `EXT_URL` (valid HTTPS URL pointing to the
+  hub's Amplience extensions interfaces)
+
+**Example Hub Configuration:**
+
+```env
+# OAut
+AMP_HUB_DEV_CLIENT_ID=client_id_here
+AMP_HUB_DEV_CLIENT_SECRET=client_secret_here
+AMP_HUB_DEV_HUB_ID=hub_id_here
+AMP_HUB_DEV_HUB_NAME=DEV
+AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
+
+# PAT
+PAT_TOKEN=token_here
+AMP_HUB_PROD_HUB_ID=hub_id_here
+AMP_HUB_PROD_HUB_NAME=PROD
+AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
+```
 
 See `src/app-config.ts` for implementation.
 
 ## Code Conventions
 
 ### File Naming
+
 - Use **kebab-case** for all files: `my-file-name.ts`
 - Test files: `my-file-name.test.ts`
 - Index files for barrel exports: `index.ts`
 
 ### Import Aliases
+
 - `~/` maps to `src/`
 - Example: `import { AmplienceService } from '~/services/amplience-service'`
 - Configured in `tsconfig.json` and `vitest.config.ts`
 
 ### Barrel Exports
+
 - Each directory uses `index.ts` for clean exports
 - Import from directory level: `import { foo } from '~/services'`
 
 ### TypeScript
+
 - Strict mode enabled
 - All compiler strict checks enabled
 - Type safety is paramount - avoid `any`
@@ -153,12 +188,15 @@ See `src/app-config.ts` for implementation.
 ## Testing
 
 ### Test Organization
+
 - Tests live alongside source files: `*.test.ts`
 - Also supported in `tests/` directory
 - Use Vitest for all tests
 
 ### Coverage Thresholds
+
 Current thresholds (from vitest.config.ts):
+
 - Lines: 24%
 - Statements: 24%
 - Functions: 33%
@@ -219,6 +257,7 @@ export async function runMyCommand(): Promise<void> {
 ## Amplience DC-CLI Integration
 
 For schema operations, the tool uses Amplience's official DC-CLI:
+
 - Executed via `src/utils/dc-cli-executor.ts`
 - Commands run as child processes
 - Used for schema import/export operations
@@ -227,6 +266,7 @@ For schema operations, the tool uses Amplience's official DC-CLI:
 ## Reports
 
 All operations generate Markdown reports in `reports/` directory with:
+
 - Operation summary and filters
 - Success/failure counts and timing
 - Item-by-item results
@@ -237,6 +277,7 @@ Reports are excluded from version control.
 ## Common Patterns
 
 ### Progress Bars
+
 ```typescript
 const progress = createProgressBar(total);
 for (const item of items) {
@@ -247,6 +288,7 @@ progress.stop();
 ```
 
 ### Filtering Content
+
 ```typescript
 const filtered = filterContentItems(items, {
   schemaId: 'https://schema.example.com',
@@ -257,7 +299,9 @@ const filtered = filterContentItems(items, {
 ```
 
 ### Dry Run Pattern
+
 Most commands support dry-run mode:
+
 ```typescript
 const isDryRun = await promptForDryRun();
 if (!isDryRun) {

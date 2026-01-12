@@ -6,6 +6,7 @@ import { copyContentTypeSchemas } from './commands/copy-content-type-schemas';
 import { runCopyContentTypes } from './commands/copy-content-types';
 import { runCopyFolderWithContent } from './commands/copy-folder-with-content';
 import { runListFolderTree } from './commands/list-folder-tree';
+import { runManageExtensions } from './commands/manage-extensions';
 import { runRecreateContentItems } from './commands/recreate-content-items';
 import { runRecreateFolderStructure } from './commands/recreate-folder-structure';
 import { runSyncContentTypeProperties } from './commands/sync-content-type-properties';
@@ -89,6 +90,9 @@ async function main(): Promise<void> {
         break;
       case 'copy-folder-with-content':
         await runCopyFolderWithContent();
+        break;
+      case 'manage-extensions':
+        await runManageExtensions();
         break;
       default:
         console.error('Unknown command selected.');

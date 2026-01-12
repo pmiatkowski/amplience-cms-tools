@@ -78,12 +78,14 @@ AMP_HUB_DEV_CLIENT_ID=your_dev_client_id
 AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
+AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
 
 # Production Environment (OAuth)
 AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
 AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
+AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
 ```
 
 #### Personal Access Token (PAT) Configuration
@@ -98,10 +100,12 @@ PAT_TOKEN=your_personal_access_token_here
 # Development Environment
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
+AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
 
 # Production Environment
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
+AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
 ```
 
 **Important:** When `PAT_TOKEN` is set, it applies to **all** configured hubs.
@@ -118,12 +122,14 @@ AMP_HUB_DEV_CLIENT_ID=your_dev_client_id
 AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
+AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
 
 # Production also with OAuth (no PAT_TOKEN set)
 AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
 AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
+AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
 ```
 
 Or use PAT for all hubs:
@@ -135,10 +141,12 @@ PAT_TOKEN=your_personal_access_token_here
 # Development Environment
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
+AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
 
 # Production Environment
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
+AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
 ```
 
 **Authentication Priority:**
@@ -147,6 +155,17 @@ AMP_HUB_PROD_HUB_NAME=PROD
   ignored)
 - If `PAT_TOKEN` is not set, OAuth credentials (CLIENT_ID + CLIENT_SECRET) are
   required per hub
+
+**Hub URL Configuration:**
+
+Each hub can optionally have an EXT_URL property that points to the hub's
+Amplience extensions interface:
+
+```env
+AMP_HUB_<HUBNAME>_EXT_URL=https://your-hub.amplience.net
+```
+
+- The URL must be a valid HTTPS URL
 
 ### Configuration Features
 
@@ -160,7 +179,8 @@ AMP_HUB_PROD_HUB_NAME=PROD
 
 **Rate Limiting Configuration:**
 
-The tool automatically handles API rate limits (HTTP 429 responses) with configurable retry behavior:
+The tool automatically handles API rate limits (HTTP 429 responses) with
+configurable retry behavior:
 
 ```env
 # Retry Configuration (optional)
@@ -168,7 +188,8 @@ RETRIES_COUNT=3           # Maximum number of retry attempts (default: 3)
 RETRY_AWAIT_TIME=60       # Base wait time in seconds before retry (default: 60)
 ```
 
-- When a rate limit is encountered, the tool will automatically retry the request
+- When a rate limit is encountered, the tool will automatically retry the
+  request
 - If the API provides a `Retry-After` header, that value is used
 - Otherwise, exponential backoff is applied: `RETRY_AWAIT_TIME * (2 ^ attempt)`
 - After `RETRIES_COUNT` attempts, the operation will fail with an error
@@ -206,7 +227,7 @@ npm start
 
 ## 🎯 Available Commands
 
-The CLI tool provides 13 specialized commands for different bulk operations:
+The CLI tool provides 14 specialized commands for different bulk operations:
 
 ### 1. Clean Repository
 
@@ -316,6 +337,28 @@ sequential processing with comprehensive error handling.
 
 Performs bulk updates to delivery key locale segments with support for
 prefix/suffix patterns and optional publishing workflow.
+
+### 14. Manage Extensions
+
+**Command**: Manage Extensions
+**Documentation**: [export-extensions.md](docs/export-extensions.md) |
+[import-extensions.md](docs/import-extensions.md)
+
+Provides a submenu for extension management operations with two capabilities:
+
+**Export Extensions**: Bulk export extensions from a hub with intelligent
+regex-based filtering and flexible handling of existing exports. Includes three
+export modes: full overwrite, selective overwrite (matching only), and
+incremental addition (get missing only). Features file validation, preview mode,
+and configurable default filters.
+
+**Import Extensions**: Bulk import extensions to a hub with automatic
+hub-specific field updates (hub IDs and URL origins). Uses temporary directory
+workflow to preserve source files, supports regex-based filtering, file
+validation, and preview mode. Ideal for cross-environment deployment and
+migration scenarios.
+
+Future enhancements will add delete capabilities.
 
 ## 📊 Common Features Across All Commands
 

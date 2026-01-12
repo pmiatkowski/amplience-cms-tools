@@ -5,7 +5,7 @@ import inquirer from 'inquirer';
  * Can be overridden by AMP_DEFAULT_EXTENSION_DIR environment variable.
  */
 export const DEFAULT_EXTENSION_INPUT_DIRECTORY =
-  process.env.AMP_DEFAULT_EXTENSION_DIR || './extensions';
+  process.env.AMP_DEFAULT_EXTENSION_DIR || './exports/extensions';
 
 /**
  * Prompt the user for a source directory containing extension files to import.

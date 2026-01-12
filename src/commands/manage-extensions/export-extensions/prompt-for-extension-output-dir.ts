@@ -1,6 +1,7 @@
 import inquirer from 'inquirer';
 
-export const DEFAULT_EXTENSION_EXPORT_DIRECTORY = './exports/extensions';
+export const DEFAULT_EXTENSION_EXPORT_DIRECTORY =
+  process.env.AMP_DEFAULT_EXTENSION_DIR || './exports/extensions';
 
 /**
  * Prompt the user for an export directory, defaulting to ./exports/extensions.

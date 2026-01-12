@@ -178,15 +178,27 @@ declare global {
     }
 
     interface Extension {
-      id: string;
-      name?: string;
-      url?: string;
-      description?: string;
-      category?: string;
+      id?: string; // System-generated, present when fetched from hub via API
+      hubId?: string; // Hub ID, present in exported files
+      name: string; // Required identifier for the extension
       label?: string;
-      snippet?: string;
+      description?: string;
+      url?: string;
       height?: number;
+      enabledForAllContentTypes?: boolean;
+      category?: string;
+      parameters?: string; // JSON string with extension parameters
+      snippets?: Array<{
+        label: string;
+        body: string;
+      }>;
+      settings?: string; // JSON string with extension settings
       status?: string;
+      createdBy?: string;
+      createdDate?: string;
+      lastModifiedBy?: string;
+      lastModifiedDate?: string;
+      snippet?: string; // Deprecated, use snippets array
       _links?: {
         self?: { href: string };
       };
@@ -721,6 +733,22 @@ declare global {
       filteredOutCount: number;
       invalidCount: number;
       importedCount: number;
+      invalidFiles: InvalidExtensionFile[];
+    }
+
+    /**
+     * Preview result for extensions before import (read-only)
+     */
+    interface PreviewExtensionsResult {
+      sourceDir: string;
+      totalFilesFound: number;
+      matchedCount: number;
+      filteredOutCount: number;
+      invalidCount: number;
+      kept: Array<{
+        extension: Extension;
+        filePath: string;
+      }>;
       invalidFiles: InvalidExtensionFile[];
     }
   }

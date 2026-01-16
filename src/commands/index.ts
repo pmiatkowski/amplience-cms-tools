@@ -15,3 +15,4 @@ export * from './recreate-folder-structure';
 export * from './sync-content-type-properties';
 export * from './sync-hierarchy';
 export * from './update-delivery-keys-locale';
+export * from './vse-management';

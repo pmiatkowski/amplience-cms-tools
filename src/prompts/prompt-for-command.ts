@@ -12,6 +12,10 @@ export async function promptForCommand(): Promise<CommandChoice> {
           value: 'manage-extensions',
         },
         {
+          name: 'VSE Management (bulk update visualization settings for content types)',
+          value: 'vse-management',
+        },
+        {
           name: 'Synchronize content-item hierarchy (recreates missing items based on source hierarchy)',
           value: 'sync-hierarchy',
         },
@@ -57,6 +61,7 @@ export async function promptForCommand(): Promise<CommandChoice> {
 
 type CommandChoice =
   | 'manage-extensions'
+  | 'vse-management'
   | 'update-locale'
   | 'clean-repo'
   | 'list-folder-tree'

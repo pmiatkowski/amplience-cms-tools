@@ -1,0 +1,15 @@
+status: completed
+current_phase: 5
+created: 2026-01-16
+updated: '2026-01-16'
+phases:
+- name: Foundation & Command Structure
+  status: completed
+- name: Content Type Selection
+  status: completed
+- name: Visualization Configuration & URL Replacement
+  status: completed
+- name: Bulk Update & Progress Tracking
+  status: completed
+- name: Reports, Dry-run & Integration
+  status: completed

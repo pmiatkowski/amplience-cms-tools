@@ -242,6 +242,7 @@ describe('EXT_URL validation', () => {
     // Arrange
     const hubWithoutExtUrl: Amplience.HubConfig = {
       name: 'Test Hub',
+      envKey: 'TEST_HUB',
       hubId: 'hub-123',
       patToken: 'test-token',
     };

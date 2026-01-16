@@ -49,6 +49,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'Target Hub',
+      envKey: 'TARGET_HUB',
       hubId: 'new-hub-id',
       patToken: 'test-token',
       extUrl: 'https://new-hub.amplience.net',
@@ -83,6 +84,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'Target',
+      envKey: 'TARGET',
       hubId: 'target-hub',
       patToken: 'token',
       extUrl: 'https://target.amplience.net',
@@ -119,6 +121,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'New Hub',
+      envKey: 'NEW_HUB',
       hubId: 'new-hub',
       patToken: 'token',
       extUrl: 'https://new.amplience.net',
@@ -145,6 +148,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'Hub',
+      envKey: 'HUB',
       hubId: 'hub-id',
       patToken: 'token',
       extUrl: 'https://hub.amplience.net',
@@ -166,6 +170,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'Hub',
+      envKey: 'HUB',
       hubId: 'new',
       patToken: 'token',
       extUrl: 'https://new.amplience.net',
@@ -183,6 +188,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'Hub',
+      envKey: 'HUB',
       hubId: 'hub-id',
       patToken: 'token',
       extUrl: 'https://hub.amplience.net',
@@ -204,6 +210,7 @@ describe('updateExtensionFields', () => {
 
     const targetHub: HubConfigWithExtUrl = {
       name: 'Hub',
+      envKey: 'HUB',
       hubId: 'new-hub',
       patToken: 'token',
       // extUrl is missing

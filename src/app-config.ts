@@ -23,7 +23,7 @@ function getHubConfigs(): Amplience.HubConfig[] {
       const name = process.env[`AMP_HUB_${hubName}_HUB_NAME`];
       const extUrl = process.env[`AMP_HUB_${hubName}_EXT_URL`];
       if (hubId && name) {
-        const config: Amplience.HubConfig = { name, hubId, patToken };
+        const config: Amplience.HubConfig = { name, envKey: hubName, hubId, patToken };
         if (extUrl) {
           config.extUrl = extUrl;
         }
@@ -54,7 +54,7 @@ function getHubConfigs(): Amplience.HubConfig[] {
     const extUrl = process.env[`AMP_HUB_${hubName}_EXT_URL`];
 
     if (clientId && clientSecret && hubId && name) {
-      const config: Amplience.HubConfig = { name, clientId, clientSecret, hubId };
+      const config: Amplience.HubConfig = { name, envKey: hubName, clientId, clientSecret, hubId };
       if (extUrl) {
         config.extUrl = extUrl;
       }

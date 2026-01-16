@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+*-cwd
 
 # Dependencies
 node_modules/
@@ -32,6 +33,7 @@ pids/
 # Logs
 logs/
 *.log
+nul
 
 # Schemas
 temp_export*

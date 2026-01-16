@@ -45,6 +45,7 @@ vi.mock('~/prompts', () => ({
 describe('copyContentTypeSchemas', () => {
   const mockSourceHub = {
     name: 'Source Hub',
+    envKey: 'SOURCE_HUB',
     clientId: 'client-id',
     clientSecret: 'client-secret',
     hubId: 'source-hub-id',
@@ -52,6 +53,7 @@ describe('copyContentTypeSchemas', () => {
 
   const mockTargetHub = {
     name: 'Target Hub',
+    envKey: 'TARGET_HUB',
     clientId: 'client-id',
     clientSecret: 'client-secret',
     hubId: 'target-hub-id',

@@ -11,12 +11,14 @@ describe('ContentTypeService', () => {
     contentTypeService = new ContentTypeService();
     mockSourceHub = new AmplienceService({
       name: 'Source Hub',
+      envKey: 'SOURCE_HUB',
       hubId: 'source-hub-id',
       clientId: 'source-client-id',
       clientSecret: 'source-client-secret',
     });
     mockTargetHub = new AmplienceService({
       name: 'Target Hub',
+      envKey: 'TARGET_HUB',
       hubId: 'target-hub-id',
       clientId: 'target-client-id',
       clientSecret: 'target-client-secret',

@@ -1,7 +1,7 @@
 version: 1
 current:
-  name: extension-import
+  name: vse-default-files
   workflow_type: feature
-  set_date: 2026-01-08
+  set_date: 2026-01-16
   set_method: auto
-last_updated: 2026-01-08
+last_updated: 2026-01-16

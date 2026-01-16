@@ -1,0 +1,11 @@
+status: completed
+current_phase: 3
+created: 2026-01-16
+updated: '2026-01-16'
+phases:
+- name: Core Subcommand Structure
+  status: completed
+- name: Environment Variable Detection and File Validation
+  status: completed
+- name: Display Logic and Example Content
+  status: completed

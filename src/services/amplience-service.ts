@@ -1472,6 +1472,33 @@ export class AmplienceService {
   }
 
   /**
+   * Update a content type's settings
+   * @param contentTypeId The ID of the content type to update
+   * @param body The update request payload
+   * @returns Promise resolving to the operation result
+   */
+  public async updateContentType<T = Record<string, unknown>>(
+    contentTypeId: string,
+    body: T
+  ): Promise<Amplience.OperationResult<Amplience.ContentType>> {
+    try {
+      const url = `https://api.amplience.net/v2/content/content-types/${contentTypeId}`;
+
+      const response = await this._request<Amplience.ContentType>(url, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+
+      return { success: true, updatedItem: response };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
    * Archive a content type
    * @param contentTypeId The ID of the content type to archive
    * @returns Promise resolving to the operation result

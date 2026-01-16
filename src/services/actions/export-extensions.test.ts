@@ -52,6 +52,7 @@ vi.mock('~/utils', () => ({
 
 const mockHub: Amplience.HubConfig = {
   name: 'Test Hub',
+  envKey: 'TEST_HUB',
   clientId: 'client-id',
   clientSecret: 'client-secret',
   hubId: 'hub-id',

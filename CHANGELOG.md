@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.4.1...v1.5.0) (2026-01-16)
+
+
+### Features
+
+* 8-vse-content-type-management: Add vsc sync ([#15](https://github.com/pmiatkowski/amplience-cms-tools/issues/15)) ([beff50b](https://github.com/pmiatkowski/amplience-cms-tools/commit/beff50b14944268b9ca8efc8191117d777b6e5d3))
+
 ## [1.4.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.4.0...v1.4.1) (2026-01-12)
 
 

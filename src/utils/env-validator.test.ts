@@ -20,7 +20,7 @@ describe('Environment Variable Validator', () => {
   });
 
   describe('getHubVisualizationUrl', () => {
-    it('should return visualization URL for valid hub name', () => {
+    it('should return visualization URL for valid environment key', () => {
       process.env.AMP_HUB_DEV_VISUALISATION_APP_URL = 'https://vse.dev.example.com';
 
       const result = getHubVisualizationUrl('DEV');
@@ -31,7 +31,7 @@ describe('Environment Variable Validator', () => {
     it('should throw error if hub visualization URL is not set', () => {
       expect(() => {
         getHubVisualizationUrl('PROD');
-      }).toThrow('Visualization URL not configured for hub "PROD"');
+      }).toThrow('Visualization URL not configured for hub environment "PROD"');
     });
 
     it('should throw error if hub visualization URL is empty', () => {
@@ -39,7 +39,7 @@ describe('Environment Variable Validator', () => {
 
       expect(() => {
         getHubVisualizationUrl('STAGING');
-      }).toThrow('Visualization URL not configured for hub "STAGING"');
+      }).toThrow('Visualization URL not configured for hub environment "STAGING"');
     });
 
     it('should throw error if hub visualization URL is whitespace only', () => {
@@ -47,7 +47,7 @@ describe('Environment Variable Validator', () => {
 
       expect(() => {
         getHubVisualizationUrl('TEST');
-      }).toThrow('Visualization URL not configured for hub "TEST"');
+      }).toThrow('Visualization URL not configured for hub environment "TEST"');
     });
 
     it('should throw error if visualization URL is not a valid HTTPS URL', () => {
@@ -82,7 +82,7 @@ describe('Environment Variable Validator', () => {
       expect(result).toBe('https://vse.dev.example.com:8080');
     });
 
-    it('should handle hub names with underscores', () => {
+    it('should handle environment keys with underscores', () => {
       process.env.AMP_HUB_DEV_US_VISUALISATION_APP_URL = 'https://vse.dev.us.example.com';
 
       const result = getHubVisualizationUrl('DEV_US');

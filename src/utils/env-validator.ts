@@ -58,7 +58,7 @@ export function getDefaultVisualizationConfigFilePath(): string | undefined {
 /**
  * Get visualization URL for a specific hub from environment variables
  *
- * @param hubName - The hub name (e.g., 'DEV', 'PROD')
+ * @param envKey - The hub environment key (e.g., 'DEV', 'PROD')
  * @returns The HTTPS visualization URL for the hub
  * @throws Error if the URL is not configured or invalid
  *
@@ -66,14 +66,14 @@ export function getDefaultVisualizationConfigFilePath(): string | undefined {
  * const url = getHubVisualizationUrl('DEV');
  * // Returns: 'https://vse.dev.example.com'
  */
-export function getHubVisualizationUrl(hubName: string): string {
-  const envKey = `AMP_HUB_${hubName}_VISUALISATION_APP_URL`;
-  const url = process.env[envKey];
+export function getHubVisualizationUrl(envKey: string): string {
+  const envVarName = `AMP_HUB_${envKey}_VISUALISATION_APP_URL`;
+  const url = process.env[envVarName];
 
   if (!url || url.trim() === '') {
     throw new Error(
-      `Visualization URL not configured for hub "${hubName}". ` +
-        `Please set ${envKey} environment variable.`
+      `Visualization URL not configured for hub environment "${envKey}". ` +
+        `Please set ${envVarName} environment variable.`
     );
   }
 

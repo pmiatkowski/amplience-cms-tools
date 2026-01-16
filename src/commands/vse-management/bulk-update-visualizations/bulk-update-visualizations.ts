@@ -125,7 +125,7 @@ export async function runBulkUpdateVisualizations(): Promise<void> {
 
     // 7. Get hub-specific visualization URL
     console.log('🔗 Retrieving hub-specific visualization URL...');
-    const hubVisualizationUrl = getHubVisualizationUrl(hub.name);
+    const hubVisualizationUrl = getHubVisualizationUrl(hub.envKey);
     console.log(`Hub visualization URL: ${hubVisualizationUrl}\n`);
 
     // 8. Verify URL replacement works correctly

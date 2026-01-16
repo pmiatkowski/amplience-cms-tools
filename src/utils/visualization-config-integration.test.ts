@@ -152,7 +152,7 @@ describe('Visualization Config Integration', () => {
         ...viz,
         templatedUri: replaceOriginPlaceholder(viz.templatedUri, hubUrl),
       }));
-    }).toThrow('Visualization URL not configured for hub "TEST"');
+    }).toThrow('Visualization URL not configured for hub environment "TEST"');
   });
 
   it('should throw error if config file has invalid structure', () => {

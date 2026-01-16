@@ -9,6 +9,7 @@ describe('AmplienceService', () => {
   let service: AmplienceService;
   const mockOAuthConfig: Amplience.HubOAuthConfig = {
     name: 'Test Hub',
+    envKey: 'TEST_HUB',
     hubId: 'test-hub-id',
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
@@ -16,6 +17,7 @@ describe('AmplienceService', () => {
 
   const mockPATConfig: Amplience.HubPATConfig = {
     name: 'Test Hub PAT',
+    envKey: 'TEST_HUB_PAT',
     hubId: 'test-hub-id-pat',
     patToken: 'test-pat-token-12345',
   };

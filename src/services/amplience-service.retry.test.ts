@@ -14,6 +14,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
   let service: AmplienceService;
   const mockOAuthConfig: Amplience.HubOAuthConfig = {
     name: 'Test Hub',
+    envKey: 'TEST_HUB',
     hubId: 'test-hub-id',
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',

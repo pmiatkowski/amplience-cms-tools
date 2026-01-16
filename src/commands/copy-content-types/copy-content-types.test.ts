@@ -47,6 +47,7 @@ describe('runCopyContentTypes', () => {
   // Mock data
   const mockSourceHub: Amplience.HubConfig = {
     name: 'source-hub',
+    envKey: 'SOURCE_HUB',
     hubId: 'source-hub-id',
     clientId: 'source-client-id',
     clientSecret: 'source-client-secret',
@@ -54,6 +55,7 @@ describe('runCopyContentTypes', () => {
 
   const mockTargetHub: Amplience.HubConfig = {
     name: 'target-hub',
+    envKey: 'TARGET_HUB',
     hubId: 'target-hub-id',
     clientId: 'target-client-id',
     clientSecret: 'target-client-secret',

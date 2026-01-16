@@ -98,13 +98,31 @@ describe('URL Replacer', () => {
       );
     });
 
-    it('should throw error if templatedUri does not contain {{ORIGIN_REPLACE}}', () => {
+    it('should return URI unchanged if it does not contain {{ORIGIN_REPLACE}}', () => {
       const templatedUri = 'https://hardcoded.com/preview';
       const hubUrl = 'https://vse.dev.example.com';
 
-      expect(() => {
-        replaceOriginPlaceholder(templatedUri, hubUrl);
-      }).toThrow('Template URI must contain {{ORIGIN_REPLACE}} placeholder');
+      const result = replaceOriginPlaceholder(templatedUri, hubUrl);
+
+      expect(result).toBe('https://hardcoded.com/preview');
+    });
+
+    it('should handle URIs with other template variables but no {{ORIGIN_REPLACE}}', () => {
+      const templatedUri = 'https://external.com/preview?id={{content.sys.id}}&locale={{locale}}';
+      const hubUrl = 'https://vse.dev.example.com';
+
+      const result = replaceOriginPlaceholder(templatedUri, hubUrl);
+
+      expect(result).toBe('https://external.com/preview?id={{content.sys.id}}&locale={{locale}}');
+    });
+
+    it('should preserve all placeholders when {{ORIGIN_REPLACE}} is missing', () => {
+      const templatedUri = 'https://fixed.com/{{contentType}}/{{itemId}}?hub={{hub.name}}';
+      const hubUrl = 'https://vse.dev.example.com';
+
+      const result = replaceOriginPlaceholder(templatedUri, hubUrl);
+
+      expect(result).toBe('https://fixed.com/{{contentType}}/{{itemId}}?hub={{hub.name}}');
     });
 
     it('should throw error if hubUrl is empty', () => {

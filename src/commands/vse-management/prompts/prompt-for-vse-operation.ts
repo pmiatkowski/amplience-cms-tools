@@ -22,6 +22,4 @@ export async function promptForVseOperation(): Promise<VseOperationChoice> {
   return operation;
 }
 
-type VseOperationChoice =
-  | 'bulk-update-visualizations'
-  | 'init-default-files';
+type VseOperationChoice = 'bulk-update-visualizations' | 'init-default-files';

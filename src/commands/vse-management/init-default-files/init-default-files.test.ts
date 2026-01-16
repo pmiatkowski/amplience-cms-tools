@@ -37,7 +37,8 @@ describe('getVseFilePaths', () => {
   });
 
   it('should return visualizations config file path when env var is set', () => {
-    process.env.AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE = '/path/to/visualizations.json';
+    process.env.AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE =
+      '/path/to/visualizations.json';
 
     const result = getVseFilePaths();
 
@@ -114,8 +115,12 @@ describe('runInitDefaultFiles', () => {
 
     expect(consoleLogSpy).toHaveBeenCalledWith('🎨 Initialize Default Files');
     expect(consoleLogSpy).toHaveBeenCalledWith('========================\n');
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Environment Variables Not Configured'));
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE'));
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Environment Variables Not Configured')
+    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE')
+    );
   });
 
   it('should display configured paths when env vars are set', async () => {
@@ -128,7 +133,7 @@ describe('runInitDefaultFiles', () => {
     expect(consoleLogSpy).toHaveBeenCalledWith('Environment variables configured:');
     expect(consoleLogSpy).toHaveBeenCalledWith('  Content Types List: /path/to/content-types.json');
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      '  Visualizations Config: /path/to/visualizations.json\n',
+      '  Visualizations Config: /path/to/visualizations.json\n'
     );
   });
 
@@ -150,7 +155,9 @@ describe('runInitDefaultFiles', () => {
 
     await runInitDefaultFiles();
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Content Types List: ✓ Found'));
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Content Types List: ✓ Found')
+    );
   });
 
   it('should show "Missing" for non-existing files', async () => {
@@ -160,7 +167,9 @@ describe('runInitDefaultFiles', () => {
 
     await runInitDefaultFiles();
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Content Types List: ✗ Missing'));
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Content Types List: ✗ Missing')
+    );
   });
 
   it('should validate both files when both env vars are set', async () => {
@@ -169,12 +178,17 @@ describe('runInitDefaultFiles', () => {
     writeFileSync(existingContentTypes, '[]');
 
     process.env.AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE = existingContentTypes;
-    process.env.AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE = nonExistentVisualizations;
+    process.env.AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE =
+      nonExistentVisualizations;
 
     await runInitDefaultFiles();
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Content Types List: ✓ Found'));
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Visualizations Config: ✗ Missing'));
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Content Types List: ✓ Found')
+    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Visualizations Config: ✗ Missing')
+    );
   });
 });
 
@@ -185,7 +199,7 @@ describe('CONTENT_TYPES_EXAMPLE', () => {
   });
 
   it('should contain example content type URIs as strings', () => {
-    CONTENT_TYPES_EXAMPLE.forEach((uri) => {
+    CONTENT_TYPES_EXAMPLE.forEach(uri => {
       expect(typeof uri).toBe('string');
       expect(uri).toMatch(/^https?:\/\//);
     });
@@ -233,12 +247,14 @@ describe('VISUALIZATIONS_EXAMPLE', () => {
   });
 
   it('preview should match PRD specification', () => {
-    expect(VISUALIZATIONS_EXAMPLE.preview.uri).toBe('{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}');
+    expect(VISUALIZATIONS_EXAMPLE.preview.uri).toBe(
+      '{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}'
+    );
   });
 
   it('liveView should match PRD specification', () => {
     expect(VISUALIZATIONS_EXAMPLE.liveView.uri).toBe(
-      '{{ORIGIN_REPLACE}}/live?id={{contentItemId}}&locale={{locale}}',
+      '{{ORIGIN_REPLACE}}/live?id={{contentItemId}}&locale={{locale}}'
     );
   });
 });
@@ -258,10 +274,10 @@ describe('displayMissingEnvVarsInstructions', () => {
     displayMissingEnvVarsInstructions();
 
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE'),
+      expect.stringContaining('AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE')
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE'),
+      expect.stringContaining('AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE')
     );
   });
 
@@ -275,7 +291,9 @@ describe('displayMissingEnvVarsInstructions', () => {
     displayMissingEnvVarsInstructions();
 
     const calls = consoleLogSpy.mock.calls.flat();
-    const jsonOutput = calls.find((call) => typeof call === 'string' && call.includes('content-types.json'));
+    const jsonOutput = calls.find(
+      call => typeof call === 'string' && call.includes('content-types.json')
+    );
     expect(jsonOutput).toBeDefined();
   });
 
@@ -284,7 +302,7 @@ describe('displayMissingEnvVarsInstructions', () => {
 
     const calls = consoleLogSpy.mock.calls.flat();
     const jsonOutput = calls.find(
-      (call) => typeof call === 'string' && call.includes('visualizations.json'),
+      call => typeof call === 'string' && call.includes('visualizations.json')
     );
     expect(jsonOutput).toBeDefined();
   });
@@ -349,7 +367,7 @@ describe('displayFileValidationResults', () => {
 
     const calls = consoleLogSpy.mock.calls.flat();
     const hasExampleContent = calls.some(
-      (call) => typeof call === 'string' && call.includes('https://schema.example.com'),
+      call => typeof call === 'string' && call.includes('https://schema.example.com')
     );
     expect(hasExampleContent).toBe(true);
   });

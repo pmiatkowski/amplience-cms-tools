@@ -16,9 +16,6 @@ export const CONTENT_TYPES_EXAMPLE = [
   'https://schema.example.com/category.json',
 ] as const;
 
-
-
-
 /**
  * Display file validation results for VSE configuration files
  *
@@ -44,7 +41,7 @@ export function displayFileValidationResults(vseFilePaths: VseFilePaths): void {
       console.log('  \n  Example content:\n');
       const exampleLines = JSON.stringify(CONTENT_TYPES_EXAMPLE, null, 2)
         .split('\n')
-        .map((line) => '    ' + line);
+        .map(line => '    ' + line);
       console.log(exampleLines.join('\n'));
     }
     console.log('');
@@ -59,18 +56,12 @@ export function displayFileValidationResults(vseFilePaths: VseFilePaths): void {
       console.log('  \n  Example content:\n');
       const exampleLines = JSON.stringify(VISUALIZATIONS_EXAMPLE, null, 2)
         .split('\n')
-        .map((line) => '    ' + line);
+        .map(line => '    ' + line);
       console.log(exampleLines.join('\n'));
     }
     console.log('');
   }
 }
-
-
-
-
-
-
 
 /**
  * Display instructions for setting up VSE environment variables
@@ -107,11 +98,6 @@ export function displayMissingEnvVarsInstructions(): void {
   console.log('');
 }
 
-
-
-
-
-
 /**
  * Reads VSE file paths from environment variables
  *
@@ -128,14 +114,10 @@ export function displayMissingEnvVarsInstructions(): void {
 export function getVseFilePaths(): VseFilePaths {
   return {
     contentTypesListFile: process.env.AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE,
-    visualizationsConfigFile: process.env.AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE,
+    visualizationsConfigFile:
+      process.env.AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE,
   };
 }
-
-
-
-
-
 
 /**
  * Initialize VSE Default Files command
@@ -163,18 +145,10 @@ export async function runInitDefaultFiles(): Promise<void> {
 
   console.log('Environment variables configured:');
   console.log(`  Content Types List: ${vseFilePaths.contentTypesListFile ?? 'Not set'}`);
-  console.log(
-    `  Visualizations Config: ${vseFilePaths.visualizationsConfigFile ?? 'Not set'}\n`,
-  );
+  console.log(`  Visualizations Config: ${vseFilePaths.visualizationsConfigFile ?? 'Not set'}\n`);
 
   displayFileValidationResults(vseFilePaths);
 }
-
-
-
-
-
-
 
 /**
  * Validates if a file exists at the given path
@@ -189,11 +163,6 @@ export async function runInitDefaultFiles(): Promise<void> {
 export function validateFileExists(filePath: string): boolean {
   return existsSync(filePath);
 }
-
-
-
-
-
 
 /**
  * Example visualizations configuration for the visualizations.json file
@@ -218,8 +187,6 @@ export const VISUALIZATIONS_EXAMPLE = {
   },
 } as const;
 
-
-
 /**
  * VSE file paths configuration
  *
@@ -230,4 +197,4 @@ export type VseFilePaths = {
   contentTypesListFile: string | undefined;
   /** Path to the visualizations configuration JSON file */
   visualizationsConfigFile: string | undefined;
-}
+};

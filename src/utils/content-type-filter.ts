@@ -1,4 +1,3 @@
-
 /**
  * Filters content types by matching their contentTypeUri against a regex pattern.
  *
@@ -30,13 +29,14 @@ export function filterContentTypesByRegex(
   try {
     regex = new RegExp(pattern, flags);
   } catch (error) {
-    throw new Error(`Invalid regex pattern: ${pattern}. ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Invalid regex pattern: ${pattern}. ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   // Filter content types by matching contentTypeUri against regex
   return contentTypes.filter(contentType => regex.test(contentType.contentTypeUri));
 }
-
 
 /**
  * Options for filtering content types
@@ -44,4 +44,4 @@ export function filterContentTypesByRegex(
 export type FilterOptions = {
   /** Whether to perform case-insensitive matching */
   caseInsensitive?: boolean;
-}
+};

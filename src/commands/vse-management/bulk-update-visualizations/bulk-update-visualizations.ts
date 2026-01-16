@@ -87,7 +87,9 @@ export async function runBulkUpdateVisualizations(): Promise<void> {
       console.log('🔍 Fetching content types from API...');
       const allContentTypes = await service.getAllContentTypes();
 
-      const matchedContentTypes = allContentTypes.filter(ct => contentTypeUris.includes(ct.contentTypeUri));
+      const matchedContentTypes = allContentTypes.filter(ct =>
+        contentTypeUris.includes(ct.contentTypeUri)
+      );
       console.log(`Matched ${matchedContentTypes.length} content types from file\n`);
 
       if (matchedContentTypes.length === 0) {
@@ -105,7 +107,9 @@ export async function runBulkUpdateVisualizations(): Promise<void> {
       return;
     }
 
-    console.log(`\n✅ Selected ${selectedContentTypes.length} content type(s) for visualization update\n`);
+    console.log(
+      `\n✅ Selected ${selectedContentTypes.length} content type(s) for visualization update\n`
+    );
 
     // 5. Prompt for visualization config file
     console.log('🎨 Visualization Configuration');
@@ -135,7 +139,9 @@ export async function runBulkUpdateVisualizations(): Promise<void> {
 
     const isDryRun = await promptForDryRun();
 
-    console.log(`\n✅ Configuration: ${isDryRun ? 'DRY-RUN (preview only)' : 'EXECUTE (live mode)'}\n`);
+    console.log(
+      `\n✅ Configuration: ${isDryRun ? 'DRY-RUN (preview only)' : 'EXECUTE (live mode)'}\n`
+    );
 
     // 10. Display summary and confirm
     displayVisualizationSummary(selectedContentTypes, visualizationConfig, hub.name);

@@ -80,7 +80,9 @@ describe('Content Type Selection - Integration Tests', () => {
       const allTypes = await mockService.getAllContentTypes();
       const filtered = filterContentTypesByRegex(allTypes, pattern);
       expect(filtered).toHaveLength(3);
-      expect(filtered.every(ct => ct.contentTypeUri.startsWith('https://schema.example.com/'))).toBe(true);
+      expect(
+        filtered.every(ct => ct.contentTypeUri.startsWith('https://schema.example.com/'))
+      ).toBe(true);
 
       const selected = await promptForContentTypeSelection(filtered);
       expect(selected).toHaveLength(2);
@@ -257,7 +259,10 @@ describe('Content Type Selection - Integration Tests', () => {
       ];
 
       // API method
-      const apiFiltered = filterContentTypesByRegex(mockContentTypes, 'https://schema\\.example\\.com/(article|product)\\.json$');
+      const apiFiltered = filterContentTypesByRegex(
+        mockContentTypes,
+        'https://schema\\.example\\.com/(article|product)\\.json$'
+      );
 
       // File method
       const mockService = {

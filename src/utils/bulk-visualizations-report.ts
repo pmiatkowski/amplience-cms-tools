@@ -45,9 +45,7 @@ export type BulkVisualizationsReportContext = {
  * @param context - Report generation context
  * @returns Markdown formatted report string
  */
-export function generateBulkVisualizationsReport(
-  context: BulkVisualizationsReportContext
-): string {
+export function generateBulkVisualizationsReport(context: BulkVisualizationsReportContext): string {
   const { result, hubName, visualizationConfig, isDryRun } = context;
   const now = new Date();
   const timestamp = now.toISOString().slice(0, 10);
@@ -79,9 +77,7 @@ export function generateBulkVisualizationsReport(
   report += `- **❌ Failed**: ${result.failed}\n`;
 
   const successRate =
-    result.totalAttempted > 0
-      ? Math.round((result.succeeded / result.totalAttempted) * 100)
-      : 0;
+    result.totalAttempted > 0 ? Math.round((result.succeeded / result.totalAttempted) * 100) : 0;
   report += `- **Success Rate**: ${successRate}%\n\n`;
 
   // Errors

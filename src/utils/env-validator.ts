@@ -1,5 +1,3 @@
-
-
 /**
  * Get default content types list file path from environment variables
  *
@@ -18,9 +16,6 @@ export function getDefaultContentTypesListFilePath(): string | undefined {
 
   return filePath.trim();
 }
-
-
-
 
 /**
  * Get default schema ID pattern from environment variables
@@ -41,8 +36,6 @@ export function getDefaultSchemaIdPattern(): string | undefined {
   return pattern.trim();
 }
 
-
-
 /**
  * Get default visualization config file path from environment variables
  *
@@ -61,7 +54,6 @@ export function getDefaultVisualizationConfigFilePath(): string | undefined {
 
   return filePath.trim();
 }
-
 
 /**
  * Get visualization URL for a specific hub from environment variables

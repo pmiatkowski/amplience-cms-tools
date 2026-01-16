@@ -12,7 +12,9 @@ describe('promptForRegexPattern', () => {
   });
 
   it('should prompt user for regex pattern with default from environment', async () => {
-    vi.mocked(envValidator.getDefaultSchemaIdPattern).mockReturnValue('https://schema\\.example\\.com/.*');
+    vi.mocked(envValidator.getDefaultSchemaIdPattern).mockReturnValue(
+      'https://schema\\.example\\.com/.*'
+    );
     vi.mocked(inquirer.prompt).mockResolvedValueOnce({
       pattern: 'https://schema\\.example\\.com/.*',
     });

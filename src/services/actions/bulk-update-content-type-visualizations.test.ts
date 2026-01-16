@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AmplienceService } from '~/services/amplience-service';
 import { type BulkUpdateVisualizationsResult } from '~/utils';
-import { bulkUpdateContentTypeVisualizations, BulkUpdateVisualizationsContext } from './bulk-update-content-type-visualizations';
+import {
+  bulkUpdateContentTypeVisualizations,
+  BulkUpdateVisualizationsContext,
+} from './bulk-update-content-type-visualizations';
 
 describe('bulkUpdateContentTypeVisualizations', () => {
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
@@ -31,17 +34,13 @@ describe('bulkUpdateContentTypeVisualizations', () => {
           status: 'ACTIVE' as Amplience.ContentTypeStatus,
           settings: {
             label: 'Test Content Type',
-            visualizations: [
-              { label: 'Old Viz', templatedUri: '{{ORIGIN_REPLACE}}/old' },
-            ],
+            visualizations: [{ label: 'Old Viz', templatedUri: '{{ORIGIN_REPLACE}}/old' }],
           },
         },
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'New Viz', templatedUri: '{{ORIGIN_REPLACE}}/new' },
-        ],
+        visualizations: [{ label: 'New Viz', templatedUri: '{{ORIGIN_REPLACE}}/new' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -130,9 +129,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -238,9 +235,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -262,9 +257,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
               { size: 16, url: 'https://example.com/icon16.png' },
               { size: 32, url: 'https://example.com/icon32.png' },
             ],
-            visualizations: [
-              { label: 'Preview', templatedUri: 'https://vse.example.com/preview' },
-            ],
+            visualizations: [{ label: 'Preview', templatedUri: 'https://vse.example.com/preview' }],
           }),
         })
       );
@@ -285,9 +278,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -305,9 +296,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
         expect.objectContaining({
           contentTypeUri: 'https://schema.example.com/test.json',
           settings: expect.objectContaining({
-            visualizations: [
-              { label: 'Preview', templatedUri: 'https://vse.example.com/preview' },
-            ],
+            visualizations: [{ label: 'Preview', templatedUri: 'https://vse.example.com/preview' }],
           }),
         })
       );
@@ -317,7 +306,8 @@ describe('bulkUpdateContentTypeVisualizations', () => {
   describe('error collection during partial failures', () => {
     it('should collect errors and continue processing when update fails', async () => {
       const mockService = {
-        updateContentType: vi.fn()
+        updateContentType: vi
+          .fn()
           .mockResolvedValueOnce({ success: true })
           .mockRejectedValueOnce(new Error('Network error'))
           .mockResolvedValueOnce({ success: true }),
@@ -348,9 +338,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -393,9 +381,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -433,9 +419,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -477,9 +461,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -516,9 +498,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -568,9 +548,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -605,9 +583,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -624,9 +600,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       expect(result.succeeded).toBe(1);
       expect(result.failed).toBe(0);
       expect(mockService.updateContentType).not.toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[DRY RUN]')
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
     });
   });
 
@@ -644,9 +618,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
           status: 'ACTIVE' as Amplience.ContentTypeStatus,
           settings: {
             label: 'Product',
-            icons: [
-              { size: 16, url: 'https://example.com/product-icon16.png' },
-            ],
+            icons: [{ size: 16, url: 'https://example.com/product-icon16.png' }],
             visualizations: [],
           },
         },
@@ -702,9 +674,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
           contentTypeUri: 'https://schema.example.com/product.json',
           settings: expect.objectContaining({
             label: 'Product',
-            icons: [
-              { size: 16, url: 'https://example.com/product-icon16.png' },
-            ],
+            icons: [{ size: 16, url: 'https://example.com/product-icon16.png' }],
             visualizations: [
               {
                 label: 'Product Preview',
@@ -713,7 +683,8 @@ describe('bulkUpdateContentTypeVisualizations', () => {
               },
               {
                 label: 'Live Product',
-                templatedUri: 'https://vse.production.com/product/live?id={{contentItemId}}&locale=en',
+                templatedUri:
+                  'https://vse.production.com/product/live?id={{contentItemId}}&locale=en',
               },
               {
                 label: 'Staging View',
@@ -727,7 +698,8 @@ describe('bulkUpdateContentTypeVisualizations', () => {
 
     it('should handle mixed success and failure scenarios realistically', async () => {
       const mockService = {
-        updateContentType: vi.fn()
+        updateContentType: vi
+          .fn()
           .mockResolvedValueOnce({ success: true })
           .mockResolvedValueOnce({
             success: false,
@@ -769,9 +741,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       ];
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {
@@ -789,7 +759,9 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       expect(result.failed).toBe(2);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0].contentTypeId).toBe('ct-2');
-      expect(result.errors[0].error).toBe('API Error: 409 Conflict - Content type version mismatch');
+      expect(result.errors[0].error).toBe(
+        'API Error: 409 Conflict - Content type version mismatch'
+      );
       expect(result.errors[1].contentTypeId).toBe('ct-3');
       expect(result.errors[1].error).toBe('Network timeout');
     });
@@ -807,9 +779,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
           status: 'ACTIVE' as Amplience.ContentTypeStatus,
           settings: {
             label: 'Test Content Type',
-            visualizations: [
-              { label: 'Old Viz', templatedUri: '{{ORIGIN_REPLACE}}/old' },
-            ],
+            visualizations: [{ label: 'Old Viz', templatedUri: '{{ORIGIN_REPLACE}}/old' }],
           },
         },
       ];
@@ -858,7 +828,8 @@ describe('bulkUpdateContentTypeVisualizations', () => {
         visualizations: [
           {
             label: 'Preview with Params',
-            templatedUri: '{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}&locale={{locale}}&version={{version}}',
+            templatedUri:
+              '{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}&locale={{locale}}&version={{version}}',
             default: true,
           },
         ],
@@ -881,7 +852,8 @@ describe('bulkUpdateContentTypeVisualizations', () => {
             visualizations: [
               {
                 label: 'Preview with Params',
-                templatedUri: 'https://vse.production.example.com/preview?id={{contentItemId}}&locale={{locale}}&version={{version}}',
+                templatedUri:
+                  'https://vse.production.example.com/preview?id={{contentItemId}}&locale={{locale}}&version={{version}}',
                 default: true,
               },
             ],
@@ -907,9 +879,7 @@ describe('bulkUpdateContentTypeVisualizations', () => {
       }));
 
       const mockVisualizationConfig = {
-        visualizations: [
-          { label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' },
-        ],
+        visualizations: [{ label: 'Preview', templatedUri: '{{ORIGIN_REPLACE}}/preview' }],
       };
 
       const context: BulkUpdateVisualizationsContext = {

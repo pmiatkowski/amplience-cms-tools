@@ -36,7 +36,9 @@ describe('URL Replacer', () => {
 
       const result = replaceOriginPlaceholder(templatedUri, hubUrl);
 
-      expect(result).toBe('https://vse.dev.example.com/live?id={{contentItemId}}&locale={{locale}}');
+      expect(result).toBe(
+        'https://vse.dev.example.com/live?id={{contentItemId}}&locale={{locale}}'
+      );
     });
 
     it('should preserve other template variables in path', () => {

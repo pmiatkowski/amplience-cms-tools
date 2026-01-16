@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { promptForDryRun } from './prompt-for-dry-run';
 
 describe('promptForDryRun', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.spyOn has complex types incompatible with inquirer v10's prompt signature
   let inquirerPromptSpy: any;
 
   beforeEach(() => {

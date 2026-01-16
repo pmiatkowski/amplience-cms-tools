@@ -41,7 +41,7 @@ export async function promptForContentTypeSelection(
         return true;
       },
     },
-  ] as any);
+  ] as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- inquirer v10 has complex types that don't work with strict mode for array prompts
 
   // Handle "Select All" option
   if (selectedIds.includes('SELECT_ALL')) {

@@ -1,7 +1,6 @@
 import { AmplienceService } from '~/services/amplience-service';
 import { type BulkUpdateVisualizationsResult, createProgressBar } from '~/utils';
 
-
 /**
  * Bulk update visualizations for multiple content types
  *
@@ -53,7 +52,9 @@ export async function bulkUpdateContentTypeVisualizations(
       if (isDryRun) {
         // In dry-run mode, just log what would be updated
         console.log(`  [DRY RUN] Would update ${contentType.contentTypeUri}`);
-        console.log(`    Old visualizations: ${JSON.stringify(contentType.settings?.visualizations || [])}`);
+        console.log(
+          `    Old visualizations: ${JSON.stringify(contentType.settings?.visualizations || [])}`
+        );
         console.log(`    New visualizations: ${JSON.stringify(updatedVisualizations)}`);
         result.succeeded++;
       } else {
@@ -94,9 +95,6 @@ export async function bulkUpdateContentTypeVisualizations(
   return result;
 }
 
-
-
-
 /**
  * Context object for bulk update visualizations action
  */
@@ -112,8 +110,6 @@ export type BulkUpdateVisualizationsContext = {
   /** Whether to run in dry-run mode (no actual updates) */
   isDryRun: boolean;
 };
-
-
 
 /**
  * Visualization configuration from JSON file

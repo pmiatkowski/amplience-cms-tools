@@ -12,7 +12,9 @@ describe('promptForContentTypesFile', () => {
   });
 
   it('should prompt user for file path with default from environment', async () => {
-    vi.mocked(envValidator.getDefaultContentTypesListFilePath).mockReturnValue('./config/content-types.json');
+    vi.mocked(envValidator.getDefaultContentTypesListFilePath).mockReturnValue(
+      './config/content-types.json'
+    );
     vi.mocked(inquirer.prompt).mockResolvedValueOnce({
       filePath: './config/content-types.json',
     });

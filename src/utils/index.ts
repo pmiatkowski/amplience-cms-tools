@@ -26,10 +26,7 @@ export {
 export { createProgressBar } from './create-progress-bar';
 export { displayTable } from './display-table';
 export { displayVisualizationSummary } from './visualization-summary';
-export {
-  filterContentTypesByRegex,
-  type FilterOptions,
-} from './content-type-filter';
+export { filterContentTypesByRegex, type FilterOptions } from './content-type-filter';
 export { getAppVersion } from './version';
 export {
   getDefaultContentTypesListFilePath,

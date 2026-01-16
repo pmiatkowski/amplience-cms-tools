@@ -49,7 +49,9 @@ describe('filterContentTypesByRegex', () => {
     const result = filterContentTypesByRegex(mockContentTypes, pattern);
 
     expect(result).toHaveLength(4);
-    expect(result.every(ct => ct.contentTypeUri.startsWith('https://schema.example.com/'))).toBe(true);
+    expect(result.every(ct => ct.contentTypeUri.startsWith('https://schema.example.com/'))).toBe(
+      true
+    );
   });
 
   it('should filter content types matching wildcard pattern', () => {

@@ -5,8 +5,6 @@ import fs from 'fs';
  */
 export type ContentTypesList = string[];
 
-
-
 /**
  * Parse and validate content types list from JSON file
  *
@@ -52,10 +50,6 @@ export function parseContentTypesList(filePath: string): ContentTypesList {
     throw new Error('Failed to read content types list file');
   }
 }
-
-
-
-
 
 /**
  * Parse and validate visualization config from JSON file
@@ -119,16 +113,12 @@ export function parseVisualizationConfig(filePath: string): VisualizationConfig 
   }
 }
 
-
-
-
 /**
  * Visualization config structure
  */
 export type VisualizationConfig = {
   visualizations: VisualizationItem[];
-}
-
+};
 
 /**
  * Visualization item structure
@@ -137,4 +127,4 @@ export type VisualizationItem = {
   label: string;
   templatedUri: string;
   default?: boolean;
-}
+};

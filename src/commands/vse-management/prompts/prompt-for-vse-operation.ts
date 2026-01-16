@@ -11,6 +11,10 @@ export async function promptForVseOperation(): Promise<VseOperationChoice> {
           name: 'Bulk Update Visualizations (update visualization config for multiple content types)',
           value: 'bulk-update-visualizations',
         },
+        {
+          name: 'Initialize Default Files (show VSE default file setup instructions)',
+          value: 'init-default-files',
+        },
       ],
     },
   ]);
@@ -18,4 +22,6 @@ export async function promptForVseOperation(): Promise<VseOperationChoice> {
   return operation;
 }
 
-type VseOperationChoice = 'bulk-update-visualizations';
+type VseOperationChoice =
+  | 'bulk-update-visualizations'
+  | 'init-default-files';

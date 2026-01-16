@@ -33,6 +33,7 @@ pids/
 # Logs
 logs/
 *.log
+nul
 
 # Schemas
 temp_export*

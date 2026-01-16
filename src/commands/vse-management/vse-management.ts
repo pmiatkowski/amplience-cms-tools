@@ -1,4 +1,5 @@
 import { runBulkUpdateVisualizations } from './bulk-update-visualizations';
+import { runInitDefaultFiles } from './init-default-files';
 import { promptForVseOperation } from './prompts';
 
 /**
@@ -17,6 +18,9 @@ export async function runVseManagement(): Promise<void> {
     switch (operation) {
       case 'bulk-update-visualizations':
         await runBulkUpdateVisualizations();
+        break;
+      case 'init-default-files':
+        await runInitDefaultFiles();
         break;
       default:
         console.error('Unknown operation selected.');

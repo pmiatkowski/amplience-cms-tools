@@ -20,6 +20,16 @@ Use `VSE Management` when you need to:
 
 Updates the visualization settings for multiple content types with a provided configuration.
 
+### Initialize Default Files
+
+Displays setup instructions and validates configuration files for VSE default visualization settings. This command helps users:
+
+1. **Environment Variable Setup** - Shows required environment variables and recommended file paths
+2. **File Validation** - Checks if configured VSE files exist at specified paths
+3. **Example Content** - Displays example JSON content for both configuration files
+
+This is a **non-destructive** command that only displays information and validates file existence - no files are created or modified.
+
 ## How It Works
 
 ### Content Type Selection
@@ -166,6 +176,137 @@ AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE=./config/visualizatio
 AMP_HUB_DEV_VISUALISATION_APP_URL=https://vse.dev.example.com
 AMP_HUB_PROD_VISUALISATION_APP_URL=https://vse.prod.example.com
 ```
+
+## Initialize Default Files Operation
+
+The Initialize Default Files operation helps you set up and validate VSE configuration files.
+
+### When Environment Variables Are Not Set
+
+If you haven't configured the required environment variables, the command displays:
+
+```
+========================================
+  Environment Variables Not Configured
+========================================
+
+To use VSE Default Files, set the following environment variables:
+
+  AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE
+    Recommended: .Amplience/content-types.json
+
+  AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE
+    Recommended: .Amplience/visualizations.json
+
+========================================
+  Example: content-types.json
+========================================
+
+[
+  "https://schema.example.com/product.json",
+  "https://schema.example.com/category.json"
+]
+
+========================================
+  Example: visualizations.json
+========================================
+
+{
+  "preview": {
+    "label": "Preview",
+    "uri": "{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}",
+    "default": true
+  },
+  "liveView": {
+    "label": "Live View",
+    "uri": "{{ORIGIN_REPLACE}}/live?id={{contentItemId}}&locale={{locale}}"
+  }
+}
+```
+
+### When Environment Variables Are Set
+
+If the environment variables are configured, the command validates file existence:
+
+```
+🎨 Initialize Default Files
+========================
+
+Environment variables configured:
+  Content Types List: .Amplience/content-types.json
+  Visualizations Config: .Amplience/visualizations.json
+
+========================================
+  File Validation Results
+========================================
+
+Content Types List: ✓ Found
+  Path: .Amplience/content-types.json
+
+Visualizations Config: ✗ Missing
+  Path: .Amplience/visualizations.json
+
+  Example content:
+
+    {
+      "preview": {
+        "label": "Preview",
+        "uri": "{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}",
+        "default": true
+      },
+      "liveView": {
+        "label": "Live View",
+        "uri": "{{ORIGIN_REPLACE}}/live?id={{contentItemId}}&locale={{locale}}"
+      }
+    }
+```
+
+### Setting Up Configuration Files
+
+Follow these steps to set up your VSE default files:
+
+1. **Create the .Amplience directory** (if it doesn't exist):
+
+   ```bash
+   mkdir .Amplience
+   ```
+
+2. **Create content-types.json** with your content type URIs:
+
+   ```json
+   [
+     "https://schema.example.com/product.json",
+     "https://schema.example.com/category.json",
+     "https://schema.example.com/blog.json"
+   ]
+   ```
+
+3. **Create visualizations.json** with your visualization definitions:
+
+   ```json
+   {
+     "visualizations": [
+       {
+         "label": "Preview",
+         "templatedUri": "{{ORIGIN_REPLACE}}/preview?id={{contentItemId}}",
+         "default": true
+       },
+       {
+         "label": "Live View",
+         "templatedUri": "{{ORIGIN_REPLACE}}/live?id={{contentItemId}}&locale={{locale}}"
+       }
+     ]
+   }
+   ```
+
+4. **Set the environment variables** in your `.env` file:
+
+   ```env
+   AMP_DEFAULT_VISUALISATIONS_CONTENT_TYPES_LIST_FILE=./.Amplience/content-types.json
+   AMP_DEFAULT_VISUALISATION_CONTENT_TYPES_CONFIGURATION_FILE=./.Amplience/visualizations.json
+   ```
+
+5. **Run Initialize Default Files** to validate your setup
 
 ## Reports
 

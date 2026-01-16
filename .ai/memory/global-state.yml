@@ -1,6 +1,6 @@
 version: 1
 current:
-  name: vse-bulk-visualisations
+  name: vse-default-files
   workflow_type: feature
   set_date: 2026-01-16
   set_method: auto

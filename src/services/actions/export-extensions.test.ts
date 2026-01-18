@@ -125,7 +125,7 @@ describe('exportExtensions action', () => {
 
     expect(createDcCliCommandMock).toHaveBeenCalledTimes(1);
     expect(builderMock.withHub).toHaveBeenCalledWith(mockHub);
-    expect(tempDirUsed).toContain('temp_export_');
+    expect(tempDirUsed).toMatch(/temp[\\/]export[\\/]\d+[\\/]extensions$/);
     expect(result.kept).toHaveLength(1);
     expect(result.outputDir).toEqual(outputDir);
     expect(result.mode).toBe('full-overwrite');

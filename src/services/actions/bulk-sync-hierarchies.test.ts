@@ -39,7 +39,12 @@ describe('bulkSyncHierarchies', () => {
 
   beforeEach(async () => {
     syncHierarchyMock = vi.mocked(syncHierarchyModule.syncHierarchy);
-    syncHierarchyMock.mockResolvedValue(undefined);
+    syncHierarchyMock.mockResolvedValue({
+      success: true,
+      itemsCreated: 3,
+      itemsRemoved: 2,
+      itemsUpdated: 0,
+    });
 
     // Mock HierarchyService.buildHierarchyTreeFromItems
     vi.spyOn(HierarchyService.prototype, 'buildHierarchyTreeFromItems').mockReturnValue({
@@ -214,9 +219,19 @@ describe('bulkSyncHierarchies', () => {
       ];
 
       syncHierarchyMock
-        .mockResolvedValueOnce(undefined) // First succeeds
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 3,
+          itemsRemoved: 2,
+          itemsUpdated: 0,
+        }) // First succeeds
         .mockRejectedValueOnce(new Error('Sync failed for nav-footer')) // Second fails
-        .mockResolvedValueOnce(undefined); // Third succeeds
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 1,
+          itemsRemoved: 0,
+          itemsUpdated: 0,
+        }); // Third succeeds
 
       const result = await bulkSyncHierarchies({
         ...baseOptions,
@@ -236,7 +251,12 @@ describe('bulkSyncHierarchies', () => {
       ];
 
       syncHierarchyMock
-        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 2,
+          itemsRemoved: 1,
+          itemsUpdated: 0,
+        })
         .mockRejectedValueOnce(new Error('API error: Rate limit exceeded'));
 
       const result = await bulkSyncHierarchies({
@@ -249,6 +269,8 @@ describe('bulkSyncHierarchies', () => {
         sourceDeliveryKey: 'nav-main',
         sourceName: 'Main Navigation',
         success: true,
+        itemsCreated: 2,
+        itemsRemoved: 1,
       });
       expect(result.results[1]).toEqual({
         sourceDeliveryKey: 'nav-footer',
@@ -267,8 +289,18 @@ describe('bulkSyncHierarchies', () => {
 
       syncHierarchyMock
         .mockRejectedValueOnce(new Error('First failure'))
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined);
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 1,
+          itemsRemoved: 0,
+          itemsUpdated: 0,
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 2,
+          itemsRemoved: 1,
+          itemsUpdated: 0,
+        });
 
       const result = await bulkSyncHierarchies({
         ...baseOptions,
@@ -290,7 +322,12 @@ describe('bulkSyncHierarchies', () => {
       syncHierarchyMock
         .mockRejectedValueOnce(new Error('Error 1'))
         .mockRejectedValueOnce(new Error('Error 2'))
-        .mockResolvedValueOnce(undefined);
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 1,
+          itemsRemoved: 0,
+          itemsUpdated: 0,
+        });
 
       const result = await bulkSyncHierarchies({
         ...baseOptions,
@@ -396,7 +433,14 @@ describe('bulkSyncHierarchies', () => {
         createMatchedPair('nav-footer', 'Footer Links'),
       ];
 
-      syncHierarchyMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Failed'));
+      syncHierarchyMock
+        .mockResolvedValueOnce({
+          success: true,
+          itemsCreated: 2,
+          itemsRemoved: 1,
+          itemsUpdated: 0,
+        })
+        .mockRejectedValueOnce(new Error('Failed'));
 
       const result = await bulkSyncHierarchies({
         ...baseOptions,
@@ -434,16 +478,27 @@ describe('bulkSyncHierarchies', () => {
     it('should include items created/removed counts', async () => {
       const matchedPairs = [createMatchedPair('nav-main', 'Main Navigation', 5)];
 
+      // Mock specific counts for this test
+      syncHierarchyMock.mockResolvedValueOnce({
+        success: true,
+        itemsCreated: 5,
+        itemsRemoved: 3,
+        itemsUpdated: 0,
+      });
+
       const result = await bulkSyncHierarchies({
         ...baseOptions,
         matchedPairs,
       });
 
-      // Note: Since we can't easily track created/removed from syncHierarchy mock,
-      // we just verify the structure exists
-      expect(result.results[0]).toHaveProperty('success');
-      expect(result.results[0]).toHaveProperty('sourceDeliveryKey');
-      expect(result.results[0]).toHaveProperty('sourceName');
+      // Verify the result contains accurate counts from syncHierarchy
+      expect(result.results[0]).toEqual({
+        sourceDeliveryKey: 'nav-main',
+        sourceName: 'Main Navigation',
+        success: true,
+        itemsCreated: 5,
+        itemsRemoved: 3,
+      });
     });
   });
 

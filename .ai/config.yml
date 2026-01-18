@@ -38,7 +38,6 @@ workflow_types:
       - state.yml
       - request.md
       - context.md
-      - clarifications/
       - prd.md
       - updates/
       - implementation-plan/
@@ -58,7 +57,6 @@ workflow_types:
       - state.yml
       - report.md
       - context.md
-      - clarifications/
       - triage.md
       - fix-plan.md
     classification_keywords:
@@ -82,6 +80,14 @@ workflow_types:
       - refinement/
       - refined-idea.md
     classification_keywords: []  # Ideas don't auto-classify
+
+# Workflow verification commands
+workflows:
+  verification:
+    commands:
+      - "npm run lint:fix"
+      - "npm run type-check"
+      - "npm run test"
 
 # Future expansion: polyglot script support
 # runner: python | bash | powershell

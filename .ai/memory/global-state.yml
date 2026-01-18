@@ -1,7 +1,7 @@
 version: 1
 current:
-  name: vse-default-files
-  workflow_type: feature
-  set_date: 2026-01-16
-  set_method: auto
-last_updated: 2026-01-16
+  name: null
+  workflow_type: null
+  set_date: null
+  set_method: null
+last_updated: 2026-01-18

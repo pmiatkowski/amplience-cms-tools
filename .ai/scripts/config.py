@@ -19,11 +19,13 @@ except ImportError:
 class PathsConfig:
     features: str = ".ai/features"
     bugs: str = ".ai/bugs"
+    ideas: str = ".ai/ideas"
     prompts: str = ".ai/prompts"
     scripts: str = ".ai/scripts"
     memory: str = ".ai/memory"
     tech_stack: str = ".ai/memory/tech-stack.md"
     coding_rules: str = ".ai/memory/coding-rules"
+    reports: str = ".ai/reports"
 
 
 @dataclass
@@ -51,10 +53,23 @@ class CurrentContext:
 
 
 @dataclass
+class VerificationConfig:
+    """Verification commands configuration."""
+    commands: list = field(default_factory=list)
+
+
+@dataclass
+class WorkflowsConfig:
+    """Workflow execution configuration."""
+    verification: VerificationConfig = field(default_factory=VerificationConfig)
+
+
+@dataclass
 class Config:
     version: int = 1
     paths: PathsConfig = field(default_factory=PathsConfig)
     defaults: DefaultsConfig = field(default_factory=DefaultsConfig)
+    workflows: WorkflowsConfig = field(default_factory=WorkflowsConfig)
     workflow_types: dict = field(default_factory=dict)
     runner: str = "python"  # future: bash | powershell
 
@@ -102,6 +117,8 @@ class Config:
 
         paths_data = data.get("paths", {})
         defaults_data = data.get("defaults", {})
+        workflows_data = data.get("workflows", {})
+        verification_data = workflows_data.get("verification", {})
         workflow_types_data = data.get("workflow_types", {})
 
         # Parse workflow types
@@ -120,15 +137,22 @@ class Config:
             paths=PathsConfig(
                 features=paths_data.get("features", ".ai/features"),
                 bugs=paths_data.get("bugs", ".ai/bugs"),
+                ideas=paths_data.get("ideas", ".ai/ideas"),
                 prompts=paths_data.get("prompts", ".ai/prompts"),
                 scripts=paths_data.get("scripts", ".ai/scripts"),
                 memory=paths_data.get("memory", ".ai/memory"),
                 tech_stack=paths_data.get("tech_stack", ".ai/memory/tech-stack.md"),
                 coding_rules=paths_data.get("coding_rules", ".ai/memory/coding-rules"),
+                reports=paths_data.get("reports", ".ai/reports"),
             ),
             defaults=DefaultsConfig(
                 date_format=defaults_data.get("date_format", "%Y-%m-%d"),
                 workflow_type=defaults_data.get("workflow_type", "feature"),
+            ),
+            workflows=WorkflowsConfig(
+                verification=VerificationConfig(
+                    commands=verification_data.get("commands", []),
+                ),
             ),
             workflow_types=workflow_types,
             runner=data.get("runner", "python"),
@@ -141,6 +165,22 @@ class Config:
     def get_feature_path(self, feature_name: str) -> Path:
         """Get absolute path to a specific feature directory."""
         return self.get_features_path() / feature_name
+
+    def get_bugs_path(self) -> Path:
+        """Get absolute path to bugs directory."""
+        return Path(self.paths.bugs)
+
+    def get_bug_path(self, bug_name: str) -> Path:
+        """Get absolute path to a specific bug directory."""
+        return self.get_bugs_path() / bug_name
+
+    def get_ideas_path(self) -> Path:
+        """Get absolute path to ideas directory."""
+        return Path(self.paths.ideas)
+
+    def get_idea_path(self, idea_name: str) -> Path:
+        """Get absolute path to a specific idea directory."""
+        return self.get_ideas_path() / idea_name
 
     def get_workflow_type(self, type_name: str):
         """Get workflow type config, fallback to feature if not found."""
@@ -309,7 +349,11 @@ if __name__ == "__main__":
     print(f"Config loaded:")
     print(f"  version: {cfg.version}")
     print(f"  paths.features: {cfg.paths.features}")
+    print(f"  paths.bugs: {cfg.paths.bugs}")
     print(f"  paths.prompts: {cfg.paths.prompts}")
     print(f"  paths.scripts: {cfg.paths.scripts}")
+    print(f"  paths.memory: {cfg.paths.memory}")
     print(f"  defaults.date_format: {cfg.defaults.date_format}")
+    print(f"  defaults.workflow_type: {cfg.defaults.workflow_type}")
+    print(f"  workflows.verification.commands: {cfg.workflows.verification.commands}")
     print(f"  runner: {cfg.runner}")

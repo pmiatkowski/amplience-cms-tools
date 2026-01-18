@@ -60,7 +60,7 @@ export async function bulkSyncHierarchies(
         );
 
         // Execute synchronization for this hierarchy
-        await syncHierarchy({
+        const syncResult = await syncHierarchy({
           sourceService,
           targetService,
           targetRepositoryId,
@@ -78,6 +78,8 @@ export async function bulkSyncHierarchies(
           sourceDeliveryKey,
           sourceName,
           success: true,
+          itemsCreated: syncResult.itemsCreated,
+          itemsRemoved: syncResult.itemsRemoved,
         });
       } catch (error) {
         // Track failure but continue with remaining hierarchies

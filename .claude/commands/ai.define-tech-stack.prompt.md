@@ -4,9 +4,7 @@ description:
   Define or update the global tech stack configuration through guided questions.
 ---
 
-You are a technical architect helping document the project's tech stack. Your
-goal is to create a clear, comprehensive tech-stack.md file through sequential
-questions.
+You are a technical architect helping document the project's tech stack. Your goal is to create a clear, comprehensive tech-stack.md file through sequential questions.
 
 ### 1. Check for Existing Tech Stack
 
@@ -28,8 +26,7 @@ Your choice?
 **If user chooses A (Update):**
 
 1. Read existing `.ai/memory/tech-stack.md`
-2. Ask: "What would you like to update? (e.g., add new service, update version,
-   change framework)"
+2. Ask: "What would you like to update? (e.g., add new service, update version, change framework)"
 3. Wait for user's specific update request
 4. Make targeted updates to specific sections
 5. Update "Last Updated" date
@@ -47,8 +44,7 @@ Your choice?
 
 ### 2. Sequential Tech Stack Questions
 
-Use the **sequential one-by-one format** (consistent with /ai.clarify). Ask 7+
-questions to gather comprehensive tech stack information.
+Use the **sequential one-by-one format** (consistent with /ai.clarify). Ask 7+ questions to gather comprehensive tech stack information.
 
 **Question 1/7+**
 
@@ -221,40 +217,35 @@ Provide any additional information or type "None".
 
 ### 3. Generate tech-stack.md
 
-After collecting all answers, create `.ai/memory/tech-stack.md` using the
-detailed template:
+After collecting all answers, create `.ai/memory/tech-stack.md` using the detailed template:
 
 ```markdown
 # Tech Stack
 
-> **Last Updated**: {YYYY-MM-DD} **Maintained By**: {Team/Person or "Development
-> Team"}
+> **Last Updated**: {YYYY-MM-DD}
+> **Maintained By**: {Team/Person or "Development Team"}
 
 ---
 
 ## Core Technologies
 
 ### Language & Runtime
-
 - **Primary Language**: {Language from Q1} {Version}
 - **Runtime**: {Runtime} {Version}
 - **Package Manager**: {npm/yarn/pnpm/pip/poetry/etc} {Version if provided}
 
 ### Frontend {if applicable from Q2}
-
 - **Framework**: {Framework from Q2} {Version}
 - **Build Tool**: {Tool if mentioned, e.g., Vite/Webpack/etc} {Version}
 - **UI Library**: {Component library if mentioned} {Version}
 - **State Management**: {From follow-up or "Built-in" or "N/A"}
 
 ### Backend {if applicable from Q3}
-
 - **Framework**: {Framework from Q3} {Version}
 - **Server**: {Server if mentioned} {Version}
 - **API Style**: {REST/GraphQL/gRPC from follow-up}
 
 ### Database & Storage
-
 - **Primary Database**: {Database from Q4} {Version}
 - **Cache**: {Cache if mentioned, e.g., Redis} {Version}
 - **Object Storage**: {Storage if mentioned, e.g., S3/GCS}
@@ -264,18 +255,14 @@ detailed template:
 ## External Services & Integrations
 
 ### Authentication & Authorization
-
 - {Auth service from Q5 or "TBD" or "Custom"}
 
 ### Third-Party APIs
-
 {List services from Q5, one per line:}
-
 - {Service Name}: {Purpose if provided}
 - {Service Name}: {Purpose if provided}
 
 ### Infrastructure & Deployment
-
 - **Hosting**: {Hosting from Q6}
 - **CI/CD**: {CI/CD from follow-up or "TBD"}
 - **Monitoring**: {Monitoring tool if mentioned or "TBD"}
@@ -285,12 +272,10 @@ detailed template:
 ## Development Tools
 
 ### Version Control
-
 - **Platform**: {GitHub/GitLab/Bitbucket or "Git"}
 - **Branching Strategy**: {Strategy if mentioned or "TBD"}
 
 ### Testing
-
 - **Unit Testing**: {Testing framework from Q7}
 - **E2E Testing**: {E2E framework from Q7 if mentioned}
 - **Coverage Tool**: {Coverage tool if mentioned}
@@ -300,15 +285,12 @@ detailed template:
 ## Technical Constraints
 
 ### Performance Requirements
-
 - {Performance targets from follow-up or "None specified"}
 
 ### Browser/Platform Support
-
 - {Browser support from follow-up or "Modern browsers (last 2 versions)"}
 
 ### Security Requirements
-
 - {Compliance standards from follow-up or "None specified"}
 
 ---
@@ -317,8 +299,7 @@ detailed template:
 
 {Additional context from follow-up questions or "None"}
 
-{If user mentioned migration plans, deprecated technologies, or future changes,
-document here}
+{If user mentioned migration plans, deprecated technologies, or future changes, document here}
 ```
 
 **Content rules:**
@@ -327,8 +308,7 @@ document here}
 - Use "N/A" or omit optional sections if not applicable
 - Include version numbers where provided
 - Keep Notes section for any clarifications or migration plans
-- If information is missing or unclear, use placeholder text that prompts future
-  updates
+- If information is missing or unclear, use placeholder text that prompts future updates
 
 **File creation:**
 
@@ -375,30 +355,25 @@ Last Updated: {YYYY-MM-DD}
 
 ## Edge Cases
 
-| Situation                          | Behavior                                                     |
-| ---------------------------------- | ------------------------------------------------------------ |
-| Tech stack already exists          | Offer update vs recreate options                             |
-| User provides incomplete answers   | Generate with "TBD" for missing info                         |
-| User wants to skip sections        | Mark as "N/A" or omit optional sections                      |
-| No .ai directory exists            | Create directory structure first                             |
-| User provides "Other" for language | Ask for specific language name and version                   |
-| User mentions multiple databases   | Document all in Database & Storage section                   |
-| User mentions microservices        | Ask about each service's tech stack or document common stack |
+| Situation | Behavior |
+|-----------|----------|
+| Tech stack already exists | Offer update vs recreate options |
+| User provides incomplete answers | Generate with "TBD" for missing info |
+| User wants to skip sections | Mark as "N/A" or omit optional sections |
+| No .ai directory exists | Create directory structure first |
+| User provides "Other" for language | Ask for specific language name and version |
+| User mentions multiple databases | Document all in Database & Storage section |
+| User mentions microservices | Ask about each service's tech stack or document common stack |
 
 ---
 
 ## Notes for AI
 
-- **Follow sequential format**: One question at a time, wait for answer before
-  next question
+- **Follow sequential format**: One question at a time, wait for answer before next question
 - **Use "Question {n}/{total}+" format**: The "+" indicates potential follow-ups
-- **Research common patterns**: When generating options, base on industry
-  standards for the context
+- **Research common patterns**: When generating options, base on industry standards for the context
 - **Be flexible**: User can provide custom answers beyond A/B/C options
 - **Maintain context**: Reference previous answers in recommendations
-- **Don't over-ask**: If user provides comprehensive answer early, skip
-  redundant questions
-- **Update mode efficiency**: In update mode, only change what user requests,
-  preserve rest
-- **Version awareness**: Tech stack versions matter - always ask for versions
-  when collecting tool information
+- **Don't over-ask**: If user provides comprehensive answer early, skip redundant questions
+- **Update mode efficiency**: In update mode, only change what user requests, preserve rest
+- **Version awareness**: Tech stack versions matter - always ask for versions when collecting tool information

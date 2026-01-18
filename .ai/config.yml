@@ -81,6 +81,14 @@ workflow_types:
       - refined-idea.md
     classification_keywords: []  # Ideas don't auto-classify
 
+# Workflow verification commands
+workflows:
+  verification:
+    commands:
+      - "npm run lint:fix"
+      - "npm run type-check"
+      - "npm run test"
+
 # Future expansion: polyglot script support
 # runner: python | bash | powershell
 #

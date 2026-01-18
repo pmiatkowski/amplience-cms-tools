@@ -1,18 +1,21 @@
 ---
 agent: agent
-description: Refine workflow requirements through clarifying questions.
+description:
+  Refine feature through clarifying questions - works with PRD (if exists) or request.md (pre-PRD).
 ---
 
-You are a requirements analyst. Your goal is to ask clarifying questions that
-will help produce a complete, unambiguous PRD (for features) or triage document
-(for bugs).
+You are a feature clarification assistant. Your goal is to identify gaps in feature documentation and ask clarifying questions to improve clarity before implementation.
+
+**Dual-mode operation:**
+
+- **PRD_MODE**: If `prd.md` exists, refine the PRD through targeted questions and direct updates
+- **REQUEST_MODE**: If no PRD yet, add clarifications to `request.md` for PRD generation
 
 ### 1. Determine Workflow Name
 
 **Parameter resolution:**
 
-1. If user provided explicit name in command (`/ai.clarify workflow-name`), use
-   it
+1. If user provided explicit name in command (`/ai.clarify workflow-name`), use it
 2. Otherwise, read current context from `.ai/memory/global-state.yml`
 3. If no current context set, error:
 
@@ -29,7 +32,7 @@ Example:
 
 **Verify workflow exists:**
 
-Check if `.ai/features/{name}/` or `.ai/bugs/{name}/` exists.
+Check if `.ai/features/{name}/` exists.
 
 If not found:
 
@@ -39,107 +42,249 @@ If not found:
 Create it first: /ai.add "{description}"
 ```
 
-### 2. Read Workflow Context
+### 2. Validate Workflow and Determine Mode
 
-Based on workflow type, read from the appropriate path:
+**Step 2a: Verify workflow type**
 
-- Features: `.ai/features/{name}/`
-- Bugs: `.ai/bugs/{name}/`
+Read `.ai/features/{name}/state.yml` and verify `workflow_type: feature`.
 
-Read these files from the workflow directory:
+If workflow is a bug:
 
 ```
-├── state.yml           # current status
-├── request.md or report.md  # original description
-├── context.md          # codebase/business context (if exists)
-└── clarifications/     # previous rounds (if any)
-    ├── round-01.md
-    └── ...
+✗ '{name}' is a bug, not a feature.
+
+Bugs don't use /ai.clarify. Use:
+  /ai.triage-bug {name} — diagnose root cause
+  /ai.plan-fix {name} — create fix checklist
 ```
 
-### 3. Determine Round State
+If workflow is an idea:
 
-**Check for existing clarification round in progress:**
+```
+✗ '{name}' is an idea, not a feature.
 
-1. Look for `clarifications/round-{n}.md` files
-2. Identify the latest round number
-3. Check if latest round has metadata indicating it's incomplete
-
-**Parse metadata (if exists) from latest round file:**
-
-```markdown
-<!-- METADATA
-format_version: 2.0
-round_type: sequential
-planned_questions: 5
-current_question: 2
-allow_followups: true
--->
+Ideas use:
+  /ai.define-idea {name} — continue refinement
 ```
 
-**Determine action:**
+**Step 2b: Determine mode based on document existence**
 
-- **No round file exists** → Start new round (round-01.md)
-- **Latest round has metadata with `current_question < planned_questions`** →
-  Resume incomplete round
-- **Latest round complete or no metadata** → Start new round (increment round
-  number)
+Check if `.ai/features/{name}/prd.md` exists.
 
-### 4. Analyze Gaps
+**If PRD exists** → Set `MODE = PRD_MODE`
 
-Based on what you've read, identify gaps in:
+Display:
 
-- **Functional clarity**: What exactly should happen?
-- **Edge cases**: What happens when X fails/is empty/exceeds limits?
-- **User experience**: Who uses this? What's the flow?
-- **Technical integration**: How does this connect to existing code?
-- **Scope boundaries**: What's explicitly NOT included?
-- **Acceptance criteria**: How do we know it's done?
+```
+📄 Working with: prd.md (PRD refinement mode)
+```
 
-**For each gap, research common solution patterns:**
+**If PRD does NOT exist** → Check request.md exists, then set `MODE = REQUEST_MODE`
 
-Use context.md hints (tech stack, existing patterns) and industry knowledge to
-identify:
+Display:
 
-- What do similar features typically do?
-- What are the 3 most common approaches for this gap?
-- What trade-offs exist between approaches?
+```
+📄 Working with: request.md (pre-PRD clarification mode)
 
-**Example Gap-to-Pattern Mapping:**
+Note: This will add clarifications to request.md. After clarifying,
+use /ai.create-prd {name} to generate the PRD.
+```
 
-- Gap: "How should password reset work?"
-  - Pattern research: Email link (most common), SMS code, security questions
-  - Context check: User mentioned "existing email system"
-  - Options: A=Email link, B=Email+SMS, C=Security questions
+If neither prd.md nor request.md exists:
 
-### 5. Plan Questions (First Question Only or Resume)
+```
+✗ No documents found for '{name}'.
 
-**If starting new round:**
+Create the feature first: /ai.add "{description}"
+```
 
-1. Identify 3-7 most critical gaps (unless user specified `--questions N`)
-2. Plan questions internally
-3. For each question, prepare 3 options (A, B, C) based on common patterns
-4. Create round file with metadata
+### 3. Read Context Files
 
-**If resuming round:**
+Read relevant context based on mode:
 
-1. Read existing round file
-2. Parse planned questions from metadata
-3. Continue from `current_question + 1`
+**PRD_MODE - Required:**
 
-### 6. Ask Questions Sequentially (One-by-One)
+- `.ai/features/{name}/prd.md` - the PRD to refine
+
+**REQUEST_MODE - Required:**
+
+- `.ai/features/{name}/request.md` - original request (may have `## Clarifications` section)
+
+**Both Modes - Optional (if exist):**
+
+- `.ai/features/{name}/context.md` - codebase/business context
+- `.ai/memory/tech-stack.md` - global tech stack
+
+**PRD_MODE only - Additional optional:**
+
+- `.ai/features/{name}/request.md` - original request for reference
+
+If optional files don't exist, proceed without them (no error).
+
+### 4. Analyze Document for Gaps
+
+Analysis differs based on mode:
+
+---
+
+#### 4a. PRD_MODE: Analyze PRD for Gaps
+
+Systematically review the PRD for areas needing clarification:
+
+**Check for "TBD" markers:**
+
+- Search for literal "TBD" text in all sections
+- These are explicit gaps left during PRD creation
+
+**Identify ambiguous requirements:**
+
+- Vague language ("should", "might", "possibly")
+- Missing specifics (no numbers, no exact behavior)
+- Unclear success criteria
+
+**Find missing edge cases:**
+
+- No error handling specified
+- No validation rules
+- No boundary conditions (empty, null, max limits)
+- No concurrent access handling
+
+**Check for inconsistencies:**
+
+- Contradictions between sections
+- FR doesn't match AC
+- Goals don't align with requirements
+
+**Identify scope creep opportunities:**
+
+- Features mentioned but not properly scoped
+- Implicit assumptions not documented
+- Integration points not fully defined
+
+**Prioritize gaps by severity:**
+
+- **Critical**: Blocks implementation
+- **Important**: Needed for complete solution
+- **Minor**: Nice-to-have clarification
+
+---
+
+#### 4b. REQUEST_MODE: Analyze Request for Gaps
+
+Systematically review request.md for areas needing clarification before PRD generation:
+
+**Analyze the Description:**
+
+- Is the core feature clearly defined?
+- Are the user benefits explained?
+- Is the scope clear (what's included vs not)?
+
+**Check existing Clarifications (if any):**
+
+- Read `## Clarifications` section if present
+- Identify what's already been answered
+- Avoid re-asking answered questions
+- Look for gaps not yet addressed
+
+**Identify functional gaps:**
+
+- What exactly should happen? (user actions, system responses)
+- Who are the users? (roles, permissions)
+- What data is involved? (inputs, outputs, storage)
+
+**Identify edge case gaps:**
+
+- Error scenarios not addressed
+- Boundary conditions (empty, max limits)
+- Concurrent usage considerations
+
+**Identify technical integration gaps:**
+
+- How does this fit with existing features?
+- Are there dependencies on other systems?
+- What constraints exist?
+
+**Identify scope gaps:**
+
+- What's explicitly NOT included?
+- What are the acceptance criteria?
+- How do we know it's done?
+
+**Prioritize gaps for PRD readiness:**
+
+- **Critical**: Cannot generate meaningful PRD without this
+- **Important**: PRD would have significant "TBD" sections without this
+- **Minor**: Nice-to-have detail (can default or mark as TBD in PRD)
+
+---
+
+### 5. Plan Clarification Questions
+
+Based on gaps identified, plan clarification questions:
+
+**Question count by mode:**
+
+- **PRD_MODE**: Plan 3-5 questions (focused refinement)
+- **REQUEST_MODE**: Plan 5-7 questions (comprehensive for PRD generation)
+
+**Question selection:**
+
+- Focus on critical and important gaps only
+- Prioritize blockers first
+- Skip gaps that are truly "TBD for later"
+- In REQUEST_MODE, ensure enough detail for PRD generation
+
+**For each question, prepare 3 options (A, B, C):**
+
+- **PRIORITY 1**: Common industry patterns for this gap
+- **PRIORITY 2**: Different approaches/trade-offs
+- **FALLBACK**: Spectrum (minimal/standard/comprehensive)
+
+**Include recommendation with reasoning:**
+
+- Why this option fits the context
+- What trade-offs are acceptable
+- How it aligns with tech stack or existing patterns
+
+**Example (PRD_MODE):**
+
+Gap: "FR-3 mentions 'rate limiting' but doesn't specify limits"
+
+Question: "What rate limits should apply to the export API?"
+
+- A: 10 requests per hour per user (strict, prevents abuse)
+- B: 100 requests per hour with burst allowance (balanced)
+- C: No hard limit, just request throttling (user-friendly)
+
+Recommendation: B, because it prevents abuse while allowing legitimate use cases like re-exports after errors.
+
+**Example (REQUEST_MODE):**
+
+Gap: "No user roles defined for this feature"
+
+Question: "Who should be able to use this feature?"
+
+- A: All authenticated users (widest access)
+- B: Only premium/paid users (monetization opportunity)
+- C: Admin users only (restricted access)
+
+Recommendation: A, because the description doesn't mention restrictions and broader access typically improves adoption.
+
+### 6. Ask Sequential Clarification Questions
+
+**IMPORTANT**: Ask ONE question at a time, wait for user answer, then ask the next question.
 
 **Question Format:**
 
 ```
-Question {n}/{total}+
+Question {n}/{total}
 
-{Clarifying question}
+{Clarifying question about specific gap}
 
 Options:
-  A: {Most common pattern/approach}
-  B: {Second common pattern/approach}
-  C: {Third pattern or alternative}
+  A: {Option with trade-off in parentheses}
+  B: {Option with trade-off in parentheses}
+  C: {Option with trade-off in parentheses}
 
 Recommendation: Option {X}, because {reasoning based on context}
 
@@ -147,165 +292,359 @@ Recommendation: Option {X}, because {reasoning based on context}
 You can select A, B, or C, or provide your own answer.
 ```
 
-**Option Generation Guidelines:**
-
-**PRIORITY 1: Common Industry Patterns**
-
-- Check context.md for tech stack hints (e.g., "React app" → suggest React
-  patterns)
-- Research typical solutions for this type of feature
-- Present 3 most common approaches
-- Example: Auth reset → A=Email link (most common), B=SMS code (mobile apps),
-  C=Both options
-
-**PRIORITY 2: Different Solution Approaches**
-
-- If no clear industry consensus
-- Show fundamentally different architectural approaches
-- Example: Session storage → A=Server-side sessions, B=JWT tokens, C=Hybrid
-
-**FALLBACK: Spectrum Approach**
-
-- A: Minimal/Simple (fastest to implement)
-- B: Moderate/Standard (balanced)
-- C: Comprehensive/Advanced (feature-rich)
-
-**FORMAT RULES:**
-
-- Each option: 1-2 sentences with key trade-off in parentheses
-- Make options mutually exclusive
-- Align options with context.md constraints when possible
-
-**Recommendation Format:**
-
-```
-Option {X}, because {why it fits THIS context} and {acceptable trade-off}.
-```
-
 **After Each Answer:**
 
-1. Acknowledge: `✓ Saved: {brief summary}`
-2. Append to round file with metadata update
-3. Determine next action:
-   - More planned questions → Ask next question
-   - All planned questions done → Offer completion or follow-up
-   - User's answer reveals new gap → Optionally add follow-up question
+1. Acknowledge: `✓ Noted: {brief summary of answer}`
+2. Determine next action:
+   - If more planned questions remain → Ask next question
+   - If user's answer reveals critical new gap → Optionally add 1 follow-up question (max 1-2 total)
+   - If all questions answered → Proceed to Step 7
 
-**Dynamic Follow-ups (Hybrid Approach):**
+**Track Progress in Conversation:**
 
-- Limit to 1-2 follow-ups per round
-- Only add if answer reveals critical missing information
-- Update metadata: increment `planned_questions`
-- Show updated progress: `Question 6/6+` → `Question 6/7+`
+- You do NOT need to write answers to any files during clarification
+- The conversation history IS your state storage
+- After all questions answered, you will synthesize changes from conversation
 
-### 7. Save/Update Clarification Round
+### 7. Synthesize Results
 
-**When creating new round (first question):**
+Synthesis differs based on mode:
 
-Create `clarifications/round-{n}.md` with metadata:
+---
 
-```markdown
-# Clarification Round {n}
+#### 7a. PRD_MODE: Synthesize Proposed PRD Changes
 
-<!-- METADATA
-format_version: 2.0
-round_type: sequential
-planned_questions: {total planned}
-current_question: 0
-allow_followups: true
--->
+After all questions answered, analyze the conversation and determine what changes to make to the PRD.
 
-## Date
+**First, evaluate if changes are needed:**
 
-{YYYY-MM-DD}
+Review all answers and compare against current PRD:
 
-## Questions & Answers
+- Do any answers contradict or expand current PRD content?
+- Are there new requirements, edge cases, or criteria to add?
+- Are there clarifications that resolve "TBD" markers?
 
-(Questions will be added incrementally)
-```
-
-**After each answer:**
-
-Append to `clarifications/round-{n}.md`:
-
-```markdown
-### Q{n}: {question text}
-
-**Options:**
-
-- A: {option A}
-- B: {option B}
-- C: {option C}
-
-**Recommendation:** {recommendation text}
-
-**Answer:** {user's answer (A/B/C or custom text)}
-```
-
-**Update metadata:**
-
-```markdown
-<!-- METADATA
-format_version: 2.0
-round_type: sequential
-planned_questions: {total}
-current_question: {n}
-allow_followups: true
--->
-```
-
-**When round is complete (all questions answered):**
-
-Add summary section:
-
-```markdown
-## Summary
-
-{1-2 sentence summary of key decisions/clarifications made this round}
-```
-
-### 8. Update State
-
-Update `state.yml`:
-
-```yaml
-updated: { YYYY-MM-DD }
-```
-
-### 9. Suggest Next Step
-
-**After each answer (not final):**
+**If NO changes needed** (answers confirm existing PRD is complete):
 
 ```
-✓ Saved: {brief summary of answer}
+✓ All clarifications confirmed existing PRD content.
 
-(Proceed to next question)
-```
-
-**After final answer in round:**
-
-```
-✓ Completed clarifications/round-{n}.md
-
-Key decisions: {brief summary}
+The PRD appears complete - no updates needed.
 
 Options:
-  - Run /ai.clarify again if more questions needed
-  - Run /ai.create-prd if ready to generate PRD (features only)
-  - Run /ai.triage-bug if ready to diagnose (bugs only)
+  1. Continue to implementation — /ai.define-implementation-plan {name}
+  2. Ask more questions — specify what you'd like to clarify
+  3. Exit — done for now
+
+Please choose 1, 2, or 3.
 ```
 
-**If resuming incomplete round:**
+**If changes ARE needed**, propose specific changes:
 
 ```
-Resuming clarifications/round-{n} (continuing from Question {current}/{planned})...
+Based on your clarifications, I will make these changes to the PRD:
 
-(Ask next question)
+**Section: Functional Requirements**
+- Update FR-2: Add edge case handling for empty input
+  OLD: "System validates user input"
+  NEW: "System validates user input. Empty input displays error message: 'Field cannot be empty'"
+
+- Add new FR-5: Handle concurrent user sessions
+  "System allows users to have multiple active sessions. Maximum 3 concurrent sessions per user. Oldest session expires when limit exceeded."
+
+**Section: Technical Considerations**
+- Add implementation note about rate limiting
+  "API rate limiting: 100 requests/hour per user with burst allowance of 10 requests/minute. Implemented using Redis token bucket."
+
+**Section: Acceptance Criteria**
+- Add AC-6: Verify session persistence across browser restarts
+  "[ ] AC-6: User remains logged in after closing and reopening browser (if 'remember me' selected)"
+
+- Update AC-3: Add specific timing
+  OLD: "[ ] AC-3: User receives password reset email"
+  NEW: "[ ] AC-3: User receives password reset email within 1 minute of request"
+
+**Section: Open Questions**
+- Remove resolved question: "How should we handle rate limiting?" (now defined in FR-5)
+
+**Section: Goals**
+- No changes needed
+```
+
+**Change proposal guidelines:**
+
+- Be specific: Show OLD vs NEW for updates
+- Use exact PRD formatting (FR-X, AC-X format)
+- Reference section names accurately
+- Note removals clearly (especially Open Questions)
+- If no changes needed for a section, state "No changes needed"
+
+---
+
+#### 7b. REQUEST_MODE: Format Clarifications for Appending
+
+After all questions answered, format the Q&A for appending to request.md.
+
+**Format clarifications:**
+
+```
+Based on your answers, I'll append these clarifications to request.md:
+
+## Clarifications
+
+### Round {N}
+
+#### Q1: {question text}
+User: {user's answer}
+
+#### Q2: {question text}
+User: {user's answer}
+
+#### Q3: {question text}
+User: {user's answer}
+
+... (all questions and answers)
+```
+
+**Notes:**
+
+- Only include question text and user's answer (not options A/B/C or recommendations)
+- Determine round number by counting existing `### Round` headers in request.md
+- If no `## Clarifications` section exists, create it
+- If section exists, append new round
+
+---
+
+### 8. Request User Confirmation
+
+Confirmation differs based on mode:
+
+---
+
+#### 8a. PRD_MODE: Confirm PRD Update
+
+**Only shown if changes were proposed in Section 7a.**
+
+```
+---
+
+Should I update the PRD with these changes?
+
+Options:
+  1. Update PRD - Apply all changes above
+  2. Clarify more - Ask additional questions before updating
+  3. Cancel - Exit without making changes
+
+Please respond with 1, 2, or 3.
+```
+
+**Handle user response:**
+
+**If "1" or "Update PRD" or "yes":**
+
+- Proceed to Section 9a (Update PRD)
+
+**If "2" or "Clarify more" or similar:**
+
+- Ask: "What additional clarifications do you need?"
+- Wait for user response
+- Plan 1-3 additional questions based on their request
+- Loop back to Section 6 with new questions
+- After answering, return to Section 7a to re-synthesize
+
+**If "3" or "Cancel" or "no":**
+
+- Exit gracefully:
+
+  ```
+  ✓ Cancelled. No changes made to prd.md.
+
+  You can run /ai.clarify {name} again when ready.
+  ```
+
+---
+
+#### 8b. REQUEST_MODE: Confirm Clarification Save
+
+```
+---
+
+Should I save these clarifications to request.md?
+
+Options:
+  1. Save clarifications - Append to request.md
+  2. Clarify more - Ask additional questions first
+  3. Cancel - Exit without saving
+
+Please respond with 1, 2, or 3.
+```
+
+**Handle user response:**
+
+**If "1" or "Save" or "yes":**
+
+- Proceed to Section 9b (Update request.md)
+
+**If "2" or "Clarify more" or similar:**
+
+- Ask: "What additional areas would you like to clarify?"
+- Wait for user response
+- Plan 1-3 additional questions based on their request
+- Loop back to Section 6 with new questions
+- After answering, return to Section 7b to re-format (merge with previous answers)
+
+**If "3" or "Cancel" or "no":**
+
+- Exit gracefully:
+
+  ```
+  ✓ Cancelled. No changes made to request.md.
+
+  You can run /ai.clarify {name} again when ready.
+  ```
+
+---
+
+### 9. Apply Changes
+
+Application differs based on mode:
+
+---
+
+#### 9a. PRD_MODE: Update PRD
+
+Apply the proposed changes to `prd.md`:
+
+**For each change:**
+
+1. Locate the exact section in prd.md
+2. Apply the modification (update, add, or remove)
+3. Maintain exact PRD formatting
+4. Preserve existing content not being changed
+
+**Update PRD metadata:**
+
+In the PRD header, update the "Last Updated" timestamp:
+
+```markdown
+> **Status**: Draft
+> **Created**: {original-date}
+> **Last Updated**: {YYYY-MM-DD} ← Update this
+```
+
+**Update workflow state:**
+
+Update `.ai/features/{name}/state.yml`:
+
+```yaml
+updated: {YYYY-MM-DD}
+```
+
+**Important notes:**
+
+- Do NOT change the PRD status (keep as `draft` or whatever it currently is)
+- Do NOT create backup files (rely on git for version control)
+- Do NOT create clarification round files (changes applied directly)
+
+---
+
+#### 9b. REQUEST_MODE: Append Clarifications to request.md
+
+Append the clarifications to `request.md`:
+
+**If `## Clarifications` section exists:**
+
+1. Find the section
+2. Count existing `### Round` headers to determine next round number
+3. Append new round after existing content
+
+**If `## Clarifications` section does NOT exist:**
+
+1. Append to end of file:
+
+   ```markdown
+
+   ## Clarifications
+
+   ### Round 1
+
+   #### Q1: {question text}
+   User: {user's answer}
+
+   ...
+   ```
+
+**Update workflow state:**
+
+Update `.ai/features/{name}/state.yml`:
+
+```yaml
+status: clarified
+updated: {YYYY-MM-DD}
+```
+
+**Important notes:**
+
+- Only save question text and user's answer (not options or recommendations)
+- Preserve existing clarification rounds
+- State changes to `clarified` (ready for PRD generation)
+
+---
+
+### 10. Confirm Completion
+
+Completion message differs based on mode:
+
+---
+
+#### 10a. PRD_MODE: PRD Update Confirmation
+
+```
+✓ PRD updated successfully!
+
+Changes applied to .ai/features/{name}/prd.md:
+
+**Updated Sections:**
+- Functional Requirements: Updated FR-2, added FR-5
+- Technical Considerations: Added rate limiting implementation note
+- Acceptance Criteria: Added AC-6, updated AC-3
+- Open Questions: Removed resolved question
+
+**Metadata:**
+- Last Updated: {YYYY-MM-DD}
+
+📝 Review the updated PRD and commit changes to git when satisfied.
+
+Next steps:
+  1. Review prd.md to verify changes
+  2. Run /ai.clarify again if more refinements needed
+  3. When ready: Update state.yml status to 'prd-approved'
+  4. Then: /ai.define-implementation-plan {name}
 ```
 
 ---
 
-## Example Session (Sequential Format)
+#### 10b. REQUEST_MODE: Clarification Save Confirmation
+
+```
+✓ Clarifications saved!
+
+Updated: .ai/features/{name}/request.md
+- Added {X} clarifications in Round {N}
+
+State: clarified (ready for PRD generation)
+
+📝 Review request.md and commit changes to git when satisfied.
+
+Next steps:
+  1. Review request.md to verify clarifications
+  2. Run /ai.clarify {name} again to add more clarifications
+  3. When ready: /ai.create-prd {name} to generate PRD
+```
+
+---
+
+## Example Session: PRD_MODE
 
 **User:**
 
@@ -315,50 +654,32 @@ Resuming clarifications/round-{n} (continuing from Question {current}/{planned})
 
 **AI reads:**
 
-- request.md (basic auth feature description)
-- context.md (mentions "existing email system", "Node.js backend")
-- No previous clarifications
+- prd.md (has some "TBD" markers and vague requirements)
+- context.md (mentions "existing email system")
+- tech-stack.md (Node.js, Redis)
 
-**AI determines:** New round needed, identifies 5 gaps
+**AI analyzes PRD:**
 
-**AI plans:** 5 questions about password reset, login attempts, sessions,
-integration, and persistence
+- Found "TBD" in FR-3 (session duration not specified)
+- FR-4 mentions rate limiting but no specifics
+- AC-2 says "error message" but doesn't specify text
+- No edge case for concurrent logins
 
-**AI creates round-01.md with metadata and asks Question 1:**
+**AI plans 4 questions** about these gaps.
+
+**AI asks Question 1:**
 
 ```
-Question 1/5+
+Question 1/4
 
-Should users be able to reset their password?
+FR-3 mentions session management but doesn't specify duration. How long should sessions last?
 
 Options:
-  A: Yes, via email link (most common, secure, aligns with existing email system)
-  B: Yes, via SMS code (faster, requires phone number collection)
-  C: Yes, both email and SMS options (maximum flexibility)
+  A: 24 hours (standard for most web apps)
+  B: 7 days if "remember me" selected, 24 hours otherwise (flexible)
+  C: 30 days (maximum convenience)
 
-Recommendation: Option A, because email-based password reset is the industry standard, requires no additional PII (phone numbers), provides better security with time-limited tokens, and aligns with your existing email system mentioned in context.
-
----
-You can select A, B, or C, or provide your own answer.
-```
-
-**User:** A
-
-**AI saves answer, updates metadata, asks Question 2:**
-
-```
-✓ Saved: Email link password reset
-
-Question 2/5+
-
-Is there a maximum login attempt limit before account lockout?
-
-Options:
-  A: Yes, 3 attempts with 15-minute lockout (strict security)
-  B: Yes, 5 attempts with progressive delays (balanced approach)
-  C: No limit, just rate limiting (user-friendly)
-
-Recommendation: Option B, because 5 attempts prevents brute force while being forgiving of user typos, and progressive delays (1s, 5s, 30s) don't require account recovery process.
+Recommendation: Option B, because it balances security (short default) with UX (optional persistence). This matches industry standards (Gmail, GitHub).
 
 ---
 You can select A, B, or C, or provide your own answer.
@@ -366,94 +687,273 @@ You can select A, B, or C, or provide your own answer.
 
 **User:** B
 
-**AI continues through Questions 3-5...**
-
-**After Question 5 answered, AI completes round:**
+**AI acknowledges and continues:**
 
 ```
-✓ Completed clarifications/round-01.md
+✓ Noted: Sessions last 24 hours, or 7 days with "remember me"
 
-Key decisions: Email password reset, 5-attempt lockout with progressive delays, 24-hour sessions, integrate with existing user table, JWT token persistence.
+Question 2/4
+
+FR-4 mentions rate limiting but doesn't specify limits. What should the login rate limit be?
 
 Options:
-  - Run /ai.clarify again if more questions needed
-  - Run /ai.create-prd if ready to generate PRD
+  A: 5 attempts per 15 minutes (strict security)
+  B: 10 attempts per hour with progressive delays (balanced)
+  C: No hard limit, just CAPTCHA after 3 failures (user-friendly)
+
+Recommendation: Option A, because login endpoints are high-value targets. 5 attempts prevents brute force while being forgiving of typos. Progressive lockout (1min, 5min, 15min) is better than permanent lockout.
+
+---
+You can select A, B, or C, or provide your own answer.
 ```
 
-**Final round-01.md file:**
+**User:** A
 
-```markdown
-# Clarification Round 1
+**... continues through Questions 3-4 ...**
 
-<!-- METADATA
-format_version: 2.0
-round_type: sequential
-planned_questions: 5
-current_question: 5
-allow_followups: true
--->
+**After final answer, AI synthesizes changes:**
 
-## Date
+```
+Based on your clarifications, I will make these changes to the PRD:
 
-2026-01-02
+**Section: Functional Requirements**
+- Update FR-3: Specify session duration
+  OLD: "Maintain user sessions with 'remember me' option"
+  NEW: "Maintain user sessions. Default session: 24 hours. With 'remember me': 7 days. Sessions stored in Redis."
 
-## Questions & Answers
+- Update FR-4: Specify rate limiting
+  OLD: "Implement rate limiting for login attempts"
+  NEW: "Rate limit login attempts: 5 attempts per 15 minutes per IP. Progressive lockout: 1min (attempt 3), 5min (attempt 4), 15min (attempt 5+)."
 
-### Q1: Should users be able to reset their password?
+**Section: Acceptance Criteria**
+- Update AC-2: Specify error message text
+  OLD: "[ ] AC-2: User sees error message with invalid credentials"
+  NEW: "[ ] AC-2: User sees error message 'Invalid email or password' with invalid credentials (avoid revealing which field is wrong)"
 
-**Options:**
+- Add AC-7: Verify concurrent login blocking
+  "[ ] AC-7: When user logs in from new device, existing sessions remain active (no forced logout)"
 
-- A: Yes, via email link (most common, secure, aligns with existing email
-  system)
-- B: Yes, via SMS code (faster, requires phone number collection)
-- C: Yes, both email and SMS options (maximum flexibility)
+**Section: Open Questions**
+- Remove: "Session duration?" (now defined in FR-3)
+- Remove: "Rate limiting strategy?" (now defined in FR-4)
 
-**Recommendation:** Option A, because email-based password reset is the industry
-standard...
+---
 
-**Answer:** A
+Should I update the PRD with these changes?
 
-### Q2: Is there a maximum login attempt limit before account lockout?
+Options:
+  1. Update PRD - Apply all changes above
+  2. Clarify more - Ask additional questions before updating
+  3. Cancel - Exit without making changes
 
-**Options:**
+Please respond with 1, 2, or 3.
+```
 
-- A: Yes, 3 attempts with 15-minute lockout (strict security)
-- B: Yes, 5 attempts with progressive delays (balanced approach)
-- C: No limit, just rate limiting (user-friendly)
+**User:** 1
 
-**Recommendation:** Option B, because 5 attempts prevents brute force...
+**AI updates prd.md** with all proposed changes.
 
-**Answer:** B
+**AI updates state.yml** with current date.
 
-### Q3-Q5: [Similar format...]
+**AI confirms:**
 
-## Summary
+```
+✓ PRD updated successfully!
 
-Established core authentication requirements: email-based password reset,
-5-attempt progressive lockout, 24-hour sessions with JWT persistence,
-integrating with existing user table.
+Changes applied to .ai/features/user-auth/prd.md:
+
+**Updated Sections:**
+- Functional Requirements: Updated FR-3 (session duration), updated FR-4 (rate limiting)
+- Acceptance Criteria: Updated AC-2 (error message), added AC-7 (concurrent logins)
+- Open Questions: Removed 2 resolved questions
+
+**Metadata:**
+- Last Updated: 2026-01-10
+
+📝 Review the updated PRD and commit changes to git when satisfied.
+
+Next steps:
+  1. Review prd.md to verify changes
+  2. Run /ai.clarify again if more refinements needed
+  3. When ready: Update state.yml status to 'prd-approved'
+  4. Then: /ai.define-implementation-plan user-auth
 ```
 
 ---
 
 ## Edge Cases
 
-| Situation                      | Behavior                              |
-| ------------------------------ | ------------------------------------- |
-| No previous clarifications     | This is round-01                      |
-| User says "enough" mid-round   | Save partial answers, note incomplete |
-| User specifies `--questions N` | Ask exactly N questions               |
-| All questions already answered | Suggest proceeding to /ai.create-prd  |
-| Feature doesn't exist          | Error: "Feature '{name}' not found"   |
+| Situation | Behavior |
+|-----------|----------|
+| Workflow not found | Error: "Feature not found. Use /ai.add to create it" |
+| Workflow is a bug | Error: "Bugs use /ai.triage-bug and /ai.plan-fix" |
+| Workflow is an idea | Error: "Ideas use /ai.define-idea" |
+| **REQUEST_MODE** | |
+| No request.md (corrupted) | Error: "request.md not found. Recreate with /ai.add" |
+| Request is complete | Still ask 2-3 questions to ensure PRD readiness |
+| Clarifications section exists | Append new round (Round 2, 3, etc.) |
+| **PRD_MODE** | |
+| PRD is perfect (no gaps) | Note: "PRD looks complete. Proceed to implementation or ask about specific sections" |
+| No changes needed from answers | Show "No updates needed" with options to continue |
+| **BOTH MODES** | |
+| User says "cancel" mid-clarification | Stop asking questions, skip to confirmation with partial results |
+| User provides contradictory answer | Note contradiction, ask for clarification as follow-up |
+| User requests specific section | Ask targeted questions only about that section |
 
 ---
 
-## Question Quality Checklist
+## Important Notes
 
-Good questions are:
+- **Dual-mode operation**: Works with request.md (pre-PRD) or prd.md (post-PRD)
+- **Mode auto-detection**: Automatically determines mode based on prd.md existence
+- **REQUEST_MODE**: Appends clarifications to request.md, updates state to 'clarified'
+- **PRD_MODE**: Updates PRD directly, only if changes are needed
+- **Conversation as state**: Answers stored in conversation history during Q&A
+- **Git for backups**: No automatic backups (user responsible for git commits)
+- **Iterative refinement**: Can be run multiple times in either mode
+- **Round tracking**: REQUEST_MODE tracks clarification rounds (Round 1, 2, 3...)
 
-- [ ] Specific (not "tell me more about X")
-- [ ] Actionable (answer leads to concrete decision)
-- [ ] Non-redundant (not answered in context.md or previous rounds)
-- [ ] Scoped (about this feature, not general architecture)
-- [ ] Prioritized (most important gaps first)
+---
+
+## Example Session: REQUEST_MODE
+
+**User:**
+
+```
+/ai.clarify user-data-export
+```
+
+**AI checks:**
+
+- Workflow exists: ✓ `.ai/features/user-data-export/`
+- Workflow type: feature ✓
+- PRD exists: ✗ (no prd.md)
+
+**AI displays:**
+
+```
+📄 Working with: request.md (pre-PRD clarification mode)
+
+Note: This will add clarifications to request.md. After clarifying,
+use /ai.create-prd user-data-export to generate the PRD.
+```
+
+**AI reads:**
+
+- request.md (has description, no clarifications yet)
+- context.md (user mentioned rate limiting requirement)
+- tech-stack.md (Node.js, PostgreSQL)
+
+**AI analyzes request.md for gaps:**
+
+- No user roles defined
+- No data scope specified
+- No file format mentioned
+- No error handling defined
+- No acceptance criteria
+
+**AI plans 5 questions.**
+
+**AI asks Question 1:**
+
+```
+Question 1/5+
+
+Who should be able to export their data?
+
+Options:
+  A: All authenticated users (widest access, standard for GDPR compliance)
+  B: Only premium/paid users (monetization opportunity)
+  C: Admin users can export any user's data (for support scenarios)
+
+Recommendation: Option A, because data export is typically a user right (GDPR, CCPA)
+and should be available to all users. Option C could be added separately for admin.
+
+---
+You can select A, B, or C, or provide your own answer.
+```
+
+**User:** A
+
+**AI acknowledges and continues:**
+
+```
+✓ Noted: All authenticated users can export their data
+
+Question 2/5+
+
+What data should be included in the export?
+
+Options:
+  A: All user data (profile, settings, activity, transactions)
+  B: User-selected categories (user chooses what to export)
+  C: Only profile data (minimal export, fastest)
+
+Recommendation: Option B, because selective export gives users control while
+managing file sizes. This matches industry standards (Google Takeout, Facebook).
+
+---
+You can select A, B, or C, or provide your own answer.
+```
+
+**... continues through all 5 questions ...**
+
+**After final answer, AI formats clarifications:**
+
+```
+Based on your answers, I'll append these clarifications to request.md:
+
+## Clarifications
+
+### Round 1
+
+#### Q1: Who should be able to export their data?
+User: All authenticated users
+
+#### Q2: What data should be included in the export?
+User: User-selected categories (user chooses what to export)
+
+#### Q3: What file format should the export use?
+User: ZIP archive with multiple CSVs (one per category)
+
+#### Q4: How should large exports be handled?
+User: Background job with email notification when ready
+
+#### Q5: What are the acceptance criteria for this feature?
+User: User can request export, select categories, receive download link within 1 hour
+
+---
+
+Should I save these clarifications to request.md?
+
+Options:
+  1. Save clarifications - Append to request.md
+  2. Clarify more - Ask additional questions first
+  3. Cancel - Exit without saving
+
+Please respond with 1, 2, or 3.
+```
+
+**User:** 1
+
+**AI appends clarifications to request.md**
+
+**AI updates state.yml** to `clarified`
+
+**AI confirms:**
+
+```
+✓ Clarifications saved!
+
+Updated: .ai/features/user-data-export/request.md
+- Added 5 clarifications in Round 1
+
+State: clarified (ready for PRD generation)
+
+📝 Review request.md and commit changes to git when satisfied.
+
+Next steps:
+  1. Review request.md to verify clarifications
+  2. Run /ai.clarify user-data-export again to add more clarifications
+  3. When ready: /ai.create-prd user-data-export to generate PRD
+```

@@ -29,10 +29,11 @@ export type LocaleStrategy = {
   targetLocale?: string;
 };
 
+
 /**
  * Execute hierarchy synchronization action
  */
-export async function syncHierarchy(options: SyncHierarchyOptions): Promise<void> {
+export async function syncHierarchy(options: SyncHierarchyOptions): Promise<SyncHierarchyResult> {
   const {
     sourceService,
     targetService,
@@ -57,18 +58,28 @@ export async function syncHierarchy(options: SyncHierarchyOptions): Promise<void
     if (syncPlan.itemsToCreate.length === 0 && syncPlan.itemsToRemove.length === 0) {
       console.log('✅ Synchronization complete - no changes needed!');
 
-      return;
+      return {
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      };
     }
 
     if (isDryRun) {
       console.log('🔍 DRY RUN COMPLETE - No changes were made.');
 
-      return;
+      return {
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      };
     }
 
     // Step 6: Execute Plan
     console.log('\n🚀 Step 6: Executing Synchronization Plan');
-    await executeSyncPlan(
+    const result = await executeSyncPlan(
       syncPlan,
       sourceService,
       targetService,
@@ -78,11 +89,22 @@ export async function syncHierarchy(options: SyncHierarchyOptions): Promise<void
     );
 
     console.log('\n✅ Hierarchy synchronization completed successfully!');
+
+    return result;
   } catch (error) {
     console.error('❌ Error during hierarchy synchronization:', error);
-    throw error;
+
+    return {
+      success: false,
+      itemsCreated: 0,
+      itemsRemoved: 0,
+      itemsUpdated: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
+
+
 
 /**
  * Options for hierarchy synchronization
@@ -99,6 +121,18 @@ export type SyncHierarchyOptions = {
   isDryRun: boolean;
 };
 
+
+/**
+ * Result of a hierarchy synchronization operation
+ */
+export type SyncHierarchyResult = {
+  success: boolean;
+  itemsCreated: number;
+  itemsRemoved: number;
+  itemsUpdated: number;
+  error?: string;
+};
+
 /**
  * Execute the synchronization plan
  */
@@ -109,9 +143,11 @@ async function executeSyncPlan(
   targetRepositoryId: string,
   localeStrategy: LocaleStrategy,
   publishAfterSync: boolean
-): Promise<void> {
+): Promise<SyncHierarchyResult> {
   let successCount = 0;
   let failureCount = 0;
+  let itemsCreated = 0;
+  let itemsRemoved = 0;
 
   // Track mapping between source IDs and newly created target IDs
   const sourceToTargetIdMap = new Map<string, string>();
@@ -183,6 +219,7 @@ async function executeSyncPlan(
 
         if (removalOutcome.success) {
           successCount++;
+          itemsRemoved++;
         } else {
           failureCount++;
         }
@@ -265,6 +302,7 @@ async function executeSyncPlan(
           createdItemIds.push(result.updatedItem.id);
 
           successCount++;
+          itemsCreated++;
           console.log(`  ✅ Created: ${item.sourceItem.label}`);
         } else {
           failureCount++;
@@ -325,6 +363,13 @@ async function executeSyncPlan(
       `  📈 Publishing success rate: ${((publishSuccessCount / (publishSuccessCount + publishFailureCount)) * 100).toFixed(1)}%`
     );
   }
+
+  return {
+    success: true,
+    itemsCreated,
+    itemsRemoved,
+    itemsUpdated: 0,
+  };
 }
 
 /**

@@ -254,7 +254,12 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(HierarchyService).mockImplementation(
         () => mockHierarchyService as unknown as HierarchyService
       );
-      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+      vi.mocked(syncHierarchy).mockResolvedValue({
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      });
 
       await runSyncHierarchy();
 
@@ -317,7 +322,12 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(HierarchyService).mockImplementation(
         () => mockHierarchyService as unknown as HierarchyService
       );
-      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+      vi.mocked(syncHierarchy).mockResolvedValue({
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      });
 
       await runSyncHierarchy();
 
@@ -381,7 +391,12 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(HierarchyService).mockImplementation(
         () => mockHierarchyService as unknown as HierarchyService
       );
-      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+      vi.mocked(syncHierarchy).mockResolvedValue({
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      });
 
       await runSyncHierarchy();
 
@@ -429,7 +444,12 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(HierarchyService).mockImplementation(
         () => mockHierarchyService as unknown as HierarchyService
       );
-      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+      vi.mocked(syncHierarchy).mockResolvedValue({
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      });
 
       await runSyncHierarchy();
 
@@ -475,7 +495,12 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(HierarchyService).mockImplementation(
         () => mockHierarchyService as unknown as HierarchyService
       );
-      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+      vi.mocked(syncHierarchy).mockResolvedValue({
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      });
 
       await runSyncHierarchy();
 
@@ -521,7 +546,12 @@ describe('runSyncHierarchy command', () => {
       vi.mocked(HierarchyService).mockImplementation(
         () => mockHierarchyService as unknown as HierarchyService
       );
-      vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+      vi.mocked(syncHierarchy).mockResolvedValue({
+        success: true,
+        itemsCreated: 0,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+      });
 
       await runSyncHierarchy();
 
@@ -873,5 +903,10 @@ function setupSuccessfulFlow(
   vi.mocked(HierarchyService).mockImplementation(
     () => mockHierarchyService as unknown as HierarchyService
   );
-  vi.mocked(syncHierarchy).mockResolvedValue(undefined);
+  vi.mocked(syncHierarchy).mockResolvedValue({
+    success: true,
+    itemsCreated: 0,
+    itemsRemoved: 0,
+    itemsUpdated: 0,
+  });
 }

@@ -101,7 +101,7 @@ existing exports to support various export workflows.
 
 ### Default Locations
 
-- **Temporary download:** `./temp_export_{timestamp}/extensions/`
+- **Temporary download:** `./temp/export/{timestamp}/extensions/`
 - **Final export:** User-specified or default `./exports/extensions`
 - **File naming:** Extensions exported as JSON files following dc-cli
   convention: `{extension-id}.json`

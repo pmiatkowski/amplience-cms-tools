@@ -117,7 +117,7 @@ NOTE: This state should not occur with the new unified workflow. Features create
 **Status: prd-draft**
 
 - Primary: Review `prd.md` and manually update `state.yml` status to `prd-approved`
-- Secondary: `/ai.clarify` - If changes needed (refines PRD directly)
+- Secondary: `/ai.clarify` - If PRD changes needed (refines PRD directly)
 
 **Status: prd-approved**
 
@@ -279,7 +279,7 @@ Phase {current_phase} of {total_phases}: {phase_name}
 
 ### Universal Commands
 - `/add "description"` - Add new feature or bug
-- `/ai.clarify [name]` - Refine existing PRD (post-PRD only, not for new features)
+- `/ai.clarify [name]` - Refine feature through clarifying questions (works with PRD or request.md)
 - `/ai.set-current {name}` - Switch workflow context
 - `/ai.help [name]` - Show this help
 
@@ -291,7 +291,7 @@ Phase {current_phase} of {total_phases}: {phase_name}
 - `/ai.verify [name]` - Verify implementation plan or code against coding standards
 
 ### Feature Commands
-- `/ai.clarify [name]` - Refine existing PRD through Q&A and direct updates (post-PRD only)
+- `/ai.clarify [name]` - Refine feature through clarifying questions (works with PRD or request.md)
 - `/ai.define-implementation-plan [name]` - Create phased implementation plan
 - `/ai.execute [name]` - Execute implementation plan
 
@@ -390,12 +390,16 @@ For new functionality, enhancements, or capabilities.
 **Typical Flow**:
 1. `/ai.add "feature description"` - Create feature with optional context gathering + inline clarifications + PRD generation (all-in-one)
 2. Review prd.md
-3. `/ai.clarify` (optional) - Refine PRD if changes needed
+3. `/ai.clarify` (optional) - Refine PRD through Q&A if changes needed
 4. Update state.yml status to 'prd-approved'
 5. `/ai.define-implementation-plan` - Break into phases
 6. `/ai.verify` - Verify plan against coding standards (recommended)
 7. `/ai.execute` - Implement each phase
 8. `/ai.verify` - Verify implementation against plan and standards
+
+**Note**: `/ai.clarify` works in dual-mode:
+- **With PRD**: Refines existing PRD directly
+- **Without PRD**: Adds clarifications to request.md (use before `/ai.create-prd`)
 
 ### Bug Workflow (Lightweight Fix Process)
 For fixes, issues, and errors.
@@ -429,7 +433,7 @@ For exploring and refining ideas before committing to implementation.
 
 ### Universal Commands
 - `/add "description"` - Add new feature or bug
-- `/ai.clarify [name]` - Refine existing PRD (post-PRD only, not for new features)
+- `/ai.clarify [name]` - Refine feature through clarifying questions (works with PRD or request.md)
 - `/ai.set-current {name}` - Switch workflow context
 - `/ai.help [name]` - Show this help
 
@@ -441,7 +445,7 @@ For exploring and refining ideas before committing to implementation.
 - `/ai.verify [name]` - Verify implementation plan or code against coding standards
 
 ### Feature Commands
-- `/ai.clarify [name]` - Refine existing PRD through Q&A and direct updates (post-PRD only)
+- `/ai.clarify [name]` - Refine feature through clarifying questions (works with PRD or request.md)
 - `/ai.define-implementation-plan [name]` - Create phased implementation plan
 - `/ai.execute [name]` - Execute implementation plan
 

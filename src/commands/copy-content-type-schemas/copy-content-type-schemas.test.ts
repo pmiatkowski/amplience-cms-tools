@@ -212,7 +212,7 @@ describe('copyContentTypeSchemas', () => {
 
     // Verify cleanup
     expect(fsPromises.rm).toHaveBeenCalledWith(
-      expect.stringContaining('temp_export'),
+      expect.stringMatching(/temp[\\/]export/),
       expect.objectContaining({ recursive: true, force: true })
     );
   });

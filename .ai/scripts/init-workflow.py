@@ -6,11 +6,19 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+import io
+
+# Configure UTF-8 encoding for Windows console
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 try:
     from config import cfg, write_global_state
 except ImportError:
     # Fallback if config module not available
+    from datetime import date
+
     class FallbackConfig:
         class paths:
             features = ".ai/features"
@@ -22,13 +30,13 @@ except ImportError:
             def __init__(self):
                 self.base_path = "features"
                 self.initial_state = "clarifying"
-                self.artifacts = ["state.yml", "request.md", "context.md", "clarifications/"]
+                self.artifacts = ["state.yml", "request.md", "context.md"]
         def get_workflow_type(self, type_name):
             wf = self.WorkflowType()
             if type_name == "bug":
                 wf.base_path = "bugs"
                 wf.initial_state = "reported"
-                wf.artifacts = ["state.yml", "report.md", "context.md", "clarifications/", "triage.md", "fix-plan.md"]
+                wf.artifacts = ["state.yml", "report.md", "context.md", "triage.md", "fix-plan.md"]
             elif type_name == "idea":
                 wf.base_path = "ideas"
                 wf.initial_state = "exploring"
@@ -42,7 +50,28 @@ except ImportError:
             else:
                 base = self.paths.features
             return Path(base) / name
+
+        @staticmethod
+        def write_global_state(name, workflow_type, set_method="auto"):
+            """Fallback global state writer."""
+            memory_path = Path(".ai/memory")
+            memory_path.mkdir(parents=True, exist_ok=True)
+
+            today = date.today().strftime("%Y-%m-%d")
+            state_path = memory_path / "global-state.yml"
+
+            content = f"""version: 1
+current:
+  name: {name or 'null'}
+  workflow_type: {workflow_type or 'null'}
+  set_date: {today if name else 'null'}
+  set_method: {set_method if name else 'null'}
+last_updated: {today}
+"""
+            state_path.write_text(content)
+
     cfg = FallbackConfig()
+    write_global_state = FallbackConfig.write_global_state
 
 
 def to_kebab_case(name: str) -> str:

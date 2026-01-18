@@ -38,7 +38,6 @@ workflow_types:
       - state.yml
       - request.md
       - context.md
-      - clarifications/
       - prd.md
       - updates/
       - implementation-plan/
@@ -58,7 +57,6 @@ workflow_types:
       - state.yml
       - report.md
       - context.md
-      - clarifications/
       - triage.md
       - fix-plan.md
     classification_keywords:

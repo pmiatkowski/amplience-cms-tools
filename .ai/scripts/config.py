@@ -158,7 +158,7 @@ class Config:
             base_path="features",
             states=["clarifying", "prd-draft", "prd-approved", "planning", "in-progress"],
             initial_state="clarifying",
-            artifacts=["state.yml", "request.md", "context.md", "clarifications/", "prd.md", "updates/", "implementation-plan/"],
+            artifacts=["state.yml", "request.md", "context.md", "prd.md", "updates/", "implementation-plan/"],
             classification_keywords=[]
         )
 

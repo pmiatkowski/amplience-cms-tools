@@ -165,6 +165,25 @@ def gather_current_context():
     }
 
 
+def count_clarifications_in_file(file_path):
+    """Count clarifications in request.md's ## Clarifications section."""
+    if not file_path.exists():
+        return 0
+
+    try:
+        content = file_path.read_text()
+        # Check if ## Clarifications section exists
+        if '## Clarifications' not in content:
+            return 0
+
+        # Count #### Q patterns (each question)
+        import re
+        questions = re.findall(r'####\s+Q\d+:', content)
+        return len(questions)
+    except Exception:
+        return 0
+
+
 def check_artifacts(workflow_path, workflow_type):
     """Check which artifact files exist for a workflow."""
     artifacts = {}
@@ -172,12 +191,9 @@ def check_artifacts(workflow_path, workflow_type):
     # Common artifacts
     artifacts['context_md'] = (workflow_path / 'context.md').exists()
 
-    # Count clarifications
-    clarifications_dir = workflow_path / 'clarifications'
-    if clarifications_dir.exists() and clarifications_dir.is_dir():
-        artifacts['clarifications_count'] = len(list(clarifications_dir.glob('round-*.md')))
-    else:
-        artifacts['clarifications_count'] = 0
+    # Count clarifications in request.md
+    request_file = workflow_path / 'request.md'
+    artifacts['clarifications_count'] = count_clarifications_in_file(request_file)
 
     # Workflow-specific artifacts
     if workflow_type == 'feature':

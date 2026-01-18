@@ -176,7 +176,7 @@ export const copyContentTypeSchemas = async (
       }
     }
 
-    const tempDir = `temp_export_${Date.now()}`;
+    const tempDir = path.resolve('./temp/export', `${Date.now()}`);
     await fs.mkdir(tempDir, { recursive: true });
 
     try {

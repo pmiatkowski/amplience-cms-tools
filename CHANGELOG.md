@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.5.0...v1.5.1) (2026-01-18)
+
+
+### Bug Fixes
+
+* temp refactor and bulk hierarchies summary fix ([#16](https://github.com/pmiatkowski/amplience-cms-tools/issues/16)) ([8676db6](https://github.com/pmiatkowski/amplience-cms-tools/commit/8676db6be671a1694fa479466cb45fb06b231356))
+
 # [1.5.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.4.1...v1.5.0) (2026-01-16)
 
 

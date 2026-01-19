@@ -212,6 +212,7 @@ declare global {
 
     type HubConfigCommon = {
       name: string;
+      envKey: string;
       hubId: string;
       extUrl?: string;
     };

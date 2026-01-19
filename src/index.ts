@@ -12,6 +12,7 @@ import { runRecreateFolderStructure } from './commands/recreate-folder-structure
 import { runSyncContentTypeProperties } from './commands/sync-content-type-properties';
 import { runSyncHierarchy } from './commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from './commands/update-delivery-keys-locale';
+import { runVseManagement } from './commands/vse-management';
 import { promptForCommand, promptForUpdate } from './prompts';
 import { checkForUpdates, performUpdate, restartApplication } from './services';
 import { getAppVersion } from './utils/version';
@@ -93,6 +94,9 @@ async function main(): Promise<void> {
         break;
       case 'manage-extensions':
         await runManageExtensions();
+        break;
+      case 'vse-management':
+        await runVseManagement();
         break;
       default:
         console.error('Unknown command selected.');

@@ -104,7 +104,7 @@ async function exportExtensions(params: ExportExtensionsParams): Promise<ExportE
   const { hub, outputDir, pattern, mode, onBeforeFiltering } = params;
   const resolvedOutputDir = path.resolve(outputDir);
   const timestamp = Date.now();
-  const tempDir = path.resolve(`./temp_export_${timestamp}/extensions`);
+  const tempDir = path.resolve('./temp/export', `${timestamp}`, 'extensions');
 
   try {
     await ensureExportDirectory(tempDir);

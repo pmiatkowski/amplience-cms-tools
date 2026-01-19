@@ -39,8 +39,8 @@ describe('app-config', () => {
       expect(configs).toHaveLength(2);
       expect(configs).toEqual(
         expect.arrayContaining([
-          { name: 'Development', hubId: 'dev-hub-id', patToken: 'pat-token-123' },
-          { name: 'Production', hubId: 'prod-hub-id', patToken: 'pat-token-123' },
+          { name: 'Development', envKey: 'DEV', hubId: 'dev-hub-id', patToken: 'pat-token-123' },
+          { name: 'Production', envKey: 'PROD', hubId: 'prod-hub-id', patToken: 'pat-token-123' },
         ])
       );
     });
@@ -67,6 +67,7 @@ describe('app-config', () => {
       expect(configs).toHaveLength(1);
       expect(configs[0]).toEqual({
         name: 'Development',
+        envKey: 'DEV',
         hubId: 'dev-hub-id',
         patToken: 'pat-token-abc',
       });
@@ -113,12 +114,14 @@ describe('app-config', () => {
         expect.arrayContaining([
           {
             name: 'Development',
+            envKey: 'DEV',
             clientId: 'dev-client-id',
             clientSecret: 'dev-client-secret',
             hubId: 'dev-hub-id',
           },
           {
             name: 'Production',
+            envKey: 'PROD',
             clientId: 'prod-client-id',
             clientSecret: 'prod-client-secret',
             hubId: 'prod-hub-id',
@@ -162,6 +165,7 @@ describe('app-config', () => {
       expect(configs).toHaveLength(1);
       expect(configs[0]).toEqual({
         name: 'Dev Staging',
+        envKey: 'DEV_STAGING',
         clientId: 'staging-client-id',
         clientSecret: 'staging-client-secret',
         hubId: 'staging-hub-id',
@@ -238,6 +242,7 @@ describe('app-config', () => {
       expect(configs).toHaveLength(1);
       expect(configs[0]).toEqual({
         name: 'Environment 1',
+        envKey: 'ENV1',
         clientId: 'env1-client-id',
         clientSecret: 'env1-client-secret',
         hubId: 'env1-hub-id',

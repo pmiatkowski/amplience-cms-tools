@@ -1,6 +1,7 @@
 ---
 agent: agent
-description: Execute implementation plan tasks while tracking phase progress.
+description:
+  Execute implementation plan tasks while tracking phase progress.
 ---
 
 ## Important: This Is Implementation Only
@@ -37,8 +38,7 @@ User: /ai.execute {feature-name}     # Explicit feature
 
 ## Instructions
 
-You are an implementation engineer executing a pre-defined plan. Your goal is to
-implement tasks exactly as specified without adding extras.
+You are an implementation engineer executing a pre-defined plan. Your goal is to implement tasks exactly as specified without adding extras.
 
 ### 1. Determine Feature Name
 
@@ -89,19 +89,18 @@ Run /ai.define-implementation-plan first.
 Read `.ai/features/{name}/implementation-plan/plan-state.yml`:
 
 ```yaml
-status: planning # or in-progress, completed
-current_phase: 1 # Current phase number
+status: planning               # or in-progress, completed
+current_phase: 1               # Current phase number
 phases:
   - name: Phase 1 Name
-    status: pending # pending, in-progress, or completed
+    status: pending            # pending, in-progress, or completed
   - name: Phase 2 Name
     status: pending
 ```
 
 **Determine next action:**
 
-- If `status: completed`: All phases done, suggest `/ai.update-feature` for
-  changes
+- If `status: completed`: All phases done, suggest `/ai.update-feature` for changes
 - If `status: planning` or `in-progress`: Continue with execution
 
 ### 4. Ask User for Execution Mode
@@ -155,16 +154,14 @@ Read `implementation-plan/plan.md` and locate Phase {N} section:
 **Goal**: {One sentence goal}
 
 ### Tasks
-
 - [ ] Task N.1: {description}
-- [ ] Task N.2: {description} ...
+- [ ] Task N.2: {description}
+...
 
 ### Deliverables
-
 - {What's completed after this phase}
 
 ### Dependencies
-
 - {Prerequisites or "None"}
 ```
 
@@ -253,22 +250,20 @@ Next steps:
 
 **Step 7: Check for next phase**
 
-Read `.ai/features/{name}/implementation-plan/plan-state.yml` to determine if
-more phases remain.
+Read `.ai/features/{name}/implementation-plan/plan-state.yml` to determine if more phases remain.
 
-After completing Phase {N}, the script automatically increments `current_phase`
-to {N+1}.
+After completing Phase {N}, the script automatically increments `current_phase` to {N+1}.
 
 Check the state:
 
 ```yaml
 status: in-progress
-current_phase: 2 # Already incremented to next phase
+current_phase: 2              # Already incremented to next phase
 phases:
   - name: Phase 1
-    status: completed # Just finished
+    status: completed          # Just finished
   - name: Phase 2
-    status: in-progress # Ready to execute
+    status: in-progress        # Ready to execute
   - name: Phase 3
     status: pending
 ```
@@ -387,8 +382,8 @@ After plan execution completes, consider updating parent feature state:
 
 ```yaml
 # .ai/features/{name}/state.yml
-status: in-progress # Or keep as 'planning'
-updated: { YYYY-MM-DD }
+status: in-progress            # Or keep as 'planning'
+updated: {YYYY-MM-DD}
 ```
 
 This is optional and depends on workflow preferences.
@@ -543,8 +538,7 @@ User: 2
 
 ✓ Execution paused after Phase 2.
 
-You can review the changes and run /ai.execute again when ready to continue with
-Phase 3.
+You can review the changes and run /ai.execute again when ready to continue with Phase 3.
 
 ```
 
@@ -562,4 +556,3 @@ Phase 3.
 | Feature state not 'planning' | Warning but allow execution |
 | User selects invalid option | Ask again with valid options (1 or 2) |
 | Phase already completed | Skip to next incomplete phase |
-```

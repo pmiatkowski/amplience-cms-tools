@@ -997,6 +997,192 @@ describe('syncHierarchy locale assignment', () => {
   });
 });
 
+describe('syncHierarchy result tracking', () => {
+  const sourceService = { __service: 'source' } as unknown as AmplienceService;
+  const targetService = {
+    __service: 'target',
+    createContentItem: vi.fn(),
+  } as unknown as AmplienceService;
+
+  let generateSyncPlanMock: ViMock;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Set up mocks for removal helpers
+    vi.spyOn(itemRemovalModule, 'ensureDeletedFolder').mockResolvedValue({
+      success: true,
+      folderId: 'deleted-folder',
+    });
+    vi.spyOn(itemRemovalModule, 'prepareItemForRemoval').mockResolvedValue({
+      success: true,
+      itemId: 'target-id',
+      label: 'Target Item',
+    } as unknown as RemovalPreparationResult);
+    vi.spyOn(itemRemovalModule, 'archivePreparedItem').mockResolvedValue({
+      overallSuccess: true,
+    } as ItemCleanupResult);
+
+    generateSyncPlanMock = vi.spyOn(
+      HierarchyService.prototype,
+      'generateSyncPlan'
+    ) as unknown as ViMock;
+
+    vi.spyOn(HierarchyService.prototype, 'displaySyncPlan').mockImplementation(() => {});
+
+    vi.mocked(targetService.createContentItem).mockResolvedValue({
+      success: true,
+      updatedItem: { id: 'new-id', version: 1 } as Amplience.ContentItemWithDetails,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should return result with accurate counts for create and remove operations', async () => {
+    const itemsToCreate = [
+      createTestContentItem({ id: 'source-1', label: 'Item 1' }),
+      createTestContentItem({ id: 'source-2', label: 'Item 2' }),
+      createTestContentItem({ id: 'source-3', label: 'Item 3' }),
+    ];
+
+    const itemsToRemove: Amplience.SyncItem[] = [
+      {
+        action: 'REMOVE' as const,
+        sourceItem: createTestContentItem({ id: 'remove-1', label: 'Remove 1' }),
+        targetItem: createTestContentItem({ id: 'target-1', label: 'Target 1' }),
+      },
+      {
+        action: 'REMOVE' as const,
+        sourceItem: createTestContentItem({ id: 'remove-2', label: 'Remove 2' }),
+        targetItem: createTestContentItem({ id: 'target-2', label: 'Target 2' }),
+      },
+    ];
+
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: itemsToCreate.map(item => ({
+        action: 'CREATE' as const,
+        sourceItem: item,
+      })),
+      itemsToRemove,
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'keep' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    consoleSpy.mockRestore();
+
+    // Verify the result contains accurate counts
+    expect(result).toEqual({
+      success: true,
+      itemsCreated: 3,
+      itemsRemoved: 2,
+      itemsUpdated: 0,
+    });
+  });
+
+  it('should return result with zero counts when plan is empty', async () => {
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: [],
+      itemsToRemove: [],
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'keep' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    consoleSpy.mockRestore();
+
+    expect(result).toEqual({
+      success: true,
+      itemsCreated: 0,
+      itemsRemoved: 0,
+      itemsUpdated: 0,
+    });
+  });
+
+  it('should return error result when sync fails', async () => {
+    generateSyncPlanMock.mockRejectedValue(new Error('Sync failed'));
+
+    const result = await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'keep' },
+      publishAfterSync: false,
+      isDryRun: false,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Sync failed');
+    expect(result.itemsCreated).toBe(0);
+    expect(result.itemsRemoved).toBe(0);
+    expect(result.itemsUpdated).toBe(0);
+  });
+
+  it('should return zero counts in dry run mode', async () => {
+    const item = createTestContentItem({ id: 'item-1', label: 'Item' });
+    const plan: Amplience.SyncPlan = {
+      itemsToCreate: [{ action: 'CREATE', sourceItem: item, targetParentId: 'parent' }],
+      itemsToRemove: [],
+    };
+
+    generateSyncPlanMock.mockResolvedValue(plan);
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await syncHierarchy({
+      sourceService,
+      targetService,
+      targetRepositoryId: 'target-repo',
+      sourceTree: {} as Amplience.HierarchyNode,
+      targetTree: {} as Amplience.HierarchyNode,
+      updateContent: false,
+      localeStrategy: { strategy: 'keep' },
+      publishAfterSync: false,
+      isDryRun: true,
+    });
+
+    consoleSpy.mockRestore();
+
+    expect(result).toEqual({
+      success: true,
+      itemsCreated: 0,
+      itemsRemoved: 0,
+      itemsUpdated: 0,
+    });
+  });
+});
+
 describe('syncHierarchy core flow', () => {
   const sourceService = { __service: 'source' } as unknown as AmplienceService;
   const targetService = { __service: 'target' } as unknown as AmplienceService;

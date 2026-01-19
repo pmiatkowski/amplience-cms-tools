@@ -1,14 +1,16 @@
 ---
 agent: agent
 description:
-  Add a new work item (feature or bug) with inline clarifications and PRD generation (all-in-one).
+  Add a new work item (feature or bug) with inline clarifications.
 ---
 
-You are creating a new workflow item. This prompt handles: classification, initialization, requirements clarification, and PRD generation in a single continuous session.
+You are creating a new workflow item. This prompt handles: classification, initialization, and requirements clarification. PRD generation is a separate step via `/ai.create-prd`.
 
 ### 1. Extract Description
 
-Parse the user's description from the `/ai.add` command.
+Parse the user's description from the `/ai.add` command and **preserve it exactly as provided**.
+
+**IMPORTANT**: Store the full original description verbatim. This exact text will be saved to request.md/report.md. Do NOT summarize, shorten, or paraphrase it.
 
 If missing:
 
@@ -42,10 +44,12 @@ Analyze the description to determine if this is a **feature** or **bug**:
 
 ### 3. Generate Name
 
-Create a kebab-case name from the description:
+Create a short kebab-case **name** from the description (for folder naming):
 
 - "Fix timeout on login page" → "login-timeout"
 - "Allow users to reset password" → "user-password-reset"
+
+**Note**: The name is a short identifier only. The original full description will be passed separately to the init script.
 
 ### 4. Check Global Context (Optional)
 
@@ -82,10 +86,19 @@ Check if `.ai/memory/tech-stack.md` exists (file existence only, don't read cont
 Run:
 
 ```bash
-python .ai/scripts/init-workflow.py "{name}" "{description}" --type {type}
+python .ai/scripts/init-workflow.py "{name}" "{original_description}" --type {type}
 ```
 
+Where:
+
+- `{name}` = the short kebab-case name generated in Step 3
+- `{original_description}` = the **full original description** from Step 1 (verbatim, not summarized)
+
+**IMPORTANT**: Always pass the complete original user description. If the user wrote 5 sentences, pass all 5 sentences. Never truncate or summarize.
+
 This creates the workflow structure and sets initial state.
+
+**Note**: The init script automatically updates `.ai/memory/global-state.yml` to set the newly created workflow as current. No manual action needed - the script will confirm with `✓ Set as current {workflow_type}`.
 
 ### 5A. Prompt for Context (Optional)
 
@@ -283,131 +296,60 @@ You can select A, B, or C, or provide your own answer.
 
 **Track Progress in Conversation:**
 
-- You do NOT need to write answers to any files during clarification
-- The conversation history IS your state storage
-- After all questions answered, you will synthesize from conversation
+- Track answers in conversation history during the Q&A session
+- After ALL questions are answered, proceed to Step 9 to save clarifications
 
-### 9. Generate PRD (FEATURES ONLY - Skip for Bugs)
+### 9. Save Clarifications (FEATURES ONLY)
 
-**For FEATURES**: Once all clarification questions are answered, generate the PRD.
+**For FEATURES**: After all clarification questions are answered, append the Q&A to request.md.
 
-**For BUGS**: Skip this step entirely and proceed to Step 10 with bug-specific guidance.
+**For BUGS**: Skip this step and proceed to Step 10.
 
 ---
 
-**PRD Generation Instructions (Features Only):**
+**Append to:** `.ai/features/{name}/request.md`
 
-Create `prd.md` in `.ai/features/{name}/prd.md` using this exact structure:
+**Format to append:**
 
 ```markdown
-# PRD: {Feature Name}
 
-> **Status**: Draft
-> **Created**: {YYYY-MM-DD}
-> **Last Updated**: {YYYY-MM-DD}
+## Clarifications
 
----
+### Round 1
 
-## Overview
-{One-paragraph summary of what this feature does and why it matters}
+#### Q1: {question text}
+User: {user's answer}
 
-## Problem Statement
-{What problem does this solve? What's the current pain point?}
+#### Q2: {question text}
+User: {user's answer}
 
-## Goals
-{What does success look like? Be specific and measurable where possible}
-
-- Goal 1
-- Goal 2
-
-## Non-Goals
-{What is explicitly out of scope for this feature?}
-
-- Non-goal 1
-- Non-goal 2
-
-## User Stories
-<!-- Optional section — remove if not applicable -->
-
-- As a {role}, I want {action}, so that {benefit}
-
-## Functional Requirements
-
-### FR-1: {Requirement title}
-{Description of requirement}
-
-### FR-2: {Requirement title}
-{Description of requirement}
-
-...
-
-## Technical Considerations
-{Base this section on:
-- Global tech stack (.ai/memory/tech-stack.md) if available
-- Feature-specific context (context.md if provided)
-- Constraints, dependencies, integration points from clarification answers
-
-Include:
-- Which technologies from the stack will be used
-- Integration points with existing services
-- Version compatibility notes
-- Architectural constraints}
-
-## Acceptance Criteria
-
-- [ ] AC-1: {Criterion}
-- [ ] AC-2: {Criterion}
-- [ ] AC-3: {Criterion}
-
-## Open Questions
-{Unresolved items, or "None" if fully resolved}
+... (continue for all questions)
 ```
 
-**PRD Quality Rules:**
+**Note:** Only save the question text and user's answer. Do not include the Options A/B/C or Recommendations (those were only for the interactive Q&A).
 
-- All sections required except User Stories (optional)
-- Use "TBD" if insufficient information — never omit section
-- Functional requirements must be numbered (FR-1, FR-2, ...)
-- Acceptance criteria must be checkboxes
-- Keep language concise and specific
-- Avoid implementation details — focus on *what*, not *how*
-
-**Synthesis Rules:**
-
-- Don't just copy from clarification answers — synthesize and organize
-- Resolve contradictions (note if unresolvable)
-- Fill gaps with reasonable assumptions (mark as assumptions)
-- Prioritize requirements if many (must-have vs nice-to-have)
-
-**After PRD Creation:**
+**After saving clarifications:**
 
 Update `.ai/features/{name}/state.yml`:
 
 ```yaml
-status: prd-draft
+status: clarified
 updated: {YYYY-MM-DD}
 ```
 
 ### 10. Confirm Completion
 
-**For FEATURES (with PRD):**
+**For FEATURES (clarified, ready for PRD):**
 
 Show completion summary with context if available:
 
 ```
-✓ Workflow complete! Feature created with PRD in single session.
+✓ Feature initialized and clarified!
 
 Created: .ai/features/{name}/
-├── state.yml (status: prd-draft)
-├── request.md
-├── context.md
-├── clarifications/ (empty - not used in unified workflow)
-└── prd.md ← Generated from conversation
-
-PRD Summary:
-  - {X} functional requirements
-  - {Y} acceptance criteria
-  - {Z} open questions
+├── state.yml (status: clarified)
+├── request.md ← includes {X} clarifications
+└── context.md
 
 {If context found in Step 4:}
 📚 Context Available:
@@ -416,13 +358,11 @@ PRD Summary:
   • Related features found:
     - {feature-name} (shares: {common keywords})
 
-💡 Consider reviewing these when defining implementation plan.
+💡 Consider reviewing related features before generating PRD.
 
 Next steps:
-  1. Review prd.md
-  2. If changes needed: /ai.clarify {name} (refines PRD)
-  3. If approved: Update state.yml status to 'prd-approved'
-  4. Then: /ai.define-implementation-plan {name}
+  1. /ai.create-prd {name} — generate PRD from clarifications
+  2. Or: /ai.clarify {name} — add more clarifications first
 ```
 
 **For BUGS (no PRD):**
@@ -436,7 +376,6 @@ Created: .ai/bugs/{name}/
 ├── state.yml (status: reported)
 ├── report.md
 ├── context.md
-├── clarifications/ (empty - not used in unified workflow)
 ├── triage.md (pending)
 └── fix-plan.md (pending)
 
@@ -562,39 +501,30 @@ You can select A, B, or C, or provide your own answer.
 
 **... continues through all 5 questions ...**
 
-**After final answer, AI generates PRD** based on conversation history.
+**After final answer, AI appends clarifications** to `request.md`
 
-**AI updates state.yml** to `prd-draft`
+**AI updates state.yml** to `clarified`
 
 **AI confirms:**
 
 ```
-✓ Workflow complete! Feature created with PRD in single session.
+✓ Feature initialized and clarified!
 
 Created: .ai/features/user-data-export/
-├── state.yml (status: prd-draft)
-├── request.md
-├── context.md
-├── clarifications/ (empty)
-└── prd.md ← Generated from conversation
-
-PRD Summary:
-  - 5 functional requirements
-  - 7 acceptance criteria
-  - 0 open questions
+├── state.yml (status: clarified)
+├── request.md ← includes 5 clarifications
+└── context.md
 
 📚 Context Available:
   • Tech stack defined: .ai/memory/tech-stack.md
   • Related features found:
     - user-data-import (shares: data handling, user features)
 
-💡 Consider reviewing related features when defining implementation plan.
+💡 Consider reviewing related features before generating PRD.
 
 Next steps:
-  1. Review prd.md
-  2. If changes needed: /ai.clarify user-data-export
-  3. If approved: Update state.yml status to 'prd-approved'
-  4. Then: /ai.define-implementation-plan user-data-export
+  1. /ai.create-prd user-data-export — generate PRD from clarifications
+  2. Or: /ai.clarify user-data-export — add more clarifications first
 ```
 
 ---
@@ -685,7 +615,6 @@ Created: .ai/bugs/websocket-memory-leak/
 ├── state.yml (status: reported)
 ├── report.md
 ├── context.md
-├── clarifications/ (empty)
 ├── triage.md (pending)
 └── fix-plan.md (pending)
 
@@ -717,8 +646,7 @@ Next steps:
 ## Important Notes
 
 - **Single continuous session**: This entire workflow happens in one user invocation
-- **Conversation as state**: Answers are stored in conversation history, not intermediate files
-- **No round files**: The new unified workflow doesn't create `clarifications/round-{n}.md` files
-- **Synthesize PRD from conversation**: After all questions answered, read answers from conversation history
-- **Bugs skip PRD**: Bugs proceed directly to triage instead of PRD generation
+- **Clarifications appended to request.md**: After all Q&A, append to `request.md` for features (not separate files)
+- **PRD is separate**: PRD generation happens via `/ai.create-prd`, not in this workflow
+- **Bugs skip clarification storage**: Bugs proceed directly to triage (clarifications not saved to file)
 - **Context discovery is passive**: Check for tech-stack.md and related features, but only for informational purposes in the final message

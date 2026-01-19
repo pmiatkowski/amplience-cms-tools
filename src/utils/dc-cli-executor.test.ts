@@ -40,6 +40,7 @@ describe('DC-CLI Executor', () => {
       it('should set the hub configuration', () => {
         const hub: Amplience.HubConfig = {
           name: 'Test Hub',
+          envKey: 'TEST_HUB',
           hubId: 'hub-123',
           clientId: 'client-123',
           clientSecret: 'secret-123',
@@ -79,6 +80,7 @@ describe('DC-CLI Executor', () => {
       it('should build correct command string with PAT token', () => {
         const hub: Amplience.HubConfig = {
           name: 'Test Hub',
+          envKey: 'TEST_HUB',
           hubId: 'hub-123',
           patToken: 'pat-token-123',
         };
@@ -100,6 +102,7 @@ describe('DC-CLI Executor', () => {
       it('should build correct command string with OAuth credentials', () => {
         const hub: Amplience.HubConfig = {
           name: 'Test Hub',
+          envKey: 'TEST_HUB',
           hubId: 'hub-123',
           clientId: 'client-123',
           clientSecret: 'secret-123',
@@ -128,6 +131,7 @@ describe('DC-CLI Executor', () => {
       it('should handle quoted arguments correctly', () => {
         const hub: Amplience.HubConfig = {
           name: 'Test Hub',
+          envKey: 'TEST_HUB',
           hubId: 'hub-123',
           clientId: 'client-123',
           clientSecret: 'secret-123',
@@ -145,6 +149,7 @@ describe('DC-CLI Executor', () => {
       it('should handle multiple arguments', () => {
         const hub: Amplience.HubConfig = {
           name: 'Test Hub',
+          envKey: 'TEST_HUB',
           hubId: 'hub-123',
           patToken: 'pat-token-123',
         };
@@ -165,6 +170,7 @@ describe('DC-CLI Executor', () => {
       it('should support method chaining', () => {
         const hub: Amplience.HubConfig = {
           name: 'Test Hub',
+          envKey: 'TEST_HUB',
           hubId: 'hub-123',
           clientId: 'client-123',
           clientSecret: 'secret-123',

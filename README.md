@@ -227,9 +227,24 @@ npm start
 
 ## 🎯 Available Commands
 
-The CLI tool provides 14 specialized commands for different bulk operations:
+The CLI tool provides 15 specialized commands for different bulk operations:
 
-### 1. Clean Repository
+### 1. VSE Management
+
+**Command**: VSE Management
+**Documentation**: [vse-management.md](docs/vse-management.md)
+
+Provides operations for managing Visual Studio Edition (VSE) visualization settings
+across multiple content types. **Bulk Update Visualizations** operation enables
+efficient updates to visualization configurations with support for:
+
+- Content type selection via API regex filtering or JSON file
+- Visualization configuration from JSON file with hub-specific URL replacement
+- Dry-run mode for previewing changes before execution
+- Progress tracking and detailed markdown reports
+- Sequential processing with error handling on individual failures
+
+### 2. Clean Repository
 
 **Command**: Clean Repository  
 **Documentation**: [clean-repository.md](docs/clean-repository.md)
@@ -237,15 +252,15 @@ The CLI tool provides 14 specialized commands for different bulk operations:
 Performs comprehensive cleanup of a repository by archiving content items with
 support for hierarchical structures and complex filtering options.
 
-### 2. Cleanup Folder
+### 3. Cleanup Folder
 
-**Command**: Cleanup Folder  
+**Command**: Cleanup Folder
 **Documentation**: [cleanup-folder.md](docs/cleanup-folder.md)
 
 Moves all content items from a folder to a designated deleted folder, archives
 them, and removes empty folder structures systematically.
 
-### 3. Copy Folder with Content
+### 4. Copy Folder with Content
 
 **Command**: Copy Folder with Content  
 **Documentation**: [copy-folder-with-content.md](docs/copy-folder-with-content.md)
@@ -253,15 +268,15 @@ them, and removes empty folder structures systematically.
 Duplicates a complete folder structure and its content from source to
 destination, supporting cross-hub content migration and duplication.
 
-### 4. List Folder Tree Structure
+### 5. List Folder Tree Structure
 
-**Command**: List folder tree structure  
+**Command**: List folder tree structure
 **Documentation**: [list-folder-tree.md](docs/list-folder-tree.md)
 
 Visualizes repository folder hierarchy in multiple formats (tree, table, JSON)
 with detailed statistics and navigation options.
 
-### 5. Recreate Content Items
+### 6. Recreate Content Items
 
 **Command**: Recreate Content Items  
 **Documentation**: [recreate-content-items.md](docs/recreate-content-items.md)
@@ -269,15 +284,15 @@ with detailed statistics and navigation options.
 Recreates content items across different hubs, repositories, and folders with
 comprehensive filtering, hierarchy handling, and locale management.
 
-### 6. Recreate Folder Structure
+### 7. Recreate Folder Structure
 
-**Command**: Recreate Folder Structure  
+**Command**: Recreate Folder Structure
 **Documentation**: [recreate-folder-structure.md](docs/recreate-folder-structure.md)
 
 Replicates folder hierarchies from source to target locations without content,
 perfect for environment setup and structural consistency.
 
-### 7. Copy Content Type Schemas
+### 8. Copy Content Type Schemas
 
 **Command**: Copy Content Type Schemas  
 **Documentation**: [copy-content-type-schemas.md](docs/copy-content-type-schemas.md)
@@ -286,16 +301,16 @@ Copies content type schemas between hubs using Amplience DC-CLI, ensuring
 consistent content models across environments with optional content type
 synchronization.
 
-### 8. Archive Content Type Schemas
+### 9. Archive Content Type Schemas
 
-**Command**: Archive Content Type Schemas  
+**Command**: Archive Content Type Schemas
 **Documentation**: [archive-content-type-schemas.md](docs/archive-content-type-schemas.md)
 
 Archives content type schemas and their dependencies (content types and content
 items) in the correct dependency order to maintain data integrity and prevent
 orphaned content.
 
-### 9. Copy Content Types
+### 10. Copy Content Types
 
 **Command**: Copy Content Types  
 **Documentation**: [copy-content-types.md](docs/copy-content-types.md)
@@ -303,15 +318,15 @@ orphaned content.
 Compares and creates missing content types between hubs with proper schema
 validation and repository assignments.
 
-### 10. Sync Content Type Properties
+### 11. Sync Content Type Properties
 
-**Command**: Sync Content Type Properties  
+**Command**: Sync Content Type Properties
 **Documentation**: [sync-content-type-properties.md](docs/sync-content-type-properties.md)
 
 Synchronizes content types with their schemas on a target hub, ensuring content
 types reflect the latest schema versions with flexible filtering options.
 
-### 11. Sync Hierarchy
+### 12. Sync Hierarchy
 
 **Command**: Sync Hierarchy  
 **Documentation**: [sync-hierarchy.md](docs/sync-hierarchy.md)
@@ -320,9 +335,9 @@ Synchronizes content item hierarchies between hubs, comparing source and target
 hierarchical structures to create, remove, or update items while preserving
 parent-child relationships and handling locale strategies for delivery keys.
 
-### 12. Bulk Sync Hierarchies
+### 13. Bulk Sync Hierarchies
 
-**Command**: Bulk Sync Hierarchies  
+**Command**: Bulk Sync Hierarchies
 **Documentation**: [bulk-sync-hierarchies.md](docs/bulk-sync-hierarchies.md)
 
 Synchronize multiple content item hierarchies from source to target
@@ -330,7 +345,7 @@ hub/repository in a single operation. Features multi-select interface, automatic
 matching by delivery key and schema ID, missing hierarchies reporting, and
 sequential processing with comprehensive error handling.
 
-### 13. Update Delivery Keys Locale
+### 14. Update Delivery Keys Locale
 
 **Command**: Update Delivery Keys Locale  
 **Documentation**: [update-delivery-keys-locale.md](docs/update-delivery-keys-locale.md)
@@ -338,7 +353,7 @@ sequential processing with comprehensive error handling.
 Performs bulk updates to delivery key locale segments with support for
 prefix/suffix patterns and optional publishing workflow.
 
-### 14. Manage Extensions
+### 15. Manage Extensions
 
 **Command**: Manage Extensions
 **Documentation**: [export-extensions.md](docs/export-extensions.md) |

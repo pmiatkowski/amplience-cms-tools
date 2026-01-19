@@ -43,6 +43,7 @@ vi.mock('./prompt-for-export-mode');
 describe('runExportExtensions', () => {
   const mockHub: Amplience.HubConfig = {
     name: 'Test Hub',
+    envKey: 'TEST_HUB',
     clientId: 'test-client-id',
     clientSecret: 'test-secret',
     hubId: 'test-hub-id',

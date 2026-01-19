@@ -1,44 +1,33 @@
 ---
 agent: agent
-description: Synthesize all feature inputs into a structured PRD document.
+description:
+  Generate PRD from clarified feature requirements.
 ---
 
-You are a technical product manager. Your goal is to synthesize all gathered
-information into a clear, actionable PRD.
+You are generating a Product Requirements Document (PRD) from clarified feature requirements.
 
-### 1. Determine Feature Name
+**IMPORTANT**: This command only works with features that have been clarified. For new features, use `/ai.add` first to initialize and gather clarifications.
+
+### 1. Determine Workflow Name
 
 **Parameter resolution:**
 
-1. If user provided explicit name in command (`/ai.create-prd feature-name`),
-   use it
+1. If user provided explicit name in command (`/ai.create-prd workflow-name`), use it
 2. Otherwise, read current context from `.ai/memory/global-state.yml`
-3. If current context is a bug, error:
+3. If no current context set, error:
 
 ```
-⚠ Current context is a bug, not a feature.
-
-Bugs use /ai.triage-bug instead of /ai.create-prd.
-
-To work with a feature:
-  /ai.set-current {feature-name}
-  /ai.create-prd
-```
-
-1. If no current context, error:
-
-```
-⚠ No feature specified and no current context set.
+⚠ No workflow specified and no current context set.
 
 Please either:
-  1. Specify the feature name: /ai.create-prd {name}
+  1. Specify the workflow name: /ai.create-prd {name}
   2. Set current context: /ai.set-current {name}
 
 Example:
   /ai.create-prd user-auth
 ```
 
-**Verify feature exists:**
+**Verify workflow exists:**
 
 Check if `.ai/features/{name}/` exists.
 
@@ -50,92 +39,104 @@ If not found:
 Create it first: /ai.add "{description}"
 ```
 
-### 2. Read All Feature Context
+### 2. Validate Workflow Type and State
 
-Read everything from `.ai/features/{name}/`:
+**Check workflow type:**
 
-```
-├── state.yml
-├── request.md
-├── context.md
-└── clarifications/
-    ├── round-01.md
-    ├── round-02.md
-    └── ...
-```
+Read `.ai/features/{name}/state.yml` and verify `workflow_type: feature`.
 
-**Also read global context (if available):**
+If workflow is a bug:
 
 ```
-.ai/memory/
-└── tech-stack.md        # Global tech stack (optional)
+✗ '{name}' is a bug, not a feature.
+
+Bugs don't have PRDs. Use:
+  /ai.triage-bug {name} — diagnose root cause
+  /ai.plan-fix {name} — create fix checklist
 ```
 
-If `tech-stack.md` exists, read it to understand:
+**Check for clarifications:**
 
-- Technology constraints for the feature
-- Existing integrations to leverage
-- Version compatibility requirements
-- Technical patterns to follow
+Check if `request.md` contains a `## Clarifications` section.
 
-If missing, proceed without it (no error needed).
-
-### 3. Validate Readiness
-
-Before generating PRD, check:
-
-- [ ] Original request exists (`request.md`)
-- [ ] At least one clarification round completed
-- [ ] No critical "TBD" items blocking core functionality
-
-If not ready:
+If no clarifications found:
 
 ```
-⚠ Not ready for PRD generation.
+⚠ No clarifications found for '{name}'.
 
-Missing:
-  - {list what's missing}
+PRD generation works best with clarified requirements. You can:
+  1. Continue anyway — generate PRD from request.md and context.md only
+  2. Add clarifications first — run /ai.clarify {name}
 
-Recommendation: Run /ai.clarify to address gaps first.
+Would you like to continue without clarifications? (yes/no)
 ```
+
+If user says no, exit gracefully.
+
+**Check if PRD already exists:**
+
+If `.ai/features/{name}/prd.md` exists:
+
+```
+⚠ PRD already exists for '{name}'.
+
+Options:
+  1. Regenerate — overwrite existing PRD with new version
+  2. Refine — use /ai.clarify {name} to update existing PRD
+  3. Cancel — keep existing PRD
+
+Please choose 1, 2, or 3.
+```
+
+Handle response accordingly.
+
+### 3. Read All Context
+
+Read all relevant files for PRD generation:
+
+**Required:**
+
+- `.ai/features/{name}/request.md` - original feature description (includes `## Clarifications` section if clarified)
+
+**Optional (if exist):**
+
+- `.ai/features/{name}/context.md` - codebase/business context
+- `.ai/memory/tech-stack.md` - global tech stack
+
+If optional files don't exist, proceed without them (no error).
 
 ### 4. Generate PRD
 
-Create `prd.md` using this exact structure:
+Create `prd.md` in `.ai/features/{name}/prd.md` using this exact structure:
 
 ```markdown
 # PRD: {Feature Name}
 
-> **Status**: Draft  
-> **Created**: {YYYY-MM-DD}  
+> **Status**: Draft
+> **Created**: {YYYY-MM-DD}
 > **Last Updated**: {YYYY-MM-DD}
 
 ---
 
 ## Overview
-
 {One-paragraph summary of what this feature does and why it matters}
 
 ## Problem Statement
-
 {What problem does this solve? What's the current pain point?}
 
 ## Goals
-
 {What does success look like? Be specific and measurable where possible}
 
 - Goal 1
 - Goal 2
 
 ## Non-Goals
-
 {What is explicitly out of scope for this feature?}
 
 - Non-goal 1
 - Non-goal 2
 
 ## User Stories
-
 <!-- Optional section — remove if not applicable -->
 
 - As a {role}, I want {action}, so that {benefit}
@@ -143,25 +144,20 @@ Create `prd.md` using this exact structure:
 ## Functional Requirements
 
 ### FR-1: {Requirement title}
-
 {Description of requirement}
 
 ### FR-2: {Requirement title}
-
 {Description of requirement}
 
 ...
 
 ## Technical Considerations
-
 {Base this section on:
-
 - Global tech stack (.ai/memory/tech-stack.md) if available
-- Feature-specific context (context.md)
-- Constraints, dependencies, integration points from clarifications
+- Feature-specific context (context.md if provided)
+- Constraints, dependencies, integration points from clarification answers
 
 Include:
-
 - Which technologies from the stack will be used
 - Integration points with existing services
 - Version compatibility notes
@@ -174,145 +170,128 @@ Include:
 - [ ] AC-3: {Criterion}
 
 ## Open Questions
-
 {Unresolved items, or "None" if fully resolved}
 ```
 
-### 5. PRD Quality Rules
-
-**Content rules:**
+**PRD Quality Rules:**
 
 - All sections required except User Stories (optional)
 - Use "TBD" if insufficient information — never omit section
 - Functional requirements must be numbered (FR-1, FR-2, ...)
 - Acceptance criteria must be checkboxes
 - Keep language concise and specific
-- Avoid implementation details — focus on _what_, not _how_
+- Avoid implementation details — focus on *what*, not *how*
 
-**Synthesis rules:**
+**Synthesis Rules:**
 
-- Don't just copy from clarifications — synthesize
+- Don't just copy from clarification answers — synthesize and organize
 - Resolve contradictions (note if unresolvable)
 - Fill gaps with reasonable assumptions (mark as assumptions)
 - Prioritize requirements if many (must-have vs nice-to-have)
 
-### 6. Update State
+### 5. Update State
 
-Update `state.yml`:
+After PRD creation, update `.ai/features/{name}/state.yml`:
 
 ```yaml
 status: prd-draft
-updated: { YYYY-MM-DD }
+updated: {YYYY-MM-DD}
 ```
 
-### 7. Confirm Completion
+### 6. Confirm Completion
+
+Show completion summary:
 
 ```
-✓ Created prd.md (status: prd-draft)
+✓ PRD generated successfully!
 
-Summary:
+Created: .ai/features/{name}/prd.md
+
+PRD Summary:
   - {X} functional requirements
   - {Y} acceptance criteria
   - {Z} open questions
 
+Sources used:
+  ✓ request.md (includes clarifications)
+  {✓ or ✗} context.md
+  {✓ or ✗} tech-stack.md
+
 Next steps:
   1. Review prd.md
-  2. If changes needed: run /ai.update-feature
-  3. If approved: update state.yml status to 'prd-approved'
-  4. Then: run /ai.define-implementation-plan
+  2. If changes needed: /ai.clarify {name} (refines PRD)
+  3. If approved: Update state.yml status to 'prd-approved'
+  4. Then: /ai.define-implementation-plan {name}
 ```
 
 ---
 
-## Example Output
+## Example Session
 
-```markdown
-# PRD: user-auth
+**User:**
 
-> **Status**: Draft  
-> **Created**: 2025-01-28  
-> **Last Updated**: 2025-01-28
+```
+/ai.create-prd user-data-export
+```
 
----
+**AI reads:**
 
-## Overview
+- request.md (original description + 5 clarifications about data scope, format, etc.)
+- context.md (mentions existing import feature, rate limiting rule)
+- tech-stack.md (Node.js, PostgreSQL)
 
-User authentication feature allowing users to securely log in with email and
-password, with support for session management and password reset.
+**AI generates PRD** synthesizing all sources:
 
-## Problem Statement
+- Overview from request.md
+- Functional requirements from clarification answers
+- Technical considerations from tech-stack.md and context.md
+- Acceptance criteria derived from requirements
 
-Currently users cannot access personalized features because there is no
-authentication system. Users have requested the ability to save preferences and
-access them across devices.
+**AI updates state.yml** to `prd-draft`
 
-## Goals
+**AI confirms:**
 
-- Enable secure user login with email/password
-- Support password reset via email
-- Maintain user sessions for 7 days with "remember me"
+```
+✓ PRD generated successfully!
 
-## Non-Goals
+Created: .ai/features/user-data-export/prd.md
 
-- Social login (Google, GitHub) — future phase
-- Two-factor authentication — future phase
-- User registration (handled by separate feature)
+PRD Summary:
+  - 5 functional requirements
+  - 7 acceptance criteria
+  - 0 open questions
 
-## User Stories
+Sources used:
+  ✓ request.md (includes clarifications)
+  ✓ context.md
+  ✓ tech-stack.md
 
-- As a returning user, I want to log in with my email, so that I can access my
-  saved preferences
-- As a forgetful user, I want to reset my password, so that I can regain access
-  to my account
-
-## Functional Requirements
-
-### FR-1: Login form
-
-Display email and password fields with validation. Show inline errors for
-invalid input.
-
-### FR-2: Session management
-
-Create session on successful login. Session expires after 24 hours, or 7 days if
-"remember me" checked.
-
-### FR-3: Password reset
-
-Send reset link to email. Link expires after 1 hour. User sets new password via
-link.
-
-### FR-4: Rate limiting
-
-Lock account for 15 minutes after 5 failed login attempts.
-
-## Technical Considerations
-
-- Must integrate with existing User model in `src/models/user.ts`
-- Use existing email service for password reset
-- Sessions stored in Redis (existing infrastructure)
-- Passwords hashed with bcrypt (minimum 10 rounds)
-
-## Acceptance Criteria
-
-- [ ] AC-1: User can log in with valid email/password
-- [ ] AC-2: User sees error message with invalid credentials
-- [ ] AC-3: User receives password reset email within 1 minute
-- [ ] AC-4: Session persists across browser restart when "remember me" checked
-- [ ] AC-5: Account locks after 5 failed attempts
-
-## Open Questions
-
-None
+Next steps:
+  1. Review prd.md
+  2. If changes needed: /ai.clarify user-data-export
+  3. If approved: Update state.yml status to 'prd-approved'
+  4. Then: /ai.define-implementation-plan user-data-export
 ```
 
 ---
 
 ## Edge Cases
 
-| Situation                   | Behavior                                        |
-| --------------------------- | ----------------------------------------------- |
-| Feature doesn't exist       | Error: "Feature '{name}' not found"             |
-| No clarifications yet       | Warn and suggest running /ai.clarify first      |
-| PRD already exists          | Ask: overwrite, create prd-v2.md, or cancel     |
-| Many TBDs in clarifications | Generate PRD with TBD sections, note in summary |
+| Situation | Behavior |
+|-----------|----------|
+| No clarifications exist | Warn user, offer to continue or add clarifications first |
+| PRD already exists | Ask: regenerate, refine, or cancel |
+| Workflow is a bug | Error: bugs don't have PRDs |
+| Feature not found | Error: suggest /ai.add first |
+| No request.md (corrupted state) | Error: suggest recreating feature with /ai.add |
+| Contradictory clarifications | Note contradiction in Open Questions section |
+
+---
+
+## Important Notes
+
+- **Requires clarifications**: Best results come from features with completed clarification rounds
+- **Can regenerate**: Running this command again will overwrite existing PRD (with confirmation)
+- **Synthesis focus**: Don't just copy answers — organize and synthesize into coherent requirements
+- **Tech stack integration**: Always reference global tech stack when available
+- **TBD is acceptable**: Better to mark unknowns as "TBD" than to invent details

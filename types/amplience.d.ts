@@ -752,6 +752,227 @@ declare global {
       }>;
       invalidFiles: InvalidExtensionFile[];
     }
+
+    // ===== User Command Sets Types =====
+
+    /**
+     * Represents a single command entry within a command set.
+     * Commands can be run interactively (no parameters) or with pre-configured parameters.
+     *
+     * @example
+     * // Interactive command - prompts user for all inputs
+     * { command: 'sync-hierarchy' }
+     *
+     * @example
+     * // Pre-configured command - uses specified parameters
+     * {
+     *   command: 'sync-hierarchy',
+     *   description: 'Sync prod to dev',
+     *   parameters: { sourceHub: 'prod', targetHub: 'dev' }
+     * }
+     */
+    interface CommandSetEntry {
+      /** The CLI command name to execute (must match a valid command) */
+      command: string;
+      /** Optional description shown in the UI when listing commands */
+      description?: string;
+      /** Optional pre-configured parameters for non-interactive execution */
+      parameters?: Record<string, unknown>;
+    }
+
+    /**
+     * Represents a named collection of commands that can be executed together.
+     *
+     * @example
+     * {
+     *   name: 'Daily Sync',
+     *   description: 'Synchronize content between prod and dev',
+     *   commands: [
+     *     { command: 'sync-hierarchy', parameters: { sourceHub: 'prod' } },
+     *     { command: 'copy-content-types' }
+     *   ]
+     * }
+     */
+    interface CommandSet {
+      /** Unique name for this command set, displayed in the menu */
+      name: string;
+      /** Optional description explaining what this set does */
+      description?: string;
+      /** Array of commands to execute as part of this set */
+      commands: CommandSetEntry[];
+    }
+
+    /**
+     * Root configuration structure for user command sets.
+     * Loaded from command-sets.json (or path specified by COMMAND_SETS_PATH env var).
+     *
+     * @example
+     * {
+     *   version: '1.0',
+     *   commandSets: [
+     *     {
+     *       name: 'Daily Sync',
+     *       description: 'Run daily sync operations',
+     *       commands: [{ command: 'sync-hierarchy' }]
+     *     }
+     *   ]
+     * }
+     */
+    interface CommandSetConfig {
+      /** Configuration format version for future compatibility */
+      version: string;
+      /** Array of command sets available to the user */
+      commandSets: CommandSet[];
+    }
+
+    /**
+     * Result of validating a command set configuration structure.
+     *
+     * @example
+     * const result = validateCommandSetConfig(config);
+     * if (!result.isValid) {
+     *   console.error('Validation errors:', result.errors);
+     * }
+     */
+    interface CommandSetValidationResult {
+      /** Whether the configuration passed all validation checks */
+      isValid: boolean;
+      /** Array of error messages if validation failed */
+      errors: string[];
+    }
+
+    /**
+     * Result of validating command references against known commands.
+     *
+     * @example
+     * const result = validateCommandReferences(config, knownCommands);
+     * if (!result.isValid) {
+     *   console.error('Unknown commands:', result.invalidCommands);
+     * }
+     */
+    interface CommandReferenceValidationResult {
+      /** Whether all command references are valid */
+      isValid: boolean;
+      /** Array of command names that don't match known commands */
+      invalidCommands: string[];
+    }
+
+    /**
+     * Execution mode for a command set entry.
+     * - 'interactive': User provides parameters via prompts during execution
+     * - 'pre-configured': Parameters are provided in the config file
+     */
+    type ParameterMode = 'interactive' | 'pre-configured';
+
+    /**
+     * Result of validating command parameters.
+     *
+     * @example
+     * const result = validateCommandParameters(entry);
+     * if (!result.isValid) {
+     *   console.error('Missing params:', result.missingParams);
+     * }
+     */
+    interface ParameterValidationResult {
+      /** Whether all required parameters are valid */
+      isValid: boolean;
+      /** Array of missing required parameter names */
+      missingParams: string[];
+      /** Array of invalid parameter names (null, empty string, etc.) */
+      invalidParams: string[];
+    }
+
+    /**
+     * Result of executing a single command.
+     *
+     * @example
+     * const result = await executeCommand(entry, executor);
+     * if (!result.success) {
+     *   console.error(`Command ${result.command} failed: ${result.error}`);
+     * }
+     */
+    interface CommandExecutionResult {
+      /** The command name that was executed */
+      command: string;
+      /** Whether the command executed successfully */
+      success: boolean;
+      /** Error message if the command failed */
+      error?: string;
+      /** Duration of execution in milliseconds */
+      durationMs: number;
+    }
+
+    /**
+     * Aggregated summary of executing multiple commands.
+     *
+     * @example
+     * const summary = aggregateResults(results);
+     * console.log(`Completed ${summary.succeeded}/${summary.total} commands`);
+     */
+    interface ExecutionSummary {
+      /** Total number of commands attempted */
+      total: number;
+      /** Number of commands that succeeded */
+      succeeded: number;
+      /** Number of commands that failed */
+      failed: number;
+      /** Total duration of all commands in milliseconds */
+      totalDurationMs: number;
+      /** Array of individual command results */
+      results: CommandExecutionResult[];
+      /** Array of failed command names for quick reference */
+      failedCommands: string[];
+    }
+
+    /**
+     * Result of executing an empty command set.
+     *
+     * @example
+     * if (commandSet.commands.length === 0) {
+     *   return executeEmptyCommandSet(commandSet);
+     * }
+     */
+    interface EmptyCommandSetResult {
+      /** Always 0 for empty sets */
+      total: number;
+      /** Always 0 for empty sets */
+      succeeded: number;
+      /** Always 0 for empty sets */
+      failed: number;
+      /** User-friendly message about the empty set */
+      message: string;
+    }
+
+    /**
+     * Function type for executing a command with parameters.
+     * Used for dependency injection in executeCommand.
+     */
+    type CommandExecutor = (
+      commandName: string,
+      parameters?: Record<string, unknown>
+    ) => Promise<{ success: boolean }>;
+
+    /**
+     * Execution mode for running a command set.
+     * - 'run-all': Execute all commands sequentially without pausing
+     * - 'step-by-step': Pause after each command for user confirmation
+     */
+    type ExecutionMode = 'run-all' | 'step-by-step';
+
+    /**
+     * User choice when an error occurs during command set execution.
+     * - 'continue': Skip the failed command and continue with the next one
+     * - 'stop': Stop execution immediately
+     * - 'retry': Retry the failed command
+     */
+    type ErrorHandlingChoice = 'continue' | 'stop' | 'retry';
+
+    /**
+     * User choice when prompted to continue to the next command in step-by-step mode.
+     * - 'continue': Proceed with the next command
+     * - 'stop': Stop execution
+     */
+    type StepByStepChoice = 'continue' | 'stop';
   }
 }
 

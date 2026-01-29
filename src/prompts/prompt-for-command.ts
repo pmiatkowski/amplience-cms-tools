@@ -8,6 +8,11 @@ export async function promptForCommand(): Promise<CommandChoice> {
       message: 'Select a command to run:',
       choices: [
         {
+          name: '📋 User Command Sets (run custom command workflows)',
+          value: 'user-command-sets',
+        },
+        new inquirer.Separator('─────────────────────────────────────────'),
+        {
           name: 'Manage Extensions (export, import, or delete extensions)',
           value: 'manage-extensions',
         },
@@ -61,6 +66,7 @@ export async function promptForCommand(): Promise<CommandChoice> {
 
 type CommandChoice =
   | 'manage-extensions'
+  | 'user-command-sets'
   | 'vse-management'
   | 'update-locale'
   | 'clean-repo'

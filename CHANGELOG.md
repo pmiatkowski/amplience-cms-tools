@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.5.1...v1.6.0) (2026-01-29)
+
+
+### Features
+
+* (user-command-sets)wire command executor to real CLI commands ([#17](https://github.com/pmiatkowski/amplience-cms-tools/issues/17)) ([b5e14cd](https://github.com/pmiatkowski/amplience-cms-tools/commit/b5e14cd2c2b8a5ab8a4226be45a2da9d402b89cd))
+
 ## [1.5.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.5.0...v1.5.1) (2026-01-18)
 
 

@@ -331,11 +331,7 @@ describe('User Command Sets Action', () => {
     it('should execute all commands sequentially', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-          { command: 'cmd-3' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }, { command: 'cmd-3' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -351,11 +347,7 @@ describe('User Command Sets Action', () => {
     it('should continue executing commands even when some fail', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-          { command: 'cmd-3' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }, { command: 'cmd-3' }],
       };
 
       const mockExecutor = vi
@@ -391,11 +383,7 @@ describe('User Command Sets Action', () => {
     it('should execute commands in order', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'first' },
-          { command: 'second' },
-          { command: 'third' },
-        ],
+        commands: [{ command: 'first' }, { command: 'second' }, { command: 'third' }],
       };
 
       const executionOrder: string[] = [];
@@ -430,10 +418,7 @@ describe('User Command Sets Action', () => {
     it('should aggregate results from all commands', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -450,11 +435,7 @@ describe('User Command Sets Action', () => {
     it('should execute commands with pause after each', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-          { command: 'cmd-3' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }, { command: 'cmd-3' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -472,11 +453,7 @@ describe('User Command Sets Action', () => {
     it('should stop execution when user chooses stop', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-          { command: 'cmd-3' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }, { command: 'cmd-3' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -495,9 +472,7 @@ describe('User Command Sets Action', () => {
     it('should not prompt after the last command', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-        ],
+        commands: [{ command: 'cmd-1' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -528,10 +503,7 @@ describe('User Command Sets Action', () => {
     it('should pass command info to promptForContinue', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -545,10 +517,7 @@ describe('User Command Sets Action', () => {
     it('should continue execution after failed command when user continues', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }],
       };
 
       const mockExecutor = vi
@@ -569,11 +538,7 @@ describe('User Command Sets Action', () => {
     it('should execute all commands successfully without prompting for error handling', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-          { command: 'cmd-3' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }, { command: 'cmd-3' }],
       };
 
       const mockExecutor = vi.fn().mockResolvedValue({ success: true });
@@ -590,10 +555,7 @@ describe('User Command Sets Action', () => {
     it('should prompt for error handling when command fails', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }],
       };
 
       const mockExecutor = vi
@@ -610,10 +572,7 @@ describe('User Command Sets Action', () => {
     it('should continue to next command when user selects continue', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }],
       };
 
       const mockExecutor = vi
@@ -632,11 +591,7 @@ describe('User Command Sets Action', () => {
     it('should stop execution when user selects stop', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-          { command: 'cmd-3' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }, { command: 'cmd-3' }],
       };
 
       const mockExecutor = vi
@@ -657,10 +612,7 @@ describe('User Command Sets Action', () => {
     it('should retry command when user selects retry', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-          { command: 'cmd-2' },
-        ],
+        commands: [{ command: 'cmd-1' }, { command: 'cmd-2' }],
       };
 
       const mockExecutor = vi
@@ -682,9 +634,7 @@ describe('User Command Sets Action', () => {
     it('should allow multiple retries until success', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-        ],
+        commands: [{ command: 'cmd-1' }],
       };
 
       const mockExecutor = vi
@@ -721,9 +671,7 @@ describe('User Command Sets Action', () => {
     it('should include error message in prompt when error occurs', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'sync-hierarchy' },
-        ],
+        commands: [{ command: 'sync-hierarchy' }],
       };
 
       const mockExecutor = vi.fn().mockRejectedValue(new Error('Network timeout'));
@@ -737,9 +685,7 @@ describe('User Command Sets Action', () => {
     it('should handle unknown error when error has no message', async () => {
       const commandSet: Amplience.CommandSet = {
         name: 'Test Set',
-        commands: [
-          { command: 'cmd-1' },
-        ],
+        commands: [{ command: 'cmd-1' }],
       };
 
       // Mock executor that throws a non-Error value

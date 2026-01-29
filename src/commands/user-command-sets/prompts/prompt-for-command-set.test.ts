@@ -88,7 +88,10 @@ describe('formatCommandSetMenuChoices', () => {
       {
         name: 'Schema Update',
         description: 'Update schemas',
-        commands: [{ command: 'copy-content-type-schemas' }, { command: 'sync-content-type-properties' }],
+        commands: [
+          { command: 'copy-content-type-schemas' },
+          { command: 'sync-content-type-properties' },
+        ],
       },
     ];
 
@@ -146,7 +149,9 @@ describe('promptForCommandSet', () => {
     expect(result).toBe('Daily Sync');
     expect(inquirer.prompt).toHaveBeenCalledTimes(1);
 
-    const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0] as unknown as Array<{ choices: Array<{ value: string }> }>;
+    const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0] as unknown as Array<{
+      choices: Array<{ value: string }>;
+    }>;
     expect(promptCall[0].choices).toHaveLength(2);
   });
 
@@ -166,15 +171,15 @@ describe('promptForCommandSet', () => {
   });
 
   it('should display appropriate message in prompt', async () => {
-    const commandSets: Amplience.CommandSet[] = [
-      { name: 'Test', commands: [] },
-    ];
+    const commandSets: Amplience.CommandSet[] = [{ name: 'Test', commands: [] }];
 
     vi.mocked(inquirer.prompt).mockResolvedValue({ selectedSet: 'Test' });
 
     await promptForCommandSet(commandSets);
 
-    const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0] as unknown as Array<{ message: string }>;
+    const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0] as unknown as Array<{
+      message: string;
+    }>;
     expect(promptCall[0].message).toBe('Select a command set to run:');
   });
 });

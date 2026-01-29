@@ -120,9 +120,9 @@ describe('promptForCreateSet', () => {
     const commandPromptCall = vi.mocked(inquirer.prompt).mock.calls[2][0];
     expect(Array.isArray(commandPromptCall)).toBe(true);
 
-    const commandQuestion = (commandPromptCall as unknown as Array<{ type: string; choices?: string[] }>).find(
-      q => q.type === 'list'
-    );
+    const commandQuestion = (
+      commandPromptCall as unknown as Array<{ type: string; choices?: string[] }>
+    ).find(q => q.type === 'list');
     expect(commandQuestion).toBeDefined();
     expect(commandQuestion?.choices).toEqual(expect.arrayContaining([...VALID_COMMAND_NAMES]));
   });
@@ -158,9 +158,12 @@ describe('promptForCreateSet', () => {
     await promptForCreateSet(existingNames);
 
     const firstPromptCall = vi.mocked(inquirer.prompt).mock.calls[0][0];
-    const nameQuestion = (firstPromptCall as unknown as Array<{ name: string; validate?: (input: string) => boolean | string }>).find(
-      q => q.name === 'name'
-    );
+    const nameQuestion = (
+      firstPromptCall as unknown as Array<{
+        name: string;
+        validate?: (input: string) => boolean | string;
+      }>
+    ).find(q => q.name === 'name');
 
     expect(nameQuestion?.validate).toBeDefined();
   });

@@ -40,9 +40,7 @@ export async function promptForDeleteConfirmation(setName: string): Promise<bool
  *   }
  * }
  */
-export async function promptForDeleteSet(
-  commandSets: Amplience.CommandSet[]
-): Promise<string> {
+export async function promptForDeleteSet(commandSets: Amplience.CommandSet[]): Promise<string> {
   const choices = commandSets.map(set => {
     const commandCount = set.commands.length;
     const commandText = commandCount === 1 ? 'command' : 'commands';

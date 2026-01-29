@@ -13,10 +13,7 @@ import { runSyncContentTypeProperties } from '~/commands/sync-content-type-prope
 import { runSyncHierarchy } from '~/commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from '~/commands/update-delivery-keys-locale';
 import { runVseManagement } from '~/commands/vse-management';
-import {
-  executeRunAll,
-  executeStepByStep,
-} from '~/services/actions/user-command-sets';
+import { executeRunAll, executeStepByStep } from '~/services/actions/user-command-sets';
 import {
   getCommandSetConfigPath,
   initializeCommandSetConfig,
@@ -60,7 +57,9 @@ export async function runUserCommandSets(): Promise<void> {
 
     // Prompt for command set selection
     console.log(`Found ${config.commandSets.length} command set(s)\n`);
-    const selectedSetName = await promptForCommandSet(config.commandSets, { includeBackOption: true });
+    const selectedSetName = await promptForCommandSet(config.commandSets, {
+      includeBackOption: true,
+    });
 
     // Handle back navigation
     if (selectedSetName === '__back__') {
@@ -167,7 +166,9 @@ function createCommandExecutor(): Amplience.CommandExecutor {
     const commandFn = COMMAND_REGISTRY[commandName];
 
     if (!commandFn) {
-      throw new Error(`Unknown command: ${commandName}. Valid commands: ${VALID_COMMAND_NAMES.join(', ')}`);
+      throw new Error(
+        `Unknown command: ${commandName}. Valid commands: ${VALID_COMMAND_NAMES.join(', ')}`
+      );
     }
 
     await commandFn();
@@ -198,7 +199,9 @@ function displayExecutionSummary(summary: Amplience.ExecutionSummary): void {
     console.log('⚠️  Execution Complete (with errors)');
   }
 
-  console.log(`\nTotal: ${summary.total} | Succeeded: ${summary.succeeded} | Failed: ${summary.failed}`);
+  console.log(
+    `\nTotal: ${summary.total} | Succeeded: ${summary.succeeded} | Failed: ${summary.failed}`
+  );
 
   const durationSeconds = (summary.totalDurationMs / 1000).toFixed(2);
   console.log(`Duration: ${durationSeconds}s`);

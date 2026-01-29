@@ -33,9 +33,9 @@ describe('promptForEditAction', () => {
     await promptForEditAction();
 
     const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0];
-    const actionQuestion = (promptCall as unknown as Array<{ choices?: Array<{ value: string }> }>).find(
-      q => q.choices
-    );
+    const actionQuestion = (
+      promptCall as unknown as Array<{ choices?: Array<{ value: string }> }>
+    ).find(q => q.choices);
 
     const values = actionQuestion?.choices?.map(c => c.value);
     expect(values).toContain('edit-name');
@@ -179,16 +179,16 @@ describe('promptForRemoveCommands', () => {
     await promptForRemoveCommands(currentCommands);
 
     const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0];
-    const checkboxQuestion = (promptCall as unknown as Array<{ choices?: Array<{ name: string }> }>)[0];
+    const checkboxQuestion = (
+      promptCall as unknown as Array<{ choices?: Array<{ name: string }> }>
+    )[0];
 
     expect(checkboxQuestion.choices?.[0].name).toContain('sync-hierarchy');
     expect(checkboxQuestion.choices?.[0].name).toContain('Sync hierarchies');
   });
 
   it('should return empty array when nothing selected', async () => {
-    const currentCommands: Amplience.CommandSetEntry[] = [
-      { command: 'sync-hierarchy' },
-    ];
+    const currentCommands: Amplience.CommandSetEntry[] = [{ command: 'sync-hierarchy' }];
 
     vi.mocked(inquirer.prompt).mockResolvedValueOnce({ indices: [] });
 

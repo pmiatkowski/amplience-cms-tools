@@ -46,7 +46,9 @@ describe('runUserCommandSets', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(commandSetConfigService.getCommandSetConfigPath).mockReturnValue('./command-sets.json');
+    vi.mocked(commandSetConfigService.getCommandSetConfigPath).mockReturnValue(
+      './command-sets.json'
+    );
   });
 
   it('should load and display available command sets', async () => {
@@ -59,10 +61,9 @@ describe('runUserCommandSets', () => {
     await runUserCommandSets();
 
     expect(commandSetConfigService.initializeCommandSetConfig).toHaveBeenCalled();
-    expect(prompts.promptForCommandSet).toHaveBeenCalledWith(
-      mockConfig.commandSets,
-      { includeBackOption: true }
-    );
+    expect(prompts.promptForCommandSet).toHaveBeenCalledWith(mockConfig.commandSets, {
+      includeBackOption: true,
+    });
   });
 
   it('should return early when user selects back option', async () => {

@@ -7,7 +7,9 @@ describe('promptForStepByStepContinue', () => {
   let inquirerPromptSpy: any;
 
   beforeEach(() => {
-    inquirerPromptSpy = vi.spyOn(inquirer, 'prompt').mockResolvedValue({ stepChoice: 'continue' } as never);
+    inquirerPromptSpy = vi
+      .spyOn(inquirer, 'prompt')
+      .mockResolvedValue({ stepChoice: 'continue' } as never);
   });
 
   afterEach(() => {

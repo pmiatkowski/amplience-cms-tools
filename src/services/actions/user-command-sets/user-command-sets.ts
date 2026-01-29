@@ -19,9 +19,7 @@
 export function aggregateResults(
   results: Amplience.CommandExecutionResult[]
 ): Amplience.ExecutionSummary {
-  const failedCommands = results
-    .filter(r => !r.success)
-    .map(r => r.command);
+  const failedCommands = results.filter(r => !r.success).map(r => r.command);
 
   const totalDurationMs = results.reduce((sum, r) => sum + r.durationMs, 0);
 
@@ -34,7 +32,6 @@ export function aggregateResults(
     failedCommands,
   };
 }
-
 
 /**
  * Detect whether a command entry should run in interactive or pre-configured mode.
@@ -50,9 +47,7 @@ export function aggregateResults(
  * const entry = { command: 'list-folder-tree' };
  * detectParameterMode(entry); // 'interactive'
  */
-export function detectParameterMode(
-  entry: Amplience.CommandSetEntry
-): Amplience.ParameterMode {
+export function detectParameterMode(entry: Amplience.CommandSetEntry): Amplience.ParameterMode {
   // No parameters object or undefined = interactive
   if (!entry.parameters) {
     return 'interactive';
@@ -66,7 +61,6 @@ export function detectParameterMode(
   // Has at least one parameter = pre-configured
   return 'pre-configured';
 }
-
 
 /**
  * Execute a single command with the provided executor function.
@@ -107,7 +101,6 @@ export async function executeCommand(
   }
 }
 
-
 /**
  * Handle execution of an empty command set.
  * Returns a result indicating no commands were executed.
@@ -130,8 +123,6 @@ export function executeEmptyCommandSet(
     message: `No commands to execute in command set "${commandSet.name}".`,
   };
 }
-
-
 
 /**
  * Execute all commands in a command set sequentially ("run all" mode).
@@ -172,9 +163,6 @@ export async function executeRunAll(
 
   return aggregateResults(results);
 }
-
-
-
 
 /**
  * Execute commands in step-by-step mode with pause/continue prompts.
@@ -233,9 +221,6 @@ export async function executeStepByStep(
 
   return aggregateResults(results);
 }
-
-
-
 
 /**
  * Execute all commands with error recovery support (Continue/Stop/Retry).
@@ -305,8 +290,6 @@ export async function executeWithErrorRecovery(
   return aggregateResults(results);
 }
 
-
-
 /**
  * Validate command parameters for pre-configured execution.
  * Checks that provided parameters don't have null or empty string values.
@@ -357,5 +340,3 @@ export function validateCommandParameters(
     invalidParams,
   };
 }
-
-

@@ -54,9 +54,7 @@ describe('addCommandSetToConfig', () => {
   it('should add command set to config', () => {
     const config: Amplience.CommandSetConfig = {
       version: '1.0',
-      commandSets: [
-        { name: 'Existing Set', commands: [] },
-      ],
+      commandSets: [{ name: 'Existing Set', commands: [] }],
     };
 
     const newSet: Amplience.CommandSet = {
@@ -126,9 +124,7 @@ describe('removeCommandSetFromConfig', () => {
   it('should not mutate original config', () => {
     const config: Amplience.CommandSetConfig = {
       version: '1.0',
-      commandSets: [
-        { name: 'Set A', commands: [] },
-      ],
+      commandSets: [{ name: 'Set A', commands: [] }],
     };
 
     const result = removeCommandSetFromConfig(config, 'Set A');
@@ -140,9 +136,7 @@ describe('removeCommandSetFromConfig', () => {
   it('should return unchanged config if name not found', () => {
     const config: Amplience.CommandSetConfig = {
       version: '1.0',
-      commandSets: [
-        { name: 'Set A', commands: [] },
-      ],
+      commandSets: [{ name: 'Set A', commands: [] }],
     };
 
     const result = removeCommandSetFromConfig(config, 'Nonexistent');
@@ -154,9 +148,7 @@ describe('removeCommandSetFromConfig', () => {
   it('should be case-sensitive when matching names', () => {
     const config: Amplience.CommandSetConfig = {
       version: '1.0',
-      commandSets: [
-        { name: 'Set A', commands: [] },
-      ],
+      commandSets: [{ name: 'Set A', commands: [] }],
     };
 
     const result = removeCommandSetFromConfig(config, 'set a');
@@ -193,9 +185,7 @@ describe('updateCommandSetInConfig', () => {
   it('should not mutate original config', () => {
     const config: Amplience.CommandSetConfig = {
       version: '1.0',
-      commandSets: [
-        { name: 'Set A', commands: [] },
-      ],
+      commandSets: [{ name: 'Set A', commands: [] }],
     };
 
     const updatedSet: Amplience.CommandSet = {
@@ -212,9 +202,7 @@ describe('updateCommandSetInConfig', () => {
   it('should return unchanged config if name not found', () => {
     const config: Amplience.CommandSetConfig = {
       version: '1.0',
-      commandSets: [
-        { name: 'Set A', commands: [] },
-      ],
+      commandSets: [{ name: 'Set A', commands: [] }],
     };
 
     const updatedSet: Amplience.CommandSet = {

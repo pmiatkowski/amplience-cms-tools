@@ -34,7 +34,9 @@ describe('promptForDeleteSet', () => {
     await promptForDeleteSet(commandSets);
 
     const promptCall = vi.mocked(inquirer.prompt).mock.calls[0][0];
-    const question = (promptCall as unknown as Array<{ choices?: Array<{ name: string; value: string }> }>)[0];
+    const question = (
+      promptCall as unknown as Array<{ choices?: Array<{ name: string; value: string }> }>
+    )[0];
 
     expect(question.choices?.find(c => c.value === 'Daily Sync')?.name).toContain('Daily Sync');
     expect(question.choices?.find(c => c.value === 'Daily Sync')?.name).toContain('1 command');
@@ -42,9 +44,7 @@ describe('promptForDeleteSet', () => {
   });
 
   it('should include back option', async () => {
-    const commandSets: Amplience.CommandSet[] = [
-      { name: 'Test', commands: [] },
-    ];
+    const commandSets: Amplience.CommandSet[] = [{ name: 'Test', commands: [] }];
 
     vi.mocked(inquirer.prompt).mockResolvedValueOnce({ setName: '__back__' });
 

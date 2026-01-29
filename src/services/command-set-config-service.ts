@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-
-
 /**
  * Add a command set to a configuration object.
  * Returns a new config object without mutating the original.
@@ -24,10 +22,6 @@ export function addCommandSetToConfig(
   };
 }
 
-
-
-
-
 /**
  * Check if a command set configuration file exists at the given path.
  *
@@ -42,11 +36,6 @@ export function addCommandSetToConfig(
 export function configFileExists(filePath: string): boolean {
   return fs.existsSync(filePath);
 }
-
-
-
-
-
 
 /**
  * Generate an example command set configuration.
@@ -94,12 +83,6 @@ export function generateExampleConfig(): Amplience.CommandSetConfig {
   };
 }
 
-
-
-
-
-
-
 /**
  * Get the path to the command set configuration file.
  * Uses COMMAND_SETS_PATH environment variable if set, otherwise defaults to command-sets.json
@@ -125,12 +108,6 @@ export function getCommandSetConfigPath(): string {
 
   return path.join(process.cwd(), 'command-sets.json');
 }
-
-
-
-
-
-
 
 /**
  * Initialize command set configuration, creating example file if it doesn't exist.
@@ -160,10 +137,6 @@ export function initializeCommandSetConfig(filePath: string): {
 
   return { created: false, config };
 }
-
-
-
-
 
 /**
  * Load and parse the command set configuration from a JSON file.
@@ -208,11 +181,6 @@ export function loadCommandSetConfig(filePath: string): Amplience.CommandSetConf
   return parsed as Amplience.CommandSetConfig;
 }
 
-
-
-
-
-
 /**
  * Remove a command set from a configuration object by name.
  * Returns a new config object without mutating the original.
@@ -234,14 +202,6 @@ export function removeCommandSetFromConfig(
   };
 }
 
-
-
-
-
-
-
-
-
 /**
  * Update a command set in a configuration object by name.
  * Returns a new config object without mutating the original.
@@ -262,19 +222,9 @@ export function updateCommandSetInConfig(
 ): Amplience.CommandSetConfig {
   return {
     ...config,
-    commandSets: config.commandSets.map(s =>
-      s.name === originalName ? updatedSet : s
-    ),
+    commandSets: config.commandSets.map(s => (s.name === originalName ? updatedSet : s)),
   };
 }
-
-
-
-
-
-
-
-
 
 /**
  * List of valid CLI command names that can be referenced in command sets.
@@ -297,11 +247,6 @@ export const VALID_COMMAND_NAMES = [
   'list-folder-tree',
   'update-locale',
 ] as const;
-
-
-
-
-
 
 /**
  * Validate that all command references in the config match known command names.
@@ -341,8 +286,6 @@ export function validateCommandReferences(
   };
 }
 
-
-
 /**
  * Validate the structure of a command set configuration object.
  * Checks for required fields, correct types, and proper nesting.
@@ -356,9 +299,7 @@ export function validateCommandReferences(
  *   console.error('Config errors:', result.errors.join(', '));
  * }
  */
-export function validateCommandSetConfig(
-  config: unknown
-): Amplience.CommandSetValidationResult {
+export function validateCommandSetConfig(config: unknown): Amplience.CommandSetValidationResult {
   const errors: string[] = [];
 
   // Type guard for basic object check
@@ -433,7 +374,9 @@ export function validateCommandSetConfig(
       const cmdObj = cmd as Record<string, unknown>;
 
       if (!cmdObj.command || typeof cmdObj.command !== 'string' || cmdObj.command.trim() === '') {
-        errors.push(`Command set "${setName}", command at index ${cmdIndex}: command name is required`);
+        errors.push(
+          `Command set "${setName}", command at index ${cmdIndex}: command name is required`
+        );
       }
     });
   });
@@ -443,7 +386,6 @@ export function validateCommandSetConfig(
     errors,
   };
 }
-
 
 export type ValidCommandName = (typeof VALID_COMMAND_NAMES)[number];
 
@@ -458,10 +400,7 @@ export type ValidCommandName = (typeof VALID_COMMAND_NAMES)[number];
  * const config = generateExampleConfig();
  * writeCommandSetConfig('./command-sets.json', config);
  */
-export function writeCommandSetConfig(
-  filePath: string,
-  config: Amplience.CommandSetConfig
-): void {
+export function writeCommandSetConfig(filePath: string, config: Amplience.CommandSetConfig): void {
   const content = JSON.stringify(config, null, 2);
   fs.writeFileSync(filePath, content, 'utf-8');
 }

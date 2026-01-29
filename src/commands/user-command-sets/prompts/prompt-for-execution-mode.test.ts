@@ -7,7 +7,9 @@ describe('promptForExecutionMode', () => {
   let inquirerPromptSpy: any;
 
   beforeEach(() => {
-    inquirerPromptSpy = vi.spyOn(inquirer, 'prompt').mockResolvedValue({ executionMode: 'run-all' } as never);
+    inquirerPromptSpy = vi
+      .spyOn(inquirer, 'prompt')
+      .mockResolvedValue({ executionMode: 'run-all' } as never);
   });
 
   afterEach(() => {

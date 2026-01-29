@@ -30,9 +30,7 @@ type FormatCommandSetMenuOptions = {
  * });
  * // { name: 'Daily Sync - Sync prod to dev (2 commands)', value: 'Daily Sync' }
  */
-export function formatCommandSetMenuChoice(
-  commandSet: Amplience.CommandSet
-): CommandSetMenuChoice {
+export function formatCommandSetMenuChoice(commandSet: Amplience.CommandSet): CommandSetMenuChoice {
   const commandCount = commandSet.commands.length;
   const commandText = commandCount === 1 ? 'command' : 'commands';
 

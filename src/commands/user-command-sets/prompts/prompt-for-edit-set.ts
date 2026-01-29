@@ -7,7 +7,12 @@ import { validateCommandCount, validateSetName } from './prompt-for-create-set';
 /**
  * Edit action type for modifying command sets.
  */
-export type EditAction = 'edit-name' | 'edit-description' | 'add-commands' | 'remove-commands' | 'done';
+export type EditAction =
+  | 'edit-name'
+  | 'edit-description'
+  | 'add-commands'
+  | 'remove-commands'
+  | 'done';
 
 /**
  * Prompt user to add new commands to a command set.
@@ -129,9 +134,7 @@ export async function promptForEditName(
 ): Promise<string> {
   // Filter out current name from existing names for validation
   // This allows keeping the same name
-  const otherNames = existingNames.filter(
-    n => n.toLowerCase() !== currentName.toLowerCase()
-  );
+  const otherNames = existingNames.filter(n => n.toLowerCase() !== currentName.toLowerCase());
 
   const { name } = await inquirer.prompt<{ name: string }>([
     {
@@ -145,7 +148,6 @@ export async function promptForEditName(
 
   return name.trim();
 }
-
 
 /**
  * Prompt user to edit a command set interactively.
@@ -200,9 +202,7 @@ export async function promptForEditSet(
           console.log('No commands to remove.');
         } else {
           const indicesToRemove = await promptForRemoveCommands(result.commands);
-          result.commands = result.commands.filter(
-            (_, index) => !indicesToRemove.includes(index)
-          );
+          result.commands = result.commands.filter((_, index) => !indicesToRemove.includes(index));
         }
         break;
       }
@@ -214,7 +214,6 @@ export async function promptForEditSet(
 
   return result;
 }
-
 
 /**
  * Prompt user to select commands to remove from a command set.

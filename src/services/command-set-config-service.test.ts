@@ -137,7 +137,9 @@ describe('Command Set Config Service', () => {
       const result = validateCommandSetConfig(invalidConfig);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Command set "Test Set", command at index 0: command name is required');
+      expect(result.errors).toContain(
+        'Command set "Test Set", command at index 0: command name is required'
+      );
     });
 
     it('should allow command set with empty commands array', () => {
@@ -313,10 +315,7 @@ describe('Command Set Config Service', () => {
         commandSets: [
           {
             name: 'Test Set',
-            commands: [
-              { command: 'sync-hierarchy' },
-              { command: 'copy-content-types' },
-            ],
+            commands: [{ command: 'sync-hierarchy' }, { command: 'copy-content-types' }],
           },
         ],
       };

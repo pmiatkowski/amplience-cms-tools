@@ -12,9 +12,7 @@ import { VALID_COMMAND_NAMES } from '~/services/command-set-config-service';
  * const newSet = await promptForCreateSet(['Existing Set']);
  * // Returns: { name: 'New Set', description: 'My set', commands: [...] }
  */
-export async function promptForCreateSet(
-  existingNames: string[]
-): Promise<Amplience.CommandSet> {
+export async function promptForCreateSet(existingNames: string[]): Promise<Amplience.CommandSet> {
   // Prompt for name and description
   const { name, description } = await inquirer.prompt<{
     name: string;
@@ -152,10 +150,7 @@ export function validateCommandCount(input: string): boolean | string {
  * validateSetName('Daily', ['Daily']);             // 'A command set with this name already exists'
  * validateSetName('daily', ['Daily']);             // 'A command set with this name already exists' (case-insensitive)
  */
-export function validateSetName(
-  name: string,
-  existingNames: string[]
-): boolean | string {
+export function validateSetName(name: string, existingNames: string[]): boolean | string {
   const trimmed = name.trim();
 
   if (!trimmed) {
@@ -163,9 +158,7 @@ export function validateSetName(
   }
 
   const lowerName = trimmed.toLowerCase();
-  const isDuplicate = existingNames.some(
-    existing => existing.toLowerCase() === lowerName
-  );
+  const isDuplicate = existingNames.some(existing => existing.toLowerCase() === lowerName);
 
   if (isDuplicate) {
     return 'A command set with this name already exists';

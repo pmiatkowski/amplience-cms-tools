@@ -7,7 +7,9 @@ describe('promptForErrorHandling', () => {
   let inquirerPromptSpy: any;
 
   beforeEach(() => {
-    inquirerPromptSpy = vi.spyOn(inquirer, 'prompt').mockResolvedValue({ errorChoice: 'continue' } as never);
+    inquirerPromptSpy = vi
+      .spyOn(inquirer, 'prompt')
+      .mockResolvedValue({ errorChoice: 'continue' } as never);
   });
 
   afterEach(() => {

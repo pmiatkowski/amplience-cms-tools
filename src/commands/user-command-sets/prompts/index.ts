@@ -1,5 +1,9 @@
 export type { EditAction } from './prompt-for-edit-set';
-export { formatCommandSetMenuChoice, formatCommandSetMenuChoices, promptForCommandSet } from './prompt-for-command-set';
+export {
+  formatCommandSetMenuChoice,
+  formatCommandSetMenuChoices,
+  promptForCommandSet,
+} from './prompt-for-command-set';
 export {
   promptForAddCommands,
   promptForEditAction,

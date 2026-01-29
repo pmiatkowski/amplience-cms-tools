@@ -12,6 +12,7 @@ import { runRecreateFolderStructure } from './commands/recreate-folder-structure
 import { runSyncContentTypeProperties } from './commands/sync-content-type-properties';
 import { runSyncHierarchy } from './commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from './commands/update-delivery-keys-locale';
+import { runUserCommandSets } from './commands/user-command-sets';
 import { runVseManagement } from './commands/vse-management';
 import { promptForCommand, promptForUpdate } from './prompts';
 import { checkForUpdates, performUpdate, restartApplication } from './services';
@@ -94,6 +95,9 @@ async function main(): Promise<void> {
         break;
       case 'manage-extensions':
         await runManageExtensions();
+        break;
+      case 'user-command-sets':
+        await runUserCommandSets();
         break;
       case 'vse-management':
         await runVseManagement();

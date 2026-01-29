@@ -101,6 +101,7 @@ We document public interfaces and maintain essential guides.
 - Use ambient declarations and global namespaces defined in `./types` folder for shared types
 - Try to infer types or use utility types to derive types when possible
 - Avoid default exports - use named exports only
+- Avoid explicit 'undefined' types - instead use '?' where possible
 
 **Import Preferences:**
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as userCommandSetsAction from '~/services/actions/user-command-sets';
 import * as commandSetConfigService from '~/services/command-set-config-service';
 import * as prompts from './prompts';
-import { runUserCommandSets } from './user-command-sets';
+import { displayManualCreationInstructions, runUserCommandSets } from './user-command-sets';
 
 vi.mock('~/commands/archive-content-type-schemas');
 vi.mock('~/commands/bulk-sync-hierarchies');
@@ -46,6 +46,7 @@ describe('runUserCommandSets', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    delete process.env.COMMAND_SETS_PATH;
     vi.mocked(commandSetConfigService.getCommandSetConfigPath).mockReturnValue(
       './command-sets.json'
     );
@@ -148,6 +149,69 @@ describe('runUserCommandSets', () => {
     );
   });
 
+  it('should execute selected commands in pick-commands run-all mode', async () => {
+    vi.mocked(commandSetConfigService.initializeCommandSetConfig).mockReturnValue({
+      created: false,
+      config: mockConfig,
+    });
+    vi.mocked(prompts.promptForCommandSet).mockResolvedValue('Daily Sync');
+    vi.mocked(prompts.promptForExecutionMode).mockResolvedValue('pick-commands');
+    vi.mocked(prompts.promptForCommandSelection).mockResolvedValue([
+      mockConfig.commandSets[0].commands[0],
+    ]);
+    vi.mocked(prompts.promptForSelectedExecutionMode).mockResolvedValue('run-all');
+    vi.mocked(userCommandSetsAction.executeRunAll).mockResolvedValue({
+      total: 1,
+      succeeded: 1,
+      failed: 0,
+      totalDurationMs: 500,
+      results: [],
+      failedCommands: [],
+    });
+
+    await runUserCommandSets();
+
+    expect(userCommandSetsAction.executeRunAll).toHaveBeenCalledWith(
+      {
+        ...mockConfig.commandSets[0],
+        commands: [mockConfig.commandSets[0].commands[0]],
+      },
+      expect.any(Function)
+    );
+  });
+
+  it('should execute selected commands in pick-commands step-by-step mode', async () => {
+    vi.mocked(commandSetConfigService.initializeCommandSetConfig).mockReturnValue({
+      created: false,
+      config: mockConfig,
+    });
+    vi.mocked(prompts.promptForCommandSet).mockResolvedValue('Daily Sync');
+    vi.mocked(prompts.promptForExecutionMode).mockResolvedValue('pick-commands');
+    vi.mocked(prompts.promptForCommandSelection).mockResolvedValue([
+      mockConfig.commandSets[0].commands[1],
+    ]);
+    vi.mocked(prompts.promptForSelectedExecutionMode).mockResolvedValue('step-by-step');
+    vi.mocked(userCommandSetsAction.executeStepByStep).mockResolvedValue({
+      total: 1,
+      succeeded: 1,
+      failed: 0,
+      totalDurationMs: 500,
+      results: [],
+      failedCommands: [],
+    });
+
+    await runUserCommandSets();
+
+    expect(userCommandSetsAction.executeStepByStep).toHaveBeenCalledWith(
+      {
+        ...mockConfig.commandSets[0],
+        commands: [mockConfig.commandSets[0].commands[1]],
+      },
+      expect.any(Function),
+      expect.any(Function)
+    );
+  });
+
   it('should display summary after execution', async () => {
     vi.mocked(commandSetConfigService.initializeCommandSetConfig).mockReturnValue({
       created: false,
@@ -209,5 +273,92 @@ describe('runUserCommandSets', () => {
     await runUserCommandSets();
 
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Invalid JSON'));
+  });
+
+  it('should prompt to create example file when COMMAND_SETS_PATH is set and file is missing', async () => {
+    process.env.COMMAND_SETS_PATH = '/custom/command-sets.json';
+    vi.mocked(commandSetConfigService.getCommandSetConfigPath).mockReturnValue(
+      '/custom/command-sets.json'
+    );
+    vi.mocked(commandSetConfigService.configFileExists).mockReturnValue(false);
+    vi.mocked(prompts.promptForCreateExampleFile).mockResolvedValue(true);
+    vi.mocked(commandSetConfigService.generateExampleConfig).mockReturnValue(mockConfig);
+    vi.mocked(commandSetConfigService.writeCommandSetConfig).mockReturnValue();
+    vi.mocked(prompts.promptForCommandSet).mockResolvedValue('__back__');
+
+    await runUserCommandSets();
+
+    expect(prompts.promptForCreateExampleFile).toHaveBeenCalledWith('/custom/command-sets.json');
+    expect(commandSetConfigService.generateExampleConfig).toHaveBeenCalled();
+    expect(commandSetConfigService.writeCommandSetConfig).toHaveBeenCalledWith(
+      '/custom/command-sets.json',
+      mockConfig
+    );
+    expect(commandSetConfigService.initializeCommandSetConfig).not.toHaveBeenCalled();
+  });
+
+  it('should continue execution after creating example file when COMMAND_SETS_PATH is missing', async () => {
+    process.env.COMMAND_SETS_PATH = '/custom/command-sets.json';
+    vi.mocked(commandSetConfigService.getCommandSetConfigPath).mockReturnValue(
+      '/custom/command-sets.json'
+    );
+    vi.mocked(commandSetConfigService.configFileExists).mockReturnValue(false);
+    vi.mocked(prompts.promptForCreateExampleFile).mockResolvedValue(true);
+    vi.mocked(commandSetConfigService.generateExampleConfig).mockReturnValue(mockConfig);
+    vi.mocked(commandSetConfigService.writeCommandSetConfig).mockReturnValue();
+    vi.mocked(prompts.promptForCommandSet).mockResolvedValue('Daily Sync');
+    vi.mocked(prompts.promptForExecutionMode).mockResolvedValue('run-all');
+    vi.mocked(userCommandSetsAction.executeRunAll).mockResolvedValue({
+      total: 2,
+      succeeded: 2,
+      failed: 0,
+      totalDurationMs: 1000,
+      results: [],
+      failedCommands: [],
+    });
+
+    await runUserCommandSets();
+
+    expect(commandSetConfigService.initializeCommandSetConfig).not.toHaveBeenCalled();
+    expect(prompts.promptForCommandSet).toHaveBeenCalledWith(mockConfig.commandSets, {
+      includeBackOption: true,
+    });
+    expect(userCommandSetsAction.executeRunAll).toHaveBeenCalledWith(
+      mockConfig.commandSets[0],
+      expect.any(Function)
+    );
+  });
+
+  it('should show manual instructions and return when user declines example file creation', async () => {
+    process.env.COMMAND_SETS_PATH = '/custom/command-sets.json';
+    vi.mocked(commandSetConfigService.getCommandSetConfigPath).mockReturnValue(
+      '/custom/command-sets.json'
+    );
+    vi.mocked(commandSetConfigService.configFileExists).mockReturnValue(false);
+    vi.mocked(prompts.promptForCreateExampleFile).mockResolvedValue(false);
+
+    await runUserCommandSets();
+
+    expect(prompts.promptForCommandSet).not.toHaveBeenCalled();
+    expect(commandSetConfigService.initializeCommandSetConfig).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Command sets file not found')
+    );
+  });
+});
+
+describe('displayManualCreationInstructions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  it('should display helpful manual creation instructions', () => {
+    displayManualCreationInstructions('/custom/command-sets.json');
+
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Command sets file not found')
+    );
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('/custom/command-sets.json'));
   });
 });

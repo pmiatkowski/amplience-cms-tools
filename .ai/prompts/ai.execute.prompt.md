@@ -138,7 +138,14 @@ If user selects Option 1:
 
 **Step 1: Start phase**
 
-Execute:
+First, check if this is Phase 1 AND the feature's `state.yml` status is `planning`. If so, update it to `in-progress`:
+
+```bash
+# Only if Phase 1 AND state.yml status is 'planning'
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-progress
+```
+
+Then start the phase:
 
 ```bash
 python .ai/scripts/update-plan-state.py {feature-name} start-phase {N}
@@ -221,9 +228,15 @@ I cannot proceed without: {what's needed}
 Please provide guidance or update the plan.
 ```
 
-**Step 5: Complete phase**
+**Step 5: Verify and complete phase**
 
 After all tasks are done:
+
+1. **Verify all checkboxes are marked**: Review Phase {N} in `plan.md` and ensure ALL task checkboxes for this phase are marked `[x]`. If any checkbox is still `[ ]`, mark it now.
+
+2. **Update plan.md**: Save the file with all checkboxes marked for Phase {N}.
+
+3. **Complete the phase**:
 
 ```bash
 python .ai/scripts/update-plan-state.py {feature-name} complete-phase {N}
@@ -307,19 +320,79 @@ Please respond with 1 or 2.
 
 **If no more phases exist** (all phases completed):
 
-Skip the question entirely. Show final confirmation and proceed to Section 6.
+Ask user explicitly about completing the feature:
 
 ```
 ✓ All phases completed for '{feature-name}'!
 
-Implementation plan is complete. Feature is ready for testing.
+All implementation tasks have been executed and checkboxes marked.
 
-Next steps:
-  1. Run /ai.verify to validate implementation against plan and standards (Recommended)
-  2. Run tests to verify all deliverables
-  3. Review all changes
-  4. Consider updating feature state.yml if needed
+Would you like to finalize this feature?
+
+1. Mark as completed
+   - Sets state.yml status to 'completed'
+   - Feature is done and ready for release/merge
+
+2. Mark for review
+   - Sets state.yml status to 'in-review'
+   - Indicates feature needs code review or QA
+
+3. Keep as in-progress
+   - No state change
+   - Continue testing or making adjustments
+
+Please respond with 1, 2, or 3.
 ```
+
+**Wait for user response.**
+
+- **If user responds "1":**
+
+  ```bash
+  python .ai/scripts/update-plan-state.py {feature-name} update-feature-state completed
+  ```
+
+  Show confirmation:
+
+  ```
+  ✓ Feature '{feature-name}' marked as completed!
+  
+  The feature is now ready for release/merge.
+  ```
+
+- **If user responds "2":**
+
+  ```bash
+  python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-review
+  ```
+
+  Show confirmation:
+
+  ```
+  ✓ Feature '{feature-name}' marked for review!
+  
+  Next steps:
+    1. Run /ai.verify to validate implementation against plan and standards
+    2. Submit for code review
+    3. Run /ai.execute again after review feedback to mark completed
+  ```
+
+- **If user responds "3":**
+  Show confirmation:
+
+  ```
+  ✓ Feature '{feature-name}' remains in-progress.
+  
+  Next steps:
+    1. Run /ai.verify to validate implementation
+    2. Continue testing and adjustments
+    3. Run /ai.execute again when ready to finalize
+  ```
+
+- **If user provides invalid response:**
+  - Re-ask with: "Please respond with 1, 2, or 3."
+
+Proceed to Section 6.
 
 ### 5B. Execute Entire Plan
 
@@ -327,7 +400,14 @@ If user selects Option 2:
 
 **Step 1: Start plan execution**
 
-If `status` is "planning":
+First, check if the feature's `state.yml` status is `planning`. If so, update it to `in-progress`:
+
+```bash
+# Only if state.yml status is 'planning'
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-progress
+```
+
+Then, if plan-state.yml `status` is "planning":
 
 ```bash
 python .ai/scripts/update-plan-state.py {feature-name} start-plan
@@ -357,7 +437,9 @@ For each phase (starting from `current_phase`):
 
 **Step 3: Confirm completion**
 
-After all phases complete:
+After all phases complete, first verify all checkboxes in `plan.md` are marked `[x]`.
+
+Then ask user explicitly about completing the feature:
 
 ```
 ✓ All phases completed for '{feature-name}'
@@ -367,26 +449,46 @@ Summary:
   Phase 2: {name} — {Y} tasks ✓
   Phase 3: {name} — {Z} tasks ✓
 
-Implementation complete. Feature is ready for testing.
+All implementation tasks have been executed and checkboxes marked.
 
-Next steps:
-  1. Run /ai.verify to validate implementation against plan and standards (Recommended)
-  2. Run tests to verify deliverables
-  3. Review changes
-  4. Update feature state to 'in-progress' if needed
+Would you like to finalize this feature?
+
+1. Mark as completed
+   - Sets state.yml status to 'completed'
+   - Feature is done and ready for release/merge
+
+2. Mark for review
+   - Sets state.yml status to 'in-review'
+   - Indicates feature needs code review or QA
+
+3. Keep as in-progress
+   - No state change
+   - Continue testing or making adjustments
+
+Please respond with 1, 2, or 3.
 ```
 
-### 6. Update Feature State (Optional)
+**Wait for user response** and handle same as Section 5A (see above).
 
-After plan execution completes, consider updating parent feature state:
+### 6. Feature State Transitions
 
-```yaml
-# .ai/features/{name}/state.yml
-status: in-progress            # Or keep as 'planning'
-updated: {YYYY-MM-DD}
+The feature `state.yml` is updated automatically during execution:
+
+| Event | state.yml Status |
+|-------|------------------|
+| First phase starts | `planning` → `in-progress` |
+| User chooses "Mark as completed" | `in-progress` → `completed` |
+| User chooses "Mark for review" | `in-progress` → `in-review` |
+| User chooses "Keep as in-progress" | No change |
+
+**Command reference:**
+
+```bash
+# Update feature state.yml status
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state {status}
+
+# Valid statuses: clarifying, clarified, prd-draft, prd-approved, planning, in-progress, in-review, completed
 ```
-
-This is optional and depends on workflow preferences.
 
 ### 7. Stop Here
 

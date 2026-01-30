@@ -89,6 +89,13 @@ workflows:
       - "npm run type-check"
       - "npm run test"
 
+# Pull request configuration
+pull_request:
+  tool: gh                          # gh (GitHub CLI) | az (Azure DevOps CLI)
+  commit_convention: conventional   # conventional | ticket-prefix
+  branch_format: conventional       # conventional (feat/description) | ticket-prefix (feature/TICKET-123-name)
+  default_base_branch: main
+
 # Future expansion: polyglot script support
 # runner: python | bash | powershell
 #

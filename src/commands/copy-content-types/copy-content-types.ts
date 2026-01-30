@@ -1,5 +1,10 @@
 import { getHubConfigs } from '~/app-config';
-import { promptForHub, promptForConfirmation, promptForValidateSchemas } from '~/prompts';
+import {
+  promptForHub,
+  promptForConfirmation,
+  promptForSchemaIdFilter,
+  promptForValidateSchemas,
+} from '~/prompts';
 import { AmplienceService, ContentTypeService } from '~/services';
 import { createProgressBar } from '~/utils';
 import { copyContentTypeSchemas } from '../copy-content-type-schemas';
@@ -82,13 +87,31 @@ export async function runCopyContentTypes(): Promise<void> {
       return;
     }
 
-    console.log(`Found ${missingContentTypes.length} content types to sync:`);
-    missingContentTypes.forEach(ct => {
+    const defaultSchemaId = process.env.AMP_DEFAULT_SCHEMA_ID;
+    const filterPattern =
+      (
+        await promptForSchemaIdFilter(
+          defaultSchemaId ? { defaultValue: defaultSchemaId } : undefined
+        )
+      )?.trim() ?? '';
+
+    let filteredContentTypes = missingContentTypes;
+
+    if (filterPattern !== '') {
+      const pattern = new RegExp(filterPattern);
+      filteredContentTypes = missingContentTypes.filter(ct => pattern.test(ct.contentTypeUri));
+      console.log(
+        `Filtered to ${filteredContentTypes.length} of ${missingContentTypes.length} content types`
+      );
+    }
+
+    console.log(`Found ${filteredContentTypes.length} content types to sync:`);
+    filteredContentTypes.forEach(ct => {
       console.log(`  • ${ct.settings?.label || ct.contentTypeUri} (${ct.contentTypeUri})`);
     });
 
     // === SELECT CONTENT TYPES TO SYNC ===
-    const selectedContentTypes = await promptForContentTypesToSync(missingContentTypes);
+    const selectedContentTypes = await promptForContentTypesToSync(filteredContentTypes);
     if (selectedContentTypes.length === 0) {
       console.log('No content types selected. Operation cancelled.');
 

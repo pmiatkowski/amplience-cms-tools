@@ -15,105 +15,32 @@ import { runUpdateDeliveryKeysLocale } from '~/commands/update-delivery-keys-loc
 import { runVseManagement } from '~/commands/vse-management';
 import { executeRunAll, executeStepByStep } from '~/services/actions/user-command-sets';
 import {
+  configFileExists,
+  generateExampleConfig,
   getCommandSetConfigPath,
   initializeCommandSetConfig,
   VALID_COMMAND_NAMES,
+  writeCommandSetConfig,
 } from '~/services/command-set-config-service';
 import {
+  promptForCommandSelection,
   promptForCommandSet,
+  promptForCreateExampleFile,
   promptForExecutionMode,
+  promptForSelectedExecutionMode,
   promptForStepByStepContinue,
 } from './prompts';
 
 /**
- * Main command orchestrator for User Command Sets feature.
- * Loads configuration, prompts for selection, and executes the chosen command set.
+ * Display instructions when a user declines creating an example file.
+ * Provides guidance for manual setup when COMMAND_SETS_PATH is set.
  *
- * @example
- * // Called from main menu when user selects "User Sets"
- * await runUserCommandSets();
+ * @param configPath - The expected configuration file path
  */
-export async function runUserCommandSets(): Promise<void> {
-  console.log('📋 User Command Sets');
-  console.log('====================\n');
-
-  try {
-    // Load configuration
-    const configPath = getCommandSetConfigPath();
-    const { created, config } = initializeCommandSetConfig(configPath);
-
-    if (created) {
-      console.log(`✨ Created example configuration file: ${configPath}`);
-      console.log('   Edit this file to define your own command sets.\n');
-    }
-
-    // Handle empty configuration
-    if (config.commandSets.length === 0) {
-      console.log('ℹ️  No command sets defined.');
-      console.log(`   Add command sets to: ${configPath}\n`);
-
-      return;
-    }
-
-    // Prompt for command set selection
-    console.log(`Found ${config.commandSets.length} command set(s)\n`);
-    const selectedSetName = await promptForCommandSet(config.commandSets, {
-      includeBackOption: true,
-    });
-
-    // Handle back navigation
-    if (selectedSetName === '__back__') {
-      console.log('\n← Returning to main menu');
-
-      return;
-    }
-
-    // Find the selected command set
-    const selectedSet = config.commandSets.find(s => s.name === selectedSetName);
-    if (!selectedSet) {
-      console.error(`❌ Command set not found: ${selectedSetName}`);
-
-      return;
-    }
-
-    // Handle empty command set
-    if (selectedSet.commands.length === 0) {
-      console.log(`\nℹ️  Command set "${selectedSet.name}" has no commands.`);
-
-      return;
-    }
-
-    // Display selected set info
-    console.log(`\n📦 Selected: ${selectedSet.name}`);
-    if (selectedSet.description) {
-      console.log(`   ${selectedSet.description}`);
-    }
-    console.log(`   Commands: ${selectedSet.commands.length}\n`);
-
-    // Prompt for execution mode
-    const executionMode = await promptForExecutionMode();
-
-    // Execute based on mode
-    console.log('\n🚀 Starting execution...\n');
-
-    let summary: Amplience.ExecutionSummary;
-
-    if (executionMode === 'run-all') {
-      summary = await executeRunAll(selectedSet, createCommandExecutor());
-    } else {
-      summary = await executeStepByStep(
-        selectedSet,
-        createCommandExecutor(),
-        promptForStepByStepContinue
-      );
-    }
-
-    // Display execution summary
-    displayExecutionSummary(summary);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`\n❌ Error: ${errorMessage}`);
-  }
+export function displayManualCreationInstructions(configPath: string): void {
+  console.log('\nℹ️  Command sets file not found.');
+  console.log(`   Create a JSON config at: ${configPath}`);
+  console.log('   Then re-run the command to load your command sets.\n');
 }
 
 /**
@@ -215,4 +142,132 @@ function displayExecutionSummary(summary: Amplience.ExecutionSummary): void {
   }
 
   console.log('='.repeat(40) + '\n');
+}
+
+/**
+ * Main command orchestrator for User Command Sets feature.
+ * Loads configuration, prompts for selection, and executes the chosen command set.
+ *
+ * @example
+ * // Called from main menu when user selects "User Sets"
+ * await runUserCommandSets();
+ */
+export async function runUserCommandSets(): Promise<void> {
+  console.log('📋 User Command Sets');
+  console.log('====================\n');
+
+  try {
+    // Load configuration
+    const configPath = getCommandSetConfigPath();
+    const envCommandSetsPath = process.env.COMMAND_SETS_PATH;
+    let created = false;
+    let config: Amplience.CommandSetConfig;
+
+    if (envCommandSetsPath && envCommandSetsPath.trim() !== '' && !configFileExists(configPath)) {
+      const shouldCreateExample = await promptForCreateExampleFile(configPath);
+
+      if (!shouldCreateExample) {
+        displayManualCreationInstructions(configPath);
+
+        return;
+      }
+
+      config = generateExampleConfig();
+      writeCommandSetConfig(configPath, config);
+      created = true;
+    } else {
+      const initResult = initializeCommandSetConfig(configPath);
+      created = initResult.created;
+      config = initResult.config;
+    }
+
+    if (created) {
+      console.log(`✨ Created example configuration file: ${configPath}`);
+      console.log('   Edit this file to define your own command sets.\n');
+    }
+
+    // Handle empty configuration
+    if (config.commandSets.length === 0) {
+      console.log('ℹ️  No command sets defined.');
+      console.log(`   Add command sets to: ${configPath}\n`);
+
+      return;
+    }
+
+    // Prompt for command set selection
+    console.log(`Found ${config.commandSets.length} command set(s)\n`);
+    const selectedSetName = await promptForCommandSet(config.commandSets, {
+      includeBackOption: true,
+    });
+
+    // Handle back navigation
+    if (selectedSetName === '__back__') {
+      console.log('\n← Returning to main menu');
+
+      return;
+    }
+
+    // Find the selected command set
+    const selectedSet = config.commandSets.find(s => s.name === selectedSetName);
+    if (!selectedSet) {
+      console.error(`❌ Command set not found: ${selectedSetName}`);
+
+      return;
+    }
+
+    // Handle empty command set
+    if (selectedSet.commands.length === 0) {
+      console.log(`\nℹ️  Command set "${selectedSet.name}" has no commands.`);
+
+      return;
+    }
+
+    // Display selected set info
+    console.log(`\n📦 Selected: ${selectedSet.name}`);
+    if (selectedSet.description) {
+      console.log(`   ${selectedSet.description}`);
+    }
+    console.log(`   Commands: ${selectedSet.commands.length}\n`);
+
+    // Prompt for execution mode
+    const executionMode = await promptForExecutionMode();
+
+    // Execute based on mode
+    console.log('\n🚀 Starting execution...\n');
+
+    let summary: Amplience.ExecutionSummary;
+
+    if (executionMode === 'pick-commands') {
+      const selectedCommands = await promptForCommandSelection(selectedSet.commands);
+      const selectedExecutionMode = await promptForSelectedExecutionMode();
+      const selectedCommandSet: Amplience.CommandSet = {
+        ...selectedSet,
+        commands: selectedCommands,
+      };
+
+      if (selectedExecutionMode === 'run-all') {
+        summary = await executeRunAll(selectedCommandSet, createCommandExecutor());
+      } else {
+        summary = await executeStepByStep(
+          selectedCommandSet,
+          createCommandExecutor(),
+          promptForStepByStepContinue
+        );
+      }
+    } else if (executionMode === 'run-all') {
+      summary = await executeRunAll(selectedSet, createCommandExecutor());
+    } else {
+      summary = await executeStepByStep(
+        selectedSet,
+        createCommandExecutor(),
+        promptForStepByStepContinue
+      );
+    }
+
+    // Display execution summary
+    displayExecutionSummary(summary);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`\n❌ Error: ${errorMessage}`);
+  }
 }

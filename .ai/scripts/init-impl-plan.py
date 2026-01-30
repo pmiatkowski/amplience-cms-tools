@@ -2,6 +2,7 @@
 """Initialize implementation plan folder structure."""
 
 import argparse
+import shutil
 import sys
 from datetime import date
 from pathlib import Path
@@ -40,9 +41,23 @@ def init_impl_plan(feature_name: str) -> None:
         print("  Recommendation: Run /create-prd before defining implementation plan\n")
 
     # Check if impl plan already exists
+    plan_state_path = impl_path / "plan-state.yml"
     if impl_path.exists():
-        print(f"✗ Implementation plan already exists at {impl_path}")
-        sys.exit(1)
+        if plan_state_path.exists():
+            print(f"✗ Implementation plan already exists at {impl_path}")
+            sys.exit(1)
+        else:
+            # Folder exists but is empty or incomplete
+            existing_files = list(impl_path.iterdir())
+            if existing_files:
+                print(f"⚠ Warning: Incomplete implementation-plan folder found at {impl_path}")
+                print(f"  Existing files: {[f.name for f in existing_files]}")
+                print(f"  Missing: plan-state.yml")
+                print(f"  Removing and re-initializing...\n")
+            else:
+                print(f"⚠ Warning: Empty implementation-plan folder found at {impl_path}")
+                print(f"  Removing and re-initializing...\n")
+            shutil.rmtree(impl_path)
 
     # Create directory
     impl_path.mkdir(parents=True)

@@ -227,7 +227,7 @@ npm start
 
 ## 🎯 Available Commands
 
-The CLI tool provides 15 specialized commands for different bulk operations:
+The CLI tool provides 16 specialized commands for different bulk operations:
 
 ### 1. VSE Management
 
@@ -374,6 +374,42 @@ validation, and preview mode. Ideal for cross-environment deployment and
 migration scenarios.
 
 Future enhancements will add delete capabilities.
+
+### 16. User Command Sets
+
+**Command**: User Sets
+**Documentation**: [user-command-sets.md](docs/user-command-sets.md)
+
+Create and execute predefined sequences of CLI commands, allowing users to
+bundle commonly used operations into reusable sets. Features include:
+
+- **Configuration-based**: Define command sets in `command-sets.json`
+- **Execution modes**: "Run all" for automated execution or "Step-by-step" for
+  controlled workflows
+- **Error recovery**: Continue, Stop, or Retry options when commands fail
+- **Auto-generation**: Example configuration created on first use
+- **CRUD operations**: Create, edit, and delete command sets through the CLI
+
+Example configuration:
+
+```json
+{
+  "version": "1.0",
+  "commandSets": [
+    {
+      "name": "Daily Sync",
+      "description": "Sync prod to dev",
+      "commands": [
+        { "command": "sync-hierarchy" },
+        { "command": "copy-content-types" }
+      ]
+    }
+  ]
+}
+```
+
+Set `COMMAND_SETS_PATH` environment variable to use a custom configuration file
+location.
 
 ## 📊 Common Features Across All Commands
 

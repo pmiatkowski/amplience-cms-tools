@@ -16,7 +16,7 @@ You are a feature clarification assistant. Your goal is to identify gaps in feat
 **Parameter resolution:**
 
 1. If user provided explicit name in command (`/ai.clarify workflow-name`), use it
-2. Otherwise, read current context from `.ai/memory/global-state.yml`
+2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
 3. If no current context set, error:
 
 ```
@@ -32,7 +32,7 @@ Example:
 
 **Verify workflow exists:**
 
-Check if `.ai/features/{name}/` exists.
+Check if `.ai-workflow/features/{name}/` exists.
 
 If not found:
 
@@ -46,7 +46,7 @@ Create it first: /ai.add "{description}"
 
 **Step 2a: Verify workflow type**
 
-Read `.ai/features/{name}/state.yml` and verify `workflow_type: feature`.
+Read `.ai-workflow/features/{name}/state.yml` and verify `workflow_type: feature`.
 
 If workflow is a bug:
 
@@ -69,7 +69,7 @@ Ideas use:
 
 **Step 2b: Determine mode based on document existence**
 
-Check if `.ai/features/{name}/prd.md` exists.
+Check if `.ai-workflow/features/{name}/prd.md` exists.
 
 **If PRD exists** → Set `MODE = PRD_MODE`
 
@@ -104,20 +104,20 @@ Read relevant context based on mode:
 
 **PRD_MODE - Required:**
 
-- `.ai/features/{name}/prd.md` - the PRD to refine
+- `.ai-workflow/features/{name}/prd.md` - the PRD to refine
 
 **REQUEST_MODE - Required:**
 
-- `.ai/features/{name}/request.md` - original request (may have `## Clarifications` section)
+- `.ai-workflow/features/{name}/request.md` - original request (may have `## Clarifications` section)
 
 **Both Modes - Optional (if exist):**
 
-- `.ai/features/{name}/context.md` - codebase/business context
-- `.ai/memory/tech-stack.md` - global tech stack
+- `.ai-workflow/features/{name}/context.md` - codebase/business context
+- `.ai-workflow/memory/tech-stack.md` - global tech stack
 
 **PRD_MODE only - Additional optional:**
 
-- `.ai/features/{name}/request.md` - original request for reference
+- `.ai-workflow/features/{name}/request.md` - original request for reference
 
 If optional files don't exist, proceed without them (no error).
 
@@ -251,7 +251,6 @@ Based on gaps identified, plan clarification questions:
 Gap: "FR-3 mentions 'rate limiting' but doesn't specify limits"
 
 Question: "What rate limits should apply to the export API?"
-
 - A: 10 requests per hour per user (strict, prevents abuse)
 - B: 100 requests per hour with burst allowance (balanced)
 - C: No hard limit, just request throttling (user-friendly)
@@ -534,7 +533,7 @@ In the PRD header, update the "Last Updated" timestamp:
 
 **Update workflow state:**
 
-Update `.ai/features/{name}/state.yml`:
+Update `.ai-workflow/features/{name}/state.yml`:
 
 ```yaml
 updated: {YYYY-MM-DD}
@@ -576,7 +575,7 @@ Append the clarifications to `request.md`:
 
 **Update workflow state:**
 
-Update `.ai/features/{name}/state.yml`:
+Update `.ai-workflow/features/{name}/state.yml`:
 
 ```yaml
 status: clarified
@@ -602,7 +601,7 @@ Completion message differs based on mode:
 ```
 ✓ PRD updated successfully!
 
-Changes applied to .ai/features/{name}/prd.md:
+Changes applied to .ai-workflow/features/{name}/prd.md:
 
 **Updated Sections:**
 - Functional Requirements: Updated FR-2, added FR-5
@@ -629,7 +628,7 @@ Next steps:
 ```
 ✓ Clarifications saved!
 
-Updated: .ai/features/{name}/request.md
+Updated: .ai-workflow/features/{name}/request.md
 - Added {X} clarifications in Round {N}
 
 State: clarified (ready for PRD generation)
@@ -653,13 +652,11 @@ Next steps:
 ```
 
 **AI reads:**
-
 - prd.md (has some "TBD" markers and vague requirements)
 - context.md (mentions "existing email system")
 - tech-stack.md (Node.js, Redis)
 
 **AI analyzes PRD:**
-
 - Found "TBD" in FR-3 (session duration not specified)
 - FR-4 mentions rate limiting but no specifics
 - AC-2 says "error message" but doesn't specify text
@@ -760,7 +757,7 @@ Please respond with 1, 2, or 3.
 ```
 ✓ PRD updated successfully!
 
-Changes applied to .ai/features/user-auth/prd.md:
+Changes applied to .ai-workflow/features/user-auth/prd.md:
 
 **Updated Sections:**
 - Functional Requirements: Updated FR-3 (session duration), updated FR-4 (rate limiting)
@@ -824,8 +821,7 @@ Next steps:
 ```
 
 **AI checks:**
-
-- Workflow exists: ✓ `.ai/features/user-data-export/`
+- Workflow exists: ✓ `.ai-workflow/features/user-data-export/`
 - Workflow type: feature ✓
 - PRD exists: ✗ (no prd.md)
 
@@ -839,13 +835,11 @@ use /ai.create-prd user-data-export to generate the PRD.
 ```
 
 **AI reads:**
-
 - request.md (has description, no clarifications yet)
 - context.md (user mentioned rate limiting requirement)
 - tech-stack.md (Node.js, PostgreSQL)
 
 **AI analyzes request.md for gaps:**
-
 - No user roles defined
 - No data scope specified
 - No file format mentioned
@@ -945,7 +939,7 @@ Please respond with 1, 2, or 3.
 ```
 ✓ Clarifications saved!
 
-Updated: .ai/features/user-data-export/request.md
+Updated: .ai-workflow/features/user-data-export/request.md
 - Added 5 clarifications in Round 1
 
 State: clarified (ready for PRD generation)

@@ -1,0 +1,9 @@
+status: completed
+current_phase: 2
+created: 2026-01-30
+updated: '2026-01-30'
+phases:
+- name: Modify promptForSchemaIdFilter Function
+  status: completed
+- name: Integrate Filter into Copy Content Types Command
+  status: completed

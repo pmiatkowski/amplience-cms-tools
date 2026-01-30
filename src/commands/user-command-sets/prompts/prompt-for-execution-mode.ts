@@ -27,6 +27,10 @@ export async function promptForExecutionMode(): Promise<Amplience.ExecutionMode>
           name: 'Step-by-step (pause after each command for confirmation)',
           value: 'step-by-step',
         },
+        {
+          name: 'Pick commands to run (select specific commands)',
+          value: 'pick-commands',
+        },
       ],
     },
   ]);

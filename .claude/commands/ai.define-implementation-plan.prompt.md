@@ -45,7 +45,7 @@ You are a technical lead planning implementation. Your goal is to break down the
 **Parameter resolution:**
 
 1. If user provided explicit name (`/ai.define-implementation-plan feature-name`), use it
-2. Otherwise, read current context from `.ai/memory/global-state.yml`
+2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
 3. If current context is a bug:
 
 ```
@@ -70,11 +70,11 @@ Please either:
 
 **Verify feature exists:**
 
-Check if `.ai/features/{name}/` exists.
+Check if `.ai-workflow/features/{name}/` exists.
 
 ### 2. Verify PRD Exists
 
-Check `.ai/features/{name}/prd.md` exists.
+Check `.ai-workflow/features/{name}/prd.md` exists.
 
 If missing:
 
@@ -86,12 +86,12 @@ Run /ai.create-prd first.
 
 ### 3. Initialize Plan Structure (if needed)
 
-Check if `.ai/features/{name}/implementation-plan/` exists.
+Check if `.ai-workflow/features/{name}/implementation-plan/` exists.
 
 If missing, execute:
 
 ```bash
-python .ai/scripts/init-impl-plan.py {feature-name}
+python .ai-workflow/scripts/init-impl-plan.py {feature-name}
 ```
 
 Then continue to step 4.
@@ -101,7 +101,7 @@ Then continue to step 4.
 Read and understand the following files:
 
 ```
-.ai/features/{feature-name}/
+.ai-workflow/features/{feature-name}/
 ├── prd.md                  # Functional requirements (FR-1, FR-2, ...)
 ├── context.md              # Technical considerations
 └── implementation-plan/
@@ -112,7 +112,7 @@ Read and understand the following files:
 **Also read global context (if available):**
 
 ```
-.ai/memory/
+.ai-workflow/memory/
 ├── tech-stack.md           # Global tech stack (optional)
 └── coding-rules/           # Coding standards (optional)
     └── index.md
@@ -320,7 +320,7 @@ Please respond with 1 or 2.
 
 1. Inform user: `Starting verification...`
 2. Invoke verification internally:
-   - Read `.ai/prompts/ai.verify.prompt.md`
+   - Read `.ai-workflow/prompts/ai.verify.prompt.md`
    - Execute verification using current workflow context
    - Use "plan verification mode" (default)
 3. After verification completes, display summary:
@@ -328,16 +328,12 @@ Please respond with 1 or 2.
 ```
 ✓ Verification complete
 
-Report: .ai/reports/verification-{name}-{timestamp}.report.md
+Report: .ai-workflow/reports/verification-{name}-{timestamp}.report.md
 
 {Display verdict from verification: PASS / PASS WITH WARNINGS / FAIL}
-
-Next steps:
-  1. Review verification report (if issues found)
-  2. Review implementation-plan/plan.md
-  3. Adjust plan if needed
-  4. Run /ai.execute when ready
 ```
+
+1. **Automatically proceed to Section 11** (Update Documentation)
 
 #### If User Selects Option 2 (Skip)
 
@@ -345,12 +341,9 @@ Next steps:
 ✓ Verification skipped
 
 You can verify later with: /ai.verify {feature-name}
-
-Next steps:
-  1. Review implementation-plan/plan.md
-  2. Verify plan: /ai.verify {feature-name} (recommended before execution)
-  3. Run /ai.execute {feature-name} when ready
 ```
+
+**Automatically proceed to Section 11** (Update Documentation)
 
 #### If User Provides Invalid Response
 
@@ -367,16 +360,385 @@ Please respond with 1 or 2:
   2 - Skip verification
 ```
 
-If still invalid, default to Option 2 (skip) and show skip message.
+If still invalid, default to Option 2 (skip) and proceed to Section 11.
 
-#### Edge Cases
+---
+
+### 11. Update Documentation
+
+After verification (or skip), automatically present the documentation update prompt:
+
+```
+Would you like to review and update documentation now?
+
+1. Yes, update documentation (Recommended)
+   - Analyze documentation gaps against the implementation plan
+   - Review README.md, CLAUDE.md, and other docs
+   - Update docs with your approval
+   - ~2-3 minutes
+
+2. No, skip documentation update
+   - You can run /ai.docs later
+   - Proceed to finalization
+
+Please respond with 1 or 2.
+```
+
+**Wait for user response.**
+
+#### If User Selects Option 1 (Update Docs)
+
+**Step 1: Discover Documentation Files**
+
+Check for these files in order:
+
+| Location | Priority | Purpose |
+|----------|----------|----------|
+| `CLAUDE.md` | High | AI agent guidance, architecture overview |
+| `README.md` | High | Project overview, getting started |
+| `AGENTS.md` | High | Multi-agent coordination guidelines |
+| `CONTRIBUTING.md` | Medium | Contribution guidelines |
+| `docs/` folder | Medium | Detailed documentation |
+| `API.md` or `docs/api.md` | Medium | API documentation |
+| `CHANGELOG.md` | Low | Version history |
+
+Display discovery results:
+
+```
+📚 Documentation Discovery
+
+Found documentation files:
+  ✓ CLAUDE.md ({N} lines)
+  ✓ README.md ({N} lines)
+  ✗ AGENTS.md (not found)
+  ...
+
+Proceeding with analysis of {N} documentation files...
+```
+
+**Step 2: Load Workflow Artifacts**
+
+Read the following to extract key information:
+
+1. `.ai-workflow/features/{name}/request.md` - Original request
+2. `.ai-workflow/features/{name}/prd.md` - Product requirements
+3. `.ai-workflow/features/{name}/implementation-plan/plan.md` - Implementation details
+
+**Extract key information:**
+
+- Feature name and description
+- Key functionality to be added
+- API changes or new endpoints
+- Configuration changes
+- User-facing changes
+- Breaking changes (if any)
+- Dependencies added or updated
+
+**Step 3: Analyze Documentation Gaps**
+
+For each documentation file, analyze:
+
+1. **Missing Information** - Feature not mentioned at all
+2. **Outdated Information** - Existing content will contradict new implementation
+3. **Incomplete Information** - Feature mentioned but lacks details
+4. **Incorrect Examples** - Code samples won't reflect planned implementation
+
+**Analysis Categories:**
+
+| Category | Description | Severity |
+|----------|-------------|----------|
+| **Missing** | Feature not documented anywhere | High |
+| **Outdated** | Existing docs will contradict implementation | High |
+| **Incomplete** | Docs exist but will lack important details | Medium |
+| **Examples** | Code samples will need updating | Medium |
+| **Minor** | Typos, formatting, minor improvements | Low |
+
+**Cross-reference checklist:**
+
+- [ ] Is the feature mentioned in README.md overview?
+- [ ] Is the API documented (if applicable)?
+- [ ] Are configuration options documented?
+- [ ] Are breaking changes noted?
+- [ ] Is CLAUDE.md updated with new architecture/commands?
+- [ ] Are usage examples current?
+- [ ] Is the changelog updated (if exists)?
+
+**Step 4: Present Gap Analysis Report**
+
+Display the report inline:
+
+```markdown
+# 📋 Documentation Gap Analysis: {feature-name}
+
+> **Analyzed**: {YYYY-MM-DD HH:MM:SS}
+> **Feature**: {feature-name}
+> **Plan Status**: Planning
+
+---
+
+## Summary
+
+**Documentation Status**: {UP-TO-DATE | NEEDS UPDATE | SIGNIFICANT GAPS}
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High (Missing/Outdated) | {count} |
+| 🟡 Medium (Incomplete) | {count} |
+| 🔵 Low (Minor) | {count} |
+
+---
+
+## Gaps Found
+
+### 🔴 High Priority
+
+#### H-{N}: {Gap Title}
+
+**File**: `{documentation file path}`
+**Type**: {Missing | Outdated}
+**Details**: {Clear description of what's missing or will be incorrect}
+
+**What should be documented:**
+{Specific information from the plan that needs to be added}
+
+**Suggested location**: {Section or heading where this should go}
+
+---
+
+### 🟡 Medium Priority
+
+{Similar format for medium priority gaps}
+
+---
+
+### 🔵 Low Priority
+
+{Similar format for low priority gaps}
+
+---
+
+## Documents Analyzed
+
+| File | Status | Gaps Found |
+|------|--------|------------|
+| `CLAUDE.md` | {Analyzed/Not Found} | {count} |
+| `README.md` | {Analyzed/Not Found} | {count} |
+| ... | ... | ... |
+```
+
+**Step 5: Wait for User Instructions**
+
+⚠️ **CRITICAL: Do NOT edit documentation without explicit user instruction.**
+
+```
+---
+
+## ⏳ Awaiting Your Instructions
+
+I've identified {N} documentation gaps. What would you like to do?
+
+**Options:**
+
+1. **Update all** - I'll update all documentation files with the identified gaps
+2. **Update specific** - Tell me which gaps to address (e.g., "Update H-1 and M-2")
+3. **Update with notes** - Provide additional context or instructions for the updates
+4. **Skip for now** - No documentation changes needed at this time
+
+**Examples:**
+- "Update all"
+- "Update H-1, H-2, and M-1"
+- "Update H-1 with note: also mention the rate limiting feature"
+- "Skip"
+
+---
+Please provide your instructions.
+```
+
+**Wait for user response before any file modifications.**
+
+**Step 6: Process User Instructions**
+
+**If "Update all":**
+
+1. Confirm the changes to be made:
+
+   ```
+   I'll update the following files:
+   - CLAUDE.md: Add {description}
+   - README.md: Update {section}
+   - docs/api.md: Add {endpoint documentation}
+   
+   Proceed? (yes/no)
+   ```
+
+2. Wait for confirmation
+3. Make the edits one file at a time
+4. Show diff summary for each file
+
+**If "Update specific" (e.g., "H-1 and M-2"):**
+
+1. Confirm which gaps will be addressed
+2. Wait for confirmation
+3. Make only the specified edits
+
+**If "Update with notes":**
+
+1. Parse user's additional instructions
+2. Incorporate notes into the documentation updates
+3. Confirm planned changes
+4. Wait for confirmation before editing
+
+**If "Skip":**
+
+```
+✓ Documentation update skipped
+
+You can update documentation later with: /ai.docs {feature-name}
+```
+
+**Step 7: Confirm Documentation Completion**
+
+After making approved changes:
+
+```
+✓ Documentation updated for '{feature-name}'
+
+**Files Modified:**
+- CLAUDE.md: {summary of changes}
+- README.md: {summary of changes}
+
+**Changes Made:**
+- H-1: Added feature description to README overview
+- M-2: Updated API examples in docs/api.md
+```
+
+**Proceed to Section 12** (Finalize Feature Status).
+
+#### If User Selects Option 2 (Skip Docs)
+
+```
+✓ Documentation update skipped
+
+You can update documentation later with: /ai.docs {feature-name}
+```
+
+**Proceed to Section 12** (Finalize Feature Status).
+
+#### Documentation Edge Cases
 
 | Situation | Behavior |
 |-----------|----------|
+| No documentation files found | Report "No documentation files found", suggest creating README.md, proceed to finalization |
+| All docs are up-to-date | Report "UP-TO-DATE" status, no action needed, proceed to finalization |
+| User provides invalid gap IDs | Ask for clarification with valid options |
+| Documentation update fails | Warn user, allow proceeding to finalization |
+
+---
+
+### 12. Finalize Feature Status
+
+After documentation (or skip), present the finalization prompt:
+
+```
+---
+
+✓ Implementation plan complete for '{feature-name}'
+
+Would you like to finalize this feature's status?
+
+1. Mark as ready for implementation
+   - Keeps state.yml status as 'planning'
+   - Ready to run /ai.execute when you want to start
+   - Recommended for most cases
+
+2. Mark for review
+   - Sets state.yml status to 'in-review'
+   - Indicates plan needs review before execution
+   - Good for team workflows
+
+3. Keep as draft
+   - No state change
+   - Continue refining the plan
+   - Can re-run /ai.define-implementation-plan to regenerate
+
+Please respond with 1, 2, or 3.
+```
+
+**Wait for user response.**
+
+#### If User Selects Option 1 (Ready for Implementation)
+
+```
+✓ Feature '{feature-name}' is ready for implementation!
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Run /ai.execute {feature-name} to start Phase 1
+```
+
+#### If User Selects Option 2 (Mark for Review)
+
+```bash
+python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state in-review
+```
+
+Show confirmation:
+
+```
+✓ Feature '{feature-name}' marked for review!
+
+Next steps:
+  1. Share implementation-plan/plan.md for review
+  2. After approval, run /ai.execute {feature-name}
+```
+
+#### If User Selects Option 3 (Keep as Draft)
+
+```
+✓ Feature '{feature-name}' remains as draft.
+
+Next steps:
+  1. Continue refining implementation-plan/plan.md
+  2. Re-run /ai.define-implementation-plan to regenerate if needed
+  3. Run /ai.execute when ready
+```
+
+#### If User Provides Invalid Response
+
+Accept flexible responses:
+
+- **Option 1**: "1", "yes", "y", "ready", "implement"
+- **Option 2**: "2", "review"
+- **Option 3**: "3", "no", "n", "draft", "skip"
+
+If response doesn't match any pattern, re-prompt once:
+
+```
+Please respond with 1, 2, or 3:
+  1 - Ready for implementation
+  2 - Mark for review
+  3 - Keep as draft
+```
+
+If still invalid, default to Option 1 (ready for implementation).
+
+---
+
+## Edge Cases
+
+| Situation | Behavior |
+|-----------|----------|
+| PRD doesn't exist | Error with instructions to create PRD first |
+| Plan folder doesn't exist | Error with script command to run |
+| Plan already exists | Ask: overwrite, create plan-v2.md, or cancel |
+| PRD has many TBDs | Generate plan but flag uncertain areas in Notes |
+| Very small feature | Single phase is acceptable |
 | No coding standards exist | Proceed with verification - verify prompt handles this gracefully with minimal PASS report |
 | Verification script fails | Show error message, suggest manual review of plan.md, provide `/ai.verify` command for retry |
 | Verification returns FAIL verdict | Show critical issues summary, recommend fixing plan, but don't block user from proceeding |
-| User wants to execute immediately | Accept "execute" as Option 2 with note to run `/ai.execute` |
+| User wants to execute immediately | Accept "execute" as response to finalization, run `/ai.execute` |
+| No documentation files found | Report "No documentation files found", suggest creating README.md, proceed to finalization |
+| Documentation update fails | Warn user, allow proceeding to finalization |
 
 ---
 
@@ -467,7 +829,7 @@ If still invalid, default to Option 2 (skip) and show skip message.
 - Consider adding logging for security audit trail (future enhancement)
 ```
 
-### Example: User Chooses Verification
+### Example: Complete Flow with Verification, Documentation, and Finalization
 
 ```
 ✓ Created implementation plan
@@ -493,8 +855,7 @@ Would you like to verify the plan against coding standards now?
 
 2. No, I'll review manually
    - You can run /ai.verify later
-   - Proceed to review plan.md
-   - Run /ai.execute when ready
+   - Proceed to documentation update
 
 Please respond with 1 or 2.
 ```
@@ -506,21 +867,154 @@ Starting verification...
 
 ✓ Verification complete
 
-Report: .ai/reports/verification-user-auth-20250108-143022.report.md
+Report: .ai-workflow/reports/verification-user-auth-20250108-143022.report.md
 
 Verdict: PASS WITH WARNINGS
 - Critical issues: 0
 - Warnings: 2
 - Info: 3
 
-Next steps:
-  1. Review verification report
-  2. Review implementation-plan/plan.md
-  3. Consider addressing warnings (optional)
-  4. Run /ai.execute when ready
+---
+
+Would you like to review and update documentation now?
+
+1. Yes, update documentation (Recommended)
+   - Analyze documentation gaps against the implementation plan
+   - Review README.md, CLAUDE.md, and other docs
+   - Update docs with your approval
+   - ~2-3 minutes
+
+2. No, skip documentation update
+   - You can run /ai.docs later
+   - Proceed to finalization
+
+Please respond with 1 or 2.
 ```
 
-### Example: User Skips Verification
+**[User responds: 1]**
+
+```
+📚 Documentation Discovery
+
+Found documentation files:
+  ✓ CLAUDE.md (862 lines)
+  ✓ README.md (156 lines)
+  ✗ AGENTS.md (not found)
+
+Proceeding with analysis of 2 documentation files...
+
+# 📋 Documentation Gap Analysis: user-auth
+
+> **Analyzed**: 2025-01-28 14:35:00
+> **Feature**: user-auth
+> **Plan Status**: Planning
+
+---
+
+## Summary
+
+**Documentation Status**: NEEDS UPDATE
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High | 2 |
+| 🟡 Medium | 1 |
+| 🔵 Low | 0 |
+
+---
+
+## Gaps Found
+
+### 🔴 High Priority
+
+#### H-1: Missing Authentication Section in README
+
+**File**: `README.md`
+**Type**: Missing
+**Details**: README has no mention of the planned authentication system.
+
+**What should be documented:**
+- User registration flow
+- Login/logout endpoints
+- Session management
+- Password reset functionality
+
+**Suggested location**: New "## Authentication" section after "## Getting Started"
+
+#### H-2: CLAUDE.md Missing Auth Commands
+
+**File**: `CLAUDE.md`
+**Type**: Missing
+**Details**: No documentation of planned auth-related API endpoints.
+
+---
+
+## ⏳ Awaiting Your Instructions
+
+I've identified 3 documentation gaps. What would you like to do?
+
+**Options:**
+1. **Update all** - I'll update all documentation files
+2. **Update specific** - Tell me which gaps to address
+3. **Update with notes** - Provide additional context
+4. **Skip for now** - No documentation changes
+
+Please provide your instructions.
+```
+
+**[User responds: Update all]**
+
+```
+I'll update the following files:
+- README.md: Add "## Authentication" section
+- CLAUDE.md: Add auth endpoints documentation
+
+Proceed? (yes/no)
+```
+
+**[User responds: yes]**
+
+```
+✓ Documentation updated for 'user-auth'
+
+**Files Modified:**
+- README.md: Added Authentication section
+- CLAUDE.md: Added auth endpoints
+
+---
+
+✓ Implementation plan complete for 'user-auth'
+
+Would you like to finalize this feature's status?
+
+1. Mark as ready for implementation
+   - Keeps state.yml status as 'planning'
+   - Ready to run /ai.execute when you want to start
+   - Recommended for most cases
+
+2. Mark for review
+   - Sets state.yml status to 'in-review'
+   - Indicates plan needs review before execution
+   - Good for team workflows
+
+3. Keep as draft
+   - No state change
+   - Continue refining the plan
+
+Please respond with 1, 2, or 3.
+```
+
+**[User responds: 1]**
+
+```
+✓ Feature 'user-auth' is ready for implementation!
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Run /ai.execute user-auth to start Phase 1
+```
+
+### Example: User Skips All Optional Steps
 
 ```
 ✓ Created implementation plan
@@ -536,13 +1030,7 @@ Scope: Medium
 Implementation plan created successfully.
 
 Would you like to verify the plan against coding standards now?
-
-1. Yes, verify the plan (Recommended)
-   ...
-
-2. No, I'll review manually
-   ...
-
+...
 Please respond with 1 or 2.
 ```
 
@@ -553,20 +1041,35 @@ Please respond with 1 or 2.
 
 You can verify later with: /ai.verify user-auth
 
-Next steps:
-  1. Review implementation-plan/plan.md
-  2. Verify plan: /ai.verify user-auth (recommended before execution)
-  3. Run /ai.execute user-auth when ready
+---
+
+Would you like to review and update documentation now?
+...
+Please respond with 1 or 2.
 ```
+
+**[User responds: 2]**
+
+```
+✓ Documentation update skipped
+
+You can update documentation later with: /ai.docs user-auth
 
 ---
 
-## Edge Cases
+✓ Implementation plan complete for 'user-auth'
 
-| Situation | Behavior |
-|-----------|----------|
-| PRD doesn't exist | Error with instructions to create PRD first |
-| Plan folder doesn't exist | Error with script command to run |
-| Plan already exists | Ask: overwrite, create plan-v2.md, or cancel |
-| PRD has many TBDs | Generate plan but flag uncertain areas in Notes |
-| Very small feature | Single phase is acceptable |
+Would you like to finalize this feature's status?
+...
+Please respond with 1, 2, or 3.
+```
+
+**[User responds: 1]**
+
+```
+✓ Feature 'user-auth' is ready for implementation!
+
+Next steps:
+  1. Review implementation-plan/plan.md
+  2. Run /ai.execute user-auth to start Phase 1
+```

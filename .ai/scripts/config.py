@@ -65,11 +65,21 @@ class WorkflowsConfig:
 
 
 @dataclass
+class PullRequestConfig:
+    """Pull request creation configuration."""
+    tool: str = "gh"                          # gh | az
+    commit_convention: str = "conventional"   # conventional | ticket-prefix
+    branch_format: str = "conventional"       # conventional | ticket-prefix
+    default_base_branch: str = "main"
+
+
+@dataclass
 class Config:
     version: int = 1
     paths: PathsConfig = field(default_factory=PathsConfig)
     defaults: DefaultsConfig = field(default_factory=DefaultsConfig)
     workflows: WorkflowsConfig = field(default_factory=WorkflowsConfig)
+    pull_request: PullRequestConfig = field(default_factory=PullRequestConfig)
     workflow_types: dict = field(default_factory=dict)
     runner: str = "python"  # future: bash | powershell
 
@@ -119,6 +129,7 @@ class Config:
         defaults_data = data.get("defaults", {})
         workflows_data = data.get("workflows", {})
         verification_data = workflows_data.get("verification", {})
+        pull_request_data = data.get("pull_request", {})
         workflow_types_data = data.get("workflow_types", {})
 
         # Parse workflow types
@@ -153,6 +164,12 @@ class Config:
                 verification=VerificationConfig(
                     commands=verification_data.get("commands", []),
                 ),
+            ),
+            pull_request=PullRequestConfig(
+                tool=pull_request_data.get("tool", "gh"),
+                commit_convention=pull_request_data.get("commit_convention", "conventional"),
+                branch_format=pull_request_data.get("branch_format", "conventional"),
+                default_base_branch=pull_request_data.get("default_base_branch", "main"),
             ),
             workflow_types=workflow_types,
             runner=data.get("runner", "python"),
@@ -196,7 +213,7 @@ class Config:
         """Default feature workflow for backward compatibility."""
         return WorkflowTypeConfig(
             base_path="features",
-            states=["clarifying", "prd-draft", "prd-approved", "planning", "in-progress"],
+            states=["clarifying", "prd-draft", "prd-approved", "planning", "in-progress", "completed"],
             initial_state="clarifying",
             artifacts=["state.yml", "request.md", "context.md", "prd.md", "updates/", "implementation-plan/"],
             classification_keywords=[]
@@ -356,4 +373,8 @@ if __name__ == "__main__":
     print(f"  defaults.date_format: {cfg.defaults.date_format}")
     print(f"  defaults.workflow_type: {cfg.defaults.workflow_type}")
     print(f"  workflows.verification.commands: {cfg.workflows.verification.commands}")
+    print(f"  pull_request.tool: {cfg.pull_request.tool}")
+    print(f"  pull_request.commit_convention: {cfg.pull_request.commit_convention}")
+    print(f"  pull_request.branch_format: {cfg.pull_request.branch_format}")
+    print(f"  pull_request.default_base_branch: {cfg.pull_request.default_base_branch}")
     print(f"  runner: {cfg.runner}")

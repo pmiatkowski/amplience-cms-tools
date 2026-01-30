@@ -48,6 +48,14 @@ describe('promptForExecutionMode', () => {
     expect(result).toBe('step-by-step');
   });
 
+  it('should return "pick-commands" when user selects pick commands mode', async () => {
+    inquirerPromptSpy.mockResolvedValueOnce({ executionMode: 'pick-commands' });
+
+    const result = await promptForExecutionMode();
+
+    expect(result).toBe('pick-commands');
+  });
+
   it('should provide choices for both execution modes', async () => {
     inquirerPromptSpy.mockResolvedValueOnce({ executionMode: 'run-all' });
 
@@ -58,6 +66,7 @@ describe('promptForExecutionMode', () => {
         choices: expect.arrayContaining([
           expect.objectContaining({ value: 'run-all' }),
           expect.objectContaining({ value: 'step-by-step' }),
+          expect.objectContaining({ value: 'pick-commands' }),
         ]),
       }),
     ]);
@@ -98,8 +107,10 @@ describe('promptForExecutionMode', () => {
     // Verify choices have descriptive names
     expect(choices[0].name).toBeTruthy();
     expect(choices[1].name).toBeTruthy();
+    expect(choices[2].name).toBeTruthy();
     expect(choices[0].name).not.toBe(choices[0].value);
     expect(choices[1].name).not.toBe(choices[1].value);
+    expect(choices[2].name).not.toBe(choices[2].value);
   });
 
   it('should handle multiple consecutive calls correctly', async () => {

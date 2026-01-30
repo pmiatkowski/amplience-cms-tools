@@ -157,6 +157,7 @@ describe('runCopyContentTypes', () => {
     // Restore only non-console mocks
     vi.mocked(appConfig.getHubConfigs).mockClear();
     vi.mocked(prompts.promptForHub).mockClear();
+    vi.mocked(prompts.promptForSchemaIdFilter).mockClear();
     vi.mocked(prompts.promptForValidateSchemas).mockClear();
     vi.mocked(prompts.promptForConfirmation).mockClear();
     vi.mocked(commandPrompts.promptForContentTypesToSync).mockClear();
@@ -306,6 +307,7 @@ describe('runCopyContentTypes', () => {
     it('should exit when no content types are selected', async () => {
       // Arrange
       mockContentTypeService.getMissingContentTypes.mockResolvedValue([mockContentType]);
+      vi.mocked(prompts.promptForSchemaIdFilter).mockResolvedValue('');
       vi.mocked(commandPrompts.promptForContentTypesToSync).mockResolvedValue([]);
 
       // Act
@@ -315,6 +317,89 @@ describe('runCopyContentTypes', () => {
       expect(consoleSpy.log).toHaveBeenCalledWith(
         'No content types selected. Operation cancelled.'
       );
+    });
+  });
+
+  describe('Schema ID Filtering', () => {
+    const secondContentType: Amplience.ContentType = {
+      id: 'ct-456',
+      contentTypeUri: 'https://schema.example.com/other-type.json',
+      hubContentTypeId: 'hub-ct-456',
+      status: 'ACTIVE' as Amplience.ContentTypeStatus,
+      settings: {
+        label: 'Other Content Type',
+        icons: [],
+        visualizations: [],
+      },
+    };
+
+    beforeEach(() => {
+      vi.mocked(appConfig.getHubConfigs).mockReturnValue([mockSourceHub, mockTargetHub]);
+      vi.mocked(prompts.promptForHub)
+        .mockResolvedValueOnce(mockSourceHub)
+        .mockResolvedValueOnce(mockTargetHub);
+      vi.mocked(prompts.promptForValidateSchemas).mockResolvedValue(false);
+    });
+
+    afterEach(() => {
+      delete process.env.AMP_DEFAULT_SCHEMA_ID;
+    });
+
+    it('should filter content types by schema ID pattern', async () => {
+      // Arrange
+      mockContentTypeService.getMissingContentTypes.mockResolvedValue([
+        mockContentType,
+        secondContentType,
+      ]);
+      vi.mocked(prompts.promptForSchemaIdFilter).mockResolvedValue('test-type');
+      vi.mocked(commandPrompts.promptForContentTypesToSync).mockResolvedValue([]);
+
+      // Act
+      await runCopyContentTypes();
+
+      // Assert
+      expect(consoleSpy.log).toHaveBeenCalledWith('Filtered to 1 of 2 content types');
+      expect(commandPrompts.promptForContentTypesToSync).toHaveBeenCalledWith([
+        mockContentType,
+      ]);
+    });
+
+    it('should skip filtering when input is empty', async () => {
+      // Arrange
+      mockContentTypeService.getMissingContentTypes.mockResolvedValue([
+        mockContentType,
+        secondContentType,
+      ]);
+      vi.mocked(prompts.promptForSchemaIdFilter).mockResolvedValue('');
+      vi.mocked(commandPrompts.promptForContentTypesToSync).mockResolvedValue([]);
+
+      // Act
+      await runCopyContentTypes();
+
+      // Assert
+      expect(commandPrompts.promptForContentTypesToSync).toHaveBeenCalledWith([
+        mockContentType,
+        secondContentType,
+      ]);
+      expect(consoleSpy.log).not.toHaveBeenCalledWith(
+        expect.stringContaining('Filtered to')
+      );
+    });
+
+    it('should pass AMP_DEFAULT_SCHEMA_ID as default to the prompt', async () => {
+      // Arrange
+      process.env.AMP_DEFAULT_SCHEMA_ID = 'https://schema.example.com/.*';
+      mockContentTypeService.getMissingContentTypes.mockResolvedValue([mockContentType]);
+      vi.mocked(prompts.promptForSchemaIdFilter).mockResolvedValue('');
+      vi.mocked(commandPrompts.promptForContentTypesToSync).mockResolvedValue([]);
+
+      // Act
+      await runCopyContentTypes();
+
+      // Assert
+      expect(prompts.promptForSchemaIdFilter).toHaveBeenCalledWith({
+        defaultValue: 'https://schema.example.com/.*',
+      });
     });
   });
 

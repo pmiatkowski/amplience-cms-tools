@@ -13,7 +13,7 @@ You are generating a Product Requirements Document (PRD) from clarified feature 
 **Parameter resolution:**
 
 1. If user provided explicit name in command (`/ai.create-prd workflow-name`), use it
-2. Otherwise, read current context from `.ai/memory/global-state.yml`
+2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
 3. If no current context set, error:
 
 ```
@@ -29,7 +29,7 @@ Example:
 
 **Verify workflow exists:**
 
-Check if `.ai/features/{name}/` exists.
+Check if `.ai-workflow/features/{name}/` exists.
 
 If not found:
 
@@ -43,7 +43,7 @@ Create it first: /ai.add "{description}"
 
 **Check workflow type:**
 
-Read `.ai/features/{name}/state.yml` and verify `workflow_type: feature`.
+Read `.ai-workflow/features/{name}/state.yml` and verify `workflow_type: feature`.
 
 If workflow is a bug:
 
@@ -75,7 +75,7 @@ If user says no, exit gracefully.
 
 **Check if PRD already exists:**
 
-If `.ai/features/{name}/prd.md` exists:
+If `.ai-workflow/features/{name}/prd.md` exists:
 
 ```
 ⚠ PRD already exists for '{name}'.
@@ -95,19 +95,17 @@ Handle response accordingly.
 Read all relevant files for PRD generation:
 
 **Required:**
-
-- `.ai/features/{name}/request.md` - original feature description (includes `## Clarifications` section if clarified)
+- `.ai-workflow/features/{name}/request.md` - original feature description (includes `## Clarifications` section if clarified)
 
 **Optional (if exist):**
-
-- `.ai/features/{name}/context.md` - codebase/business context
-- `.ai/memory/tech-stack.md` - global tech stack
+- `.ai-workflow/features/{name}/context.md` - codebase/business context
+- `.ai-workflow/memory/tech-stack.md` - global tech stack
 
 If optional files don't exist, proceed without them (no error).
 
 ### 4. Generate PRD
 
-Create `prd.md` in `.ai/features/{name}/prd.md` using this exact structure:
+Create `prd.md` in `.ai-workflow/features/{name}/prd.md` using this exact structure:
 
 ```markdown
 # PRD: {Feature Name}
@@ -153,7 +151,7 @@ Create `prd.md` in `.ai/features/{name}/prd.md` using this exact structure:
 
 ## Technical Considerations
 {Base this section on:
-- Global tech stack (.ai/memory/tech-stack.md) if available
+- Global tech stack (.ai-workflow/memory/tech-stack.md) if available
 - Feature-specific context (context.md if provided)
 - Constraints, dependencies, integration points from clarification answers
 
@@ -191,7 +189,7 @@ Include:
 
 ### 5. Update State
 
-After PRD creation, update `.ai/features/{name}/state.yml`:
+After PRD creation, update `.ai-workflow/features/{name}/state.yml`:
 
 ```yaml
 status: prd-draft
@@ -205,7 +203,7 @@ Show completion summary:
 ```
 ✓ PRD generated successfully!
 
-Created: .ai/features/{name}/prd.md
+Created: .ai-workflow/features/{name}/prd.md
 
 PRD Summary:
   - {X} functional requirements
@@ -235,13 +233,11 @@ Next steps:
 ```
 
 **AI reads:**
-
 - request.md (original description + 5 clarifications about data scope, format, etc.)
 - context.md (mentions existing import feature, rate limiting rule)
 - tech-stack.md (Node.js, PostgreSQL)
 
 **AI generates PRD** synthesizing all sources:
-
 - Overview from request.md
 - Functional requirements from clarification answers
 - Technical considerations from tech-stack.md and context.md
@@ -254,7 +250,7 @@ Next steps:
 ```
 ✓ PRD generated successfully!
 
-Created: .ai/features/user-data-export/prd.md
+Created: .ai-workflow/features/user-data-export/prd.md
 
 PRD Summary:
   - 5 functional requirements

@@ -29,7 +29,7 @@ except ImportError:
         def get_workflow_type(self, type_name):
             if type_name == "feature":
                 return type('obj', (object,), {
-                    'states': ['clarifying', 'prd-draft', 'prd-approved', 'planning', 'in-progress']
+                    'states': ['clarifying', 'prd-draft', 'prd-approved', 'planning', 'in-progress', 'completed']
                 })()
             else:
                 return type('obj', (object,), {

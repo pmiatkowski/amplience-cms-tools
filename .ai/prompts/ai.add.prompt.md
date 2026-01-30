@@ -57,12 +57,12 @@ Before initializing, check for relevant context to inform the user:
 
 **A. Check Tech Stack:**
 
-Check if `.ai/memory/tech-stack.md` exists (file existence only, don't read contents yet).
+Check if `.ai-workflow/memory/tech-stack.md` exists (file existence only, don't read contents yet).
 
 **B. Find Related Features (FEATURES only, skip for bugs):**
 
-1. Use glob to find all PRDs: `.ai/features/*/prd.md`
-2. Extract feature names from paths (e.g., `.ai/features/user-auth/prd.md` → "user-auth")
+1. Use glob to find all PRDs: `.ai-workflow/features/*/prd.md`
+2. Extract feature names from paths (e.g., `.ai-workflow/features/user-auth/prd.md` → "user-auth")
 3. Use simple keyword matching:
    - Split the new feature name by hyphens: "user-password-reset" → ["user", "password", "reset"]
    - Split existing feature names by hyphens
@@ -73,7 +73,6 @@ Check if `.ai/memory/tech-stack.md` exists (file existence only, don't read cont
 **Store findings for confirmation message in Step 10.**
 
 **Error handling:**
-
 - If tech-stack.md doesn't exist → no error, continue
 - If no features exist → no error, continue
 - If no matches found → no error, continue
@@ -86,11 +85,10 @@ Check if `.ai/memory/tech-stack.md` exists (file existence only, don't read cont
 Run:
 
 ```bash
-python .ai/scripts/init-workflow.py "{name}" "{original_description}" --type {type}
+python .ai-workflow/scripts/init-workflow.py "{name}" "{original_description}" --type {type}
 ```
 
 Where:
-
 - `{name}` = the short kebab-case name generated in Step 3
 - `{original_description}` = the **full original description** from Step 1 (verbatim, not summarized)
 
@@ -98,7 +96,7 @@ Where:
 
 This creates the workflow structure and sets initial state.
 
-**Note**: The init script automatically updates `.ai/memory/global-state.yml` to set the newly created workflow as current. No manual action needed - the script will confirm with `✓ Set as current {workflow_type}`.
+**Note**: The init script automatically updates `.ai-workflow/memory/global-state.yml` to set the newly created workflow as current. No manual action needed - the script will confirm with `✓ Set as current {workflow_type}`.
 
 ### 5A. Prompt for Context (Optional)
 
@@ -132,7 +130,7 @@ Answer: yes/no (or 'skip')
    - Business rules/constraints → **Business Logic**
    - Tech stack mentions → **Technical Constraints**
    - Everything else → **Notes**
-4. Write to context.md (`.ai/features/{name}/context.md` or `.ai/bugs/{name}/context.md`)
+4. Write to context.md (`.ai-workflow/features/{name}/context.md` or `.ai-workflow/bugs/{name}/context.md`)
 5. Confirm: "✓ Context saved. This will inform clarification questions."
 
 **If user responds 'no' or 'skip':**
@@ -172,35 +170,30 @@ Answer: yes/no (or 'skip')
 
 Now read the created workflow context to inform clarification questions:
 
-**For features**, read from `.ai/features/{name}/`:
-
+**For features**, read from `.ai-workflow/features/{name}/`:
 - `state.yml` - current status
 - `request.md` - original description
 - `context.md` - user-provided context (may have content if user chose to add context)
 
-**For bugs**, read from `.ai/bugs/{name}/`:
-
+**For bugs**, read from `.ai-workflow/bugs/{name}/`:
 - `state.yml` - current status
 - `report.md` - bug description
 - `context.md` - user-provided context (may have content if user chose to add context)
 
 **Read global context (if available)**:
-
-- `.ai/memory/tech-stack.md` - global tech stack (if exists from Step 4 check)
+- `.ai-workflow/memory/tech-stack.md` - global tech stack (if exists from Step 4 check)
 
 If tech-stack.md doesn't exist, proceed without it (no error).
 
 ### 7. Analyze Gaps and Plan Clarification Questions
 
 **IMPORTANT**: If context.md has content, use it to:
-
 - Understand existing architecture and integration points
 - Identify what's already known vs. what needs clarification
 - Align clarification questions with existing patterns and constraints
 - Avoid asking about information already provided
 
 Example:
-
 - If context.md lists relevant files → Reference them when asking integration questions
 - If context.md documents business rules → Avoid asking about rules already specified
 - If context.md specifies technical constraints → Respect them when presenting option trade-offs
@@ -307,7 +300,7 @@ You can select A, B, or C, or provide your own answer.
 
 ---
 
-**Append to:** `.ai/features/{name}/request.md`
+**Append to:** `.ai-workflow/features/{name}/request.md`
 
 **Format to append:**
 
@@ -330,7 +323,7 @@ User: {user's answer}
 
 **After saving clarifications:**
 
-Update `.ai/features/{name}/state.yml`:
+Update `.ai-workflow/features/{name}/state.yml`:
 
 ```yaml
 status: clarified
@@ -346,14 +339,14 @@ Show completion summary with context if available:
 ```
 ✓ Feature initialized and clarified!
 
-Created: .ai/features/{name}/
+Created: .ai-workflow/features/{name}/
 ├── state.yml (status: clarified)
 ├── request.md ← includes {X} clarifications
 └── context.md
 
 {If context found in Step 4:}
 📚 Context Available:
-  • Tech stack defined: .ai/memory/tech-stack.md
+  • Tech stack defined: .ai-workflow/memory/tech-stack.md
   {If related features:}
   • Related features found:
     - {feature-name} (shares: {common keywords})
@@ -372,7 +365,7 @@ Show completion summary with context if available:
 ```
 ✓ Workflow complete! Bug clarified and ready for triage.
 
-Created: .ai/bugs/{name}/
+Created: .ai-workflow/bugs/{name}/
 ├── state.yml (status: reported)
 ├── report.md
 ├── context.md
@@ -381,7 +374,7 @@ Created: .ai/bugs/{name}/
 
 {If context found in Step 4:}
 📚 Context Available:
-  • Tech stack defined: .ai/memory/tech-stack.md
+  • Tech stack defined: .ai-workflow/memory/tech-stack.md
 
 💡 Consider referencing tech stack when adding context.
 
@@ -390,7 +383,6 @@ Next steps:
 ```
 
 **Important Formatting**:
-
 - Use 📚 emoji for "Context Available" section
 - Use 💡 emoji for helpful suggestions
 - Only show context section if tech-stack.md exists OR related features found
@@ -409,14 +401,13 @@ Next steps:
 **AI classifies:** feature (keyword "Allow")
 
 **AI checks context:**
-
 - Tech stack exists: ✓
 - Related features: "user-data-import" (shares: user, data)
 
 **AI executes:**
 
 ```bash
-python .ai/scripts/init-workflow.py "user-data-export" "Allow users to export their data to CSV" --type feature
+python .ai-workflow/scripts/init-workflow.py "user-data-export" "Allow users to export their data to CSV" --type feature
 ```
 
 **AI prompts for context:**
@@ -443,7 +434,6 @@ Answer: yes/no (or 'skip')
 **AI:** Please provide the context (paste files, describe relevant code, or explain constraints):
 
 **User:**
-
 ```
 We have existing import feature at src/features/import/
 Export should mirror import structure.
@@ -510,13 +500,13 @@ You can select A, B, or C, or provide your own answer.
 ```
 ✓ Feature initialized and clarified!
 
-Created: .ai/features/user-data-export/
+Created: .ai-workflow/features/user-data-export/
 ├── state.yml (status: clarified)
 ├── request.md ← includes 5 clarifications
 └── context.md
 
 📚 Context Available:
-  • Tech stack defined: .ai/memory/tech-stack.md
+  • Tech stack defined: .ai-workflow/memory/tech-stack.md
   • Related features found:
     - user-data-import (shares: data handling, user features)
 
@@ -542,7 +532,7 @@ Next steps:
 **AI executes:**
 
 ```bash
-python .ai/scripts/init-workflow.py "websocket-memory-leak" "Fix memory leak in WebSocket handler" --type bug
+python .ai-workflow/scripts/init-workflow.py "websocket-memory-leak" "Fix memory leak in WebSocket handler" --type bug
 ```
 
 **AI prompts for context:**
@@ -569,7 +559,6 @@ Answer: yes/no (or 'skip')
 **AI:** Please provide the context (paste files, describe relevant code, or explain constraints):
 
 **User:**
-
 ```
 WebSocket handler is at src/services/websocket-handler.ts
 Using ws library v8.x
@@ -611,7 +600,7 @@ You can select A, B, or C, or provide your own answer.
 ```
 ✓ Workflow complete! Bug clarified and ready for triage.
 
-Created: .ai/bugs/websocket-memory-leak/
+Created: .ai-workflow/bugs/websocket-memory-leak/
 ├── state.yml (status: reported)
 ├── report.md
 ├── context.md
@@ -619,7 +608,7 @@ Created: .ai/bugs/websocket-memory-leak/
 └── fix-plan.md (pending)
 
 📚 Context Available:
-  • Tech stack defined: .ai/memory/tech-stack.md
+  • Tech stack defined: .ai-workflow/memory/tech-stack.md
 
 💡 Consider referencing tech stack when adding context.
 

@@ -139,12 +139,33 @@ NOTE: This state should not occur with the new unified workflow. Features create
   - Secondary: `/ai.verify` - Verify implementation against plan and standards
 - Else if `plan_state.status == "completed"`:
   - Primary: `/ai.verify` - Verify final implementation (recommended)
-  - Secondary: Testing and validation
+  - Secondary: `/ai.docs` - Verify documentation reflects implementation
+  - Tertiary: Testing and validation
 
 **Status: in-progress**
 
-- Primary: Continue implementation
-- Secondary: `/ai.clarify` - For PRD changes (if needed)
+- If `plan_state.status == "in-progress"`:
+  - Primary: `/ai.execute` - Continue with Phase {current_phase}
+  - Secondary: `/ai.verify` - Verify implementation against plan and standards
+- If `plan_state.status == "completed"`:
+  - Primary: `/ai.verify` - Verify final implementation (recommended)
+  - Secondary: `/ai.docs` - Verify documentation reflects implementation
+  - Tertiary: Run `/ai.execute` to finalize (mark completed or in-review)
+
+**Status: in-review**
+
+- Primary: Conduct code review or QA testing
+- Secondary: `/ai.verify` - Verify implementation against standards
+- Tertiary: `/ai.docs` - Verify documentation is complete
+- When review passes: Run `/ai.execute` to mark as completed
+- If ready for PR: `/ai.create-pull-request` - Create pull request
+
+**Status: completed**
+
+- Status: Feature is complete and ready for release/merge
+- Primary: `/ai.create-pull-request` - Create pull request (if not already created)
+- Suggest: Archive or create new workflow
+- Note: Can be reopened by manually changing state if issues found
 
 #### Bug Workflow
 
@@ -172,12 +193,15 @@ If `workflow_type == "bug"`:
 **Status: resolved**
 
 - Primary: `/ai.verify` - Verify final fix against standards (recommended)
-- Secondary: Final testing and verification
-- Tertiary: Update state to `closed` when verified
+- Secondary: `/ai.docs` - Verify documentation reflects the fix
+- Tertiary: Final testing and verification
+- Quaternary: `/ai.create-pull-request` - Create pull request for the fix
+- Update state to `closed` when verified
 
 **Status: closed**
 
 - Status: Bug is complete
+- Primary: `/ai.create-pull-request` - Create pull request (if not already created)
 - Suggest: Archive or create new workflow
 
 #### Idea Workflow
@@ -219,11 +243,12 @@ If `workflow_type == "idea"`:
 **For Features:**
 
 ```
-Step 1 of 5: Create feature with clarifications and PRD (/ai.add)
-Step 2 of 5: Review and approve PRD (prd-draft → prd-approved)
-Step 3 of 5: Define implementation plan (prd-approved → planning)
-Step 4 of 5: Execute implementation phases (planning → in-progress)
-Step 5 of 5: Testing & completion (in-progress)
+Step 1 of 6: Create feature with clarifications and PRD (/ai.add)
+Step 2 of 6: Review and approve PRD (prd-draft → prd-approved)
+Step 3 of 6: Define implementation plan (prd-approved → planning)
+Step 4 of 6: Execute implementation phases (planning → in-progress)
+Step 5 of 6: Review & QA (in-progress → in-review)
+Step 6 of 6: Complete & release (in-review → completed)
 ```
 
 **For Bugs:**
@@ -290,9 +315,14 @@ Phase {current_phase} of {total_phases}: {phase_name}
 
 ### Quality Assurance Commands
 - `/ai.verify [name]` - Verify implementation plan or code against coding standards
+- `/ai.docs [name]` - Verify documentation reflects current implementation
 
 ### Maintenance Commands
 - `/ai.cleanup` - Remove all workflows and reset global state
+
+### Pull Request Commands
+- `/ai.create-pull-request [name]` - Create PR with auto-generated title/body
+- `/ai.create-pull-request --custom` - Create PR with custom title/body
 
 ### Feature Commands
 - `/ai.clarify [name]` - Refine feature through clarifying questions (works with PRD or request.md)
@@ -448,9 +478,14 @@ For exploring and refining ideas before committing to implementation.
 
 ### Quality Assurance Commands
 - `/ai.verify [name]` - Verify implementation plan or code against coding standards
+- `/ai.docs [name]` - Verify documentation reflects current implementation
 
 ### Maintenance Commands
 - `/ai.cleanup` - Remove all workflows and reset global state
+
+### Pull Request Commands
+- `/ai.create-pull-request [name]` - Create PR with auto-generated title/body
+- `/ai.create-pull-request --custom` - Create PR with custom title/body
 
 ### Feature Commands
 - `/ai.clarify [name]` - Refine feature through clarifying questions (works with PRD or request.md)

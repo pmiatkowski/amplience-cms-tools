@@ -108,8 +108,96 @@ def write_plan_state(state_path: Path, state: dict) -> None:
         write_plan_state_no_yaml(state_path, state)
 
 
-def update_plan_state(feature_name: str, action: str, phase_number: int = None) -> None:
+def read_feature_state(state_path: Path) -> dict:
+    """Read feature state.yml."""
+    if not state_path.exists():
+        raise FileNotFoundError(f"state.yml not found at {state_path}")
+
+    if HAS_YAML:
+        import yaml
+        with open(state_path) as f:
+            return yaml.safe_load(f) or {}
+    else:
+        # Simple fallback parser for feature state.yml
+        state = {}
+        content = state_path.read_text()
+        for line in content.split('\n'):
+            stripped = line.strip()
+            if ':' in stripped and not stripped.startswith('#'):
+                key, value = stripped.split(':', 1)
+                state[key.strip()] = value.strip()
+        return state
+
+
+def write_feature_state(state_path: Path, state: dict) -> None:
+    """Write feature state.yml."""
+    if HAS_YAML:
+        import yaml
+        with open(state_path, 'w') as f:
+            yaml.dump(state, f, default_flow_style=False, sort_keys=False)
+    else:
+        # Simple fallback writer
+        content = '\n'.join(f"{k}: {v}" for k, v in state.items())
+        state_path.write_text(content)
+
+
+def update_feature_state_status(feature_name: str, new_status: str) -> None:
+    """Update feature state.yml status."""
+    today = date.today().strftime(cfg.defaults.date_format)
+    feature_path = cfg.get_feature_path(feature_name)
+    state_path = feature_path / "state.yml"
+
+    # Check feature exists
+    if not feature_path.exists():
+        print(f"[ERROR] Feature '{feature_name}' not found at {feature_path}")
+        sys.exit(1)
+
+    # Check state.yml exists
+    if not state_path.exists():
+        print(f"[ERROR] state.yml not found for '{feature_name}'")
+        sys.exit(1)
+
+    # Valid feature states
+    valid_statuses = ['clarifying', 'clarified', 'prd-draft', 'prd-approved', 'planning', 'in-progress', 'in-review', 'completed']
+    if new_status not in valid_statuses:
+        print(f"[ERROR] Invalid status: {new_status}")
+        print(f"Valid statuses: {', '.join(valid_statuses)}")
+        sys.exit(1)
+
+    # Read current state
+    try:
+        state = read_feature_state(state_path)
+    except Exception as e:
+        print(f"[ERROR] Failed to read feature state: {e}")
+        sys.exit(1)
+
+    old_status = state.get('status', 'unknown')
+    state['status'] = new_status
+    state['updated'] = today
+
+    # Write updated state
+    try:
+        write_feature_state(state_path, state)
+    except Exception as e:
+        print(f"[ERROR] Failed to write feature state: {e}")
+        sys.exit(1)
+
+    print(f"[OK] Feature state updated for '{feature_name}'")
+    print(f"  Status: {old_status} → {new_status}")
+    print(f"\nUpdated: {state_path}")
+
+
+def update_plan_state(feature_name: str, action: str, phase_number: int = None, feature_status: str = None) -> None:
     """Update plan state based on action."""
+
+    # Handle feature state update action separately
+    if action == 'update-feature-state':
+        if not feature_status:
+            print(f"[ERROR] Feature status required for action: {action}")
+            print(f"Usage: update-plan-state.py {feature_name} update-feature-state <status>")
+            sys.exit(1)
+        update_feature_state_status(feature_name, feature_status)
+        return
 
     today = date.today().strftime(cfg.defaults.date_format)
     feature_path = cfg.get_feature_path(feature_name)
@@ -137,7 +225,7 @@ def update_plan_state(feature_name: str, action: str, phase_number: int = None) 
     total_phases = len(state.get('phases', []))
 
     # Validate action
-    valid_actions = ['start-plan', 'start-phase', 'complete-phase', 'complete-plan']
+    valid_actions = ['start-plan', 'start-phase', 'complete-phase', 'complete-plan', 'update-feature-state']
     if action not in valid_actions:
         print(f"[ERROR] Invalid action: {action}")
         print(f"Valid actions: {', '.join(valid_actions)}")
@@ -225,13 +313,27 @@ def main():
     parser = argparse.ArgumentParser(description="Update implementation plan state")
     parser.add_argument("feature", help="Feature name")
     parser.add_argument("action",
-                       choices=['start-plan', 'start-phase', 'complete-phase', 'complete-plan'],
+                       choices=['start-plan', 'start-phase', 'complete-phase', 'complete-plan', 'update-feature-state'],
                        help="Action to perform")
-    parser.add_argument("phase", type=int, nargs='?',
-                       help="Phase number (required for start-phase and complete-phase)")
+    parser.add_argument("phase_or_status", nargs='?',
+                       help="Phase number (for start-phase/complete-phase) or status (for update-feature-state)")
 
     args = parser.parse_args()
-    update_plan_state(args.feature, args.action, args.phase)
+
+    # Determine if third argument is phase number or feature status
+    phase_number = None
+    feature_status = None
+
+    if args.action == 'update-feature-state':
+        feature_status = args.phase_or_status
+    elif args.phase_or_status is not None:
+        try:
+            phase_number = int(args.phase_or_status)
+        except ValueError:
+            print(f"[ERROR] Invalid phase number: {args.phase_or_status}")
+            sys.exit(1)
+
+    update_plan_state(args.feature, args.action, phase_number, feature_status)
 
 
 if __name__ == "__main__":

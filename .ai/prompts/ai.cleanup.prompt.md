@@ -1,12 +1,31 @@
 ---
 agent: agent
 description:
-  Clean up all AI workflow artifacts (features, bugs, ideas) and reset global state.
+  Clean up AI workflow artifacts or validate completion states across features and bugs.
 ---
 
-You are a cleanup assistant for the AI Feature Workflow. Your goal is to help users clean up all workflow data safely.
+You are a cleanup assistant for the AI Feature Workflow. Your goal is to help users either clean up all workflow data or validate/sync completion states.
 
-### 1. Check Current State
+## Mode Selection
+
+First, ask the user which mode they want:
+
+```markdown
+# AI Workflow Cleanup
+
+What would you like to do?
+
+1. **Full Cleanup** - Remove ALL features, bugs, and ideas. Reset global state.
+2. **Validate & Sync** - Check completed workflows and sync their states. Reset global context if pointing to completed work.
+
+Please type `1` or `2` (or `full`/`validate`):
+```
+
+---
+
+## Mode 1: Full Cleanup
+
+### 1.1 Check Current State
 
 Run the cleanup script in dry-run mode to see what exists:
 
@@ -43,12 +62,12 @@ The script outputs JSON with the following structure:
 }
 ```
 
-### 2. Present Report to User
+### 1.2 Present Report to User
 
 Format the output into a clear, templated report:
 
 ```markdown
-# AI Workflow Cleanup Report
+# AI Workflow Full Cleanup Report
 
 ## Current State
 
@@ -83,19 +102,19 @@ This action will:
 
 ```
 
-### 3. Ask for Confirmation
+### 1.3 Ask for Confirmation
 
 After presenting the report, ask the user explicitly:
 
 ```
-Do you want to proceed with the cleanup?
+Do you want to proceed with the full cleanup?
 
 Please confirm:
 - Type "yes" to proceed with cleanup
 - Type "no" or anything else to cancel
 ```
 
-### 4. Execute or Cancel
+### 1.4 Execute or Cancel
 
 **If user confirms "yes":**
 
@@ -108,7 +127,7 @@ python .ai/scripts/cleanup.py
 After successful cleanup, display:
 
 ```markdown
-# Cleanup Complete
+# Full Cleanup Complete
 
 All workflow directories have been removed
 Global state has been reset to initial values
@@ -141,34 +160,206 @@ No changes were made. Your workflows remain intact.
 - `/ai.set-current {name}` - Switch to a specific workflow
 ```
 
-### 5. Edge Cases
+---
 
-| Situation | Behavior |
-|-----------|----------|
-| No workflows exist | Show "Nothing to clean up" message, suggest `/ai.add` |
-| Script execution fails | Show error message, suggest checking permissions |
-| Git-tracked workflows | Warn that git history may still contain files |
+## Mode 2: Validate & Sync Completion States
+
+### 2.1 Check Completion States
+
+Run the cleanup script with validate flag in dry-run mode:
+
+```bash
+python .ai/scripts/cleanup.py --validate --dry-run
+```
+
+The script outputs JSON with the following structure:
+
+```json
+{
+  "status": "dry_run",
+  "validated": [
+    {"name": "user-auth", "type": "feature", "plan_status": "completed", "state_status": "in-progress"}
+  ],
+  "updated": [
+    {"name": "user-auth", "type": "feature", "plan_status": "completed", "state_status": "in-progress", "new_status": "completed"}
+  ],
+  "already_synced": [
+    {"name": "data-export", "type": "feature", "plan_status": "completed", "state_status": "completed"}
+  ],
+  "no_plan": [
+    {"name": "api-cleanup", "type": "feature", "plan_status": null, "state_status": "planning"}
+  ],
+  "global_state_reset": true,
+  "global_state_was": {"name": "user-auth", "workflow_type": "feature"},
+  "dry_run": true
+}
+```
+
+### 2.2 Present Validation Report
+
+Format the output into a clear report:
+
+```markdown
+# AI Workflow Validation Report
+
+## Workflows with Completed Plans
+
+These workflows have `plan-state.yml` status set to `completed`:
+
+| Workflow | Type | Current State | Action |
+|----------|------|---------------|--------|
+| {name} | {type} | {state_status} | Will update to `{new_status}` |
+| {name} | {type} | {state_status} | Already synced ✓ |
+
+## Workflows Without Plans
+
+These workflows don't have a plan-state.yml (skipped):
+
+- {name} ({type}) - status: {state_status}
+
+## Global Context
+
+{IF global_state_reset}
+- Current context points to: {global_state_was.name} ({global_state_was.workflow_type})
+- This workflow is completed, so global context will be reset to `null`
+{ELSE}
+- Current context: {name} ({type}) - not completed, will remain set
+- OR: No current context set
+{ENDIF}
+
+## Summary
+
+- **{count}** workflows will be updated to completed status
+- **{count}** workflows already have correct status
+- **{count}** workflows skipped (no plan file)
+- Global context: {will reset / will remain}
+```
+
+### 2.3 Ask for Confirmation
+
+```
+Do you want to proceed with the state synchronization?
+
+This will:
+- Update state.yml for {count} workflow(s) to reflect completion
+- {Reset global context to null / Keep global context unchanged}
+
+Please confirm:
+- Type "yes" to proceed
+- Type "no" or anything else to cancel
+```
+
+### 2.4 Execute or Cancel
+
+**If user confirms "yes":**
+
+Run the validation script:
+
+```bash
+python .ai/scripts/cleanup.py --validate
+```
+
+After successful validation, display:
+
+```markdown
+# Validation Complete
+
+## Updated Workflows
+
+| Workflow | Type | New Status |
+|----------|------|------------|
+| {name} | {type} | {new_status} |
+
+## Global Context
+
+{IF reset}
+- Reset from: {name} ({type}) → null
+{ELSE}
+- Unchanged
+{ENDIF}
+
+## Next Steps
+
+- `/ai.help` - Show available commands
+- `/ai.add "description"` - Start a new feature or bug
+- `/ai.set-current {name}` - Switch to another workflow
+```
+
+**If user declines:**
+
+```markdown
+# Validation Cancelled
+
+No changes were made.
+
+## Pending State Mismatches
+
+The following workflows have completed plans but their state.yml hasn't been updated:
+
+- {name} ({type}): plan completed, state shows `{current_status}`
+
+You can run `/ai.cleanup` again when ready.
+```
 
 ---
 
-## Example Session
+## Edge Cases
 
-**User:**
+| Situation | Behavior |
+|-----------|----------|
+| No workflows exist | Show "Nothing to validate" message |
+| No completed workflows | Show "All workflows are in progress" |
+| All already synced | Show "All completion states are already correct" |
+| Script execution fails | Show error message, suggest checking permissions |
+| Mode not specified | Show mode selection prompt |
 
-```
-/ai.cleanup
-```
+---
+
+## Example Sessions
+
+### Example 1: Full Cleanup
+
+**User:** `/ai.cleanup`
+
+**AI:** Shows mode selection
+
+**User:** `1` or `full`
+
+**AI:** Runs `--dry-run`, shows full cleanup report, asks confirmation
+
+**User:** `yes`
+
+**AI:** Runs cleanup, shows completion message
+
+---
+
+### Example 2: Validate & Sync
+
+**User:** `/ai.cleanup`
+
+**AI:** Shows mode selection
+
+**User:** `2` or `validate`
+
+**AI:** Runs `--validate --dry-run`
 
 **Script Output:**
 
 ```json
 {
   "status": "dry_run",
-  "features": {"exists": true, "count": 2, "items": ["user-auth", "data-export"]},
-  "bugs": {"exists": true, "count": 1, "items": ["login-timeout"]},
-  "ideas": {"exists": false, "count": 0, "items": []},
-  "has_current_context": true,
-  "current_context": {"name": "user-auth", "workflow_type": "feature"},
+  "validated": [
+    {"name": "user-auth", "type": "feature", "plan_status": "completed", "state_status": "in-progress"}
+  ],
+  "updated": [
+    {"name": "user-auth", "type": "feature", "plan_status": "completed", "state_status": "in-progress", "new_status": "completed"}
+  ],
+  "already_synced": [],
+  "no_plan": [
+    {"name": "api-refactor", "type": "feature", "plan_status": null, "state_status": "planning"}
+  ],
+  "global_state_reset": true,
+  "global_state_was": {"name": "user-auth", "workflow_type": "feature"},
   "dry_run": true
 }
 ```
@@ -176,71 +367,74 @@ No changes were made. Your workflows remain intact.
 **AI Response:**
 
 ```markdown
-# AI Workflow Cleanup Report
+# AI Workflow Validation Report
 
-## Current State
+## Workflows with Completed Plans
 
-### Features
-- Count: 2
-- Items: user-auth, data-export
+| Workflow | Type | Current State | Action |
+|----------|------|---------------|--------|
+| user-auth | feature | in-progress | Will update to `completed` |
 
-### Bugs
-- Count: 1
-- Items: login-timeout
+## Workflows Without Plans
 
-### Ideas
-- Count: 0
-- Items: (none)
+- api-refactor (feature) - status: planning
 
-### Global Context
-- Current context: user-auth (feature)
+## Global Context
 
-## What Will Be Deleted
+- Current context points to: user-auth (feature)
+- This workflow is completed, so global context will be reset to `null`
 
-- All features (2 items): user-auth, data-export
-- All bugs (1 item): login-timeout
-- All ideas (0 items)
-- Global state will be reset to initial values
+## Summary
 
-## Warning
-
-This action will:
-- Permanently delete all features, bugs, and ideas
-- Reset the current workflow context
-- Cannot be undone (unless you have git history)
+- **1** workflow will be updated to completed status
+- **0** workflows already have correct status
+- **1** workflow skipped (no plan file)
+- Global context: will reset
 
 ---
 
-Do you want to proceed with the cleanup?
+Do you want to proceed with the state synchronization?
+
+This will:
+- Update state.yml for 1 workflow(s) to reflect completion
+- Reset global context to null
 
 Please confirm:
-- Type "yes" to proceed with cleanup
+- Type "yes" to proceed
 - Type "no" or anything else to cancel
 ```
 
 **User:** `yes`
 
-**AI:** (runs actual cleanup script)
+**AI:** Runs `--validate`, shows completion
 
 ```markdown
-# Cleanup Complete
+# Validation Complete
 
-All workflow directories have been removed
-Global state has been reset to initial values
+## Updated Workflows
+
+| Workflow | Type | New Status |
+|----------|------|------------|
+| user-auth | feature | completed |
+
+## Global Context
+
+- Reset from: user-auth (feature) → null
 
 ## Next Steps
 
-- `/ai.add "description"` - Create a new feature or bug
-- `/ai.define-idea "description"` - Create a new idea
 - `/ai.help` - Show available commands
+- `/ai.add "description"` - Start a new feature or bug
+- `/ai.set-current api-refactor` - Continue with api-refactor
 ```
 
 ---
 
 ## Important Notes
 
-- **Safety-first**: Always run dry-run first and require explicit confirmation
-- **Clear warnings**: Emphasize that this is destructive and cannot be undone
-- **Structured output**: Use JSON for script output to make parsing easy
-- **Templates**: Use consistent report format for user clarity
-- **Next steps**: Always provide guidance on what to do after cleanup
+- **Plan-state.yml is the source of truth** for completion detection
+- **Feature completion status:** `completed`
+- **Bug completion status:** `closed`
+- **Non-destructive:** Validate mode only updates status fields, never deletes workflows
+- **Global context auto-reset:** If current context points to a completed workflow, it's cleared
+- **Safety-first:** Always run dry-run first and require explicit confirmation

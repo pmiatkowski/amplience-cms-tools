@@ -756,6 +756,16 @@ declare global {
     // ===== User Command Sets Types =====
 
     /**
+     * Action options for editing a command set.
+     */
+    type EditAction =
+      | 'edit-name'
+      | 'edit-description'
+      | 'add-commands'
+      | 'remove-commands'
+      | 'done';
+
+    /**
      * Represents a single command entry within a command set.
      * Commands can be run interactively (no parameters) or with pre-configured parameters.
      *
@@ -957,7 +967,7 @@ declare global {
      * - 'run-all': Execute all commands sequentially without pausing
      * - 'step-by-step': Pause after each command for user confirmation
      */
-    type ExecutionMode = 'run-all' | 'step-by-step';
+    type ExecutionMode = 'run-all' | 'step-by-step' | 'pick-commands';
 
     /**
      * User choice when an error occurs during command set execution.

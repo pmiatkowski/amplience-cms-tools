@@ -73,7 +73,6 @@ Check if `.ai/memory/tech-stack.md` exists (file existence only, don't read cont
 **Store findings for confirmation message in Step 10.**
 
 **Error handling:**
-
 - If tech-stack.md doesn't exist → no error, continue
 - If no features exist → no error, continue
 - If no matches found → no error, continue
@@ -90,7 +89,6 @@ python .ai/scripts/init-workflow.py "{name}" "{original_description}" --type {ty
 ```
 
 Where:
-
 - `{name}` = the short kebab-case name generated in Step 3
 - `{original_description}` = the **full original description** from Step 1 (verbatim, not summarized)
 
@@ -173,19 +171,16 @@ Answer: yes/no (or 'skip')
 Now read the created workflow context to inform clarification questions:
 
 **For features**, read from `.ai/features/{name}/`:
-
 - `state.yml` - current status
 - `request.md` - original description
 - `context.md` - user-provided context (may have content if user chose to add context)
 
 **For bugs**, read from `.ai/bugs/{name}/`:
-
 - `state.yml` - current status
 - `report.md` - bug description
 - `context.md` - user-provided context (may have content if user chose to add context)
 
 **Read global context (if available)**:
-
 - `.ai/memory/tech-stack.md` - global tech stack (if exists from Step 4 check)
 
 If tech-stack.md doesn't exist, proceed without it (no error).
@@ -193,14 +188,12 @@ If tech-stack.md doesn't exist, proceed without it (no error).
 ### 7. Analyze Gaps and Plan Clarification Questions
 
 **IMPORTANT**: If context.md has content, use it to:
-
 - Understand existing architecture and integration points
 - Identify what's already known vs. what needs clarification
 - Align clarification questions with existing patterns and constraints
 - Avoid asking about information already provided
 
 Example:
-
 - If context.md lists relevant files → Reference them when asking integration questions
 - If context.md documents business rules → Avoid asking about rules already specified
 - If context.md specifies technical constraints → Respect them when presenting option trade-offs
@@ -390,7 +383,6 @@ Next steps:
 ```
 
 **Important Formatting**:
-
 - Use 📚 emoji for "Context Available" section
 - Use 💡 emoji for helpful suggestions
 - Only show context section if tech-stack.md exists OR related features found
@@ -409,7 +401,6 @@ Next steps:
 **AI classifies:** feature (keyword "Allow")
 
 **AI checks context:**
-
 - Tech stack exists: ✓
 - Related features: "user-data-import" (shares: user, data)
 
@@ -443,7 +434,6 @@ Answer: yes/no (or 'skip')
 **AI:** Please provide the context (paste files, describe relevant code, or explain constraints):
 
 **User:**
-
 ```
 We have existing import feature at src/features/import/
 Export should mirror import structure.
@@ -569,7 +559,6 @@ Answer: yes/no (or 'skip')
 **AI:** Please provide the context (paste files, describe relevant code, or explain constraints):
 
 **User:**
-
 ```
 WebSocket handler is at src/services/websocket-handler.ts
 Using ws library v8.x

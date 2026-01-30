@@ -5,16 +5,6 @@ import { VALID_COMMAND_NAMES } from '~/services/command-set-config-service';
 import { validateCommandCount, validateSetName } from './prompt-for-create-set';
 
 /**
- * Edit action type for modifying command sets.
- */
-export type EditAction =
-  | 'edit-name'
-  | 'edit-description'
-  | 'add-commands'
-  | 'remove-commands'
-  | 'done';
-
-/**
  * Prompt user to add new commands to a command set.
  * Returns an array of new command entries to add.
  *
@@ -75,8 +65,8 @@ export async function promptForAddCommands(): Promise<Amplience.CommandSetEntry[
  *   // Handle name edit
  * }
  */
-export async function promptForEditAction(): Promise<EditAction> {
-  const { action } = await inquirer.prompt<{ action: EditAction }>([
+export async function promptForEditAction(): Promise<Amplience.EditAction> {
+  const { action } = await inquirer.prompt<{ action: Amplience.EditAction }>([
     {
       type: 'list',
       name: 'action',

@@ -251,7 +251,6 @@ Based on gaps identified, plan clarification questions:
 Gap: "FR-3 mentions 'rate limiting' but doesn't specify limits"
 
 Question: "What rate limits should apply to the export API?"
-
 - A: 10 requests per hour per user (strict, prevents abuse)
 - B: 100 requests per hour with burst allowance (balanced)
 - C: No hard limit, just request throttling (user-friendly)
@@ -653,13 +652,11 @@ Next steps:
 ```
 
 **AI reads:**
-
 - prd.md (has some "TBD" markers and vague requirements)
 - context.md (mentions "existing email system")
 - tech-stack.md (Node.js, Redis)
 
 **AI analyzes PRD:**
-
 - Found "TBD" in FR-3 (session duration not specified)
 - FR-4 mentions rate limiting but no specifics
 - AC-2 says "error message" but doesn't specify text
@@ -824,7 +821,6 @@ Next steps:
 ```
 
 **AI checks:**
-
 - Workflow exists: ✓ `.ai/features/user-data-export/`
 - Workflow type: feature ✓
 - PRD exists: ✗ (no prd.md)
@@ -839,13 +835,11 @@ use /ai.create-prd user-data-export to generate the PRD.
 ```
 
 **AI reads:**
-
 - request.md (has description, no clarifications yet)
 - context.md (user mentioned rate limiting requirement)
 - tech-stack.md (Node.js, PostgreSQL)
 
 **AI analyzes request.md for gaps:**
-
 - No user roles defined
 - No data scope specified
 - No file format mentioned

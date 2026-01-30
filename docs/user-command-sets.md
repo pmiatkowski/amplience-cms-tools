@@ -38,11 +38,16 @@ operations.
 - The user selects "User Sets" from the main CLI menu
 - Configuration is loaded from `command-sets.json` (or custom path via
   `COMMAND_SETS_PATH` environment variable)
-- If no configuration exists, an example file is automatically created
+- If no configuration exists at the default path, an example file is
+  automatically created
+- If `COMMAND_SETS_PATH` is set but the file is missing, the user is prompted
+  to create an example file
 - Available command sets are displayed showing name, description, and command
   count
 - User selects a command set to execute
-- User chooses execution mode: "Run all" or "Step-by-step"
+- User chooses execution mode: "Run all", "Step-by-step", or "Pick commands"
+- If "Pick commands" is selected, the user selects a subset of commands and
+  then chooses whether to "Run selected" or "Step-by-step selected"
 - Commands execute sequentially with progress feedback
 - If errors occur, user can choose to Continue, Stop, or Retry
 - Execution summary displays success/failure counts and duration
@@ -97,7 +102,7 @@ The configuration file location is determined by:
 ### Configuration Fields
 
 | Field | Required | Description |
-|-------|----------|-------------|
+| --- | --- | --- |
 | `version` | Yes | Configuration format version (currently "1.0") |
 | `commandSets` | Yes | Array of command set definitions |
 | `commandSets[].name` | Yes | Display name for the command set |
@@ -143,12 +148,21 @@ for:
 - Debugging workflow issues
 - Operations requiring verification between steps
 
+### Pick Commands Mode
+
+Allows you to select a subset of commands from the chosen command set before
+execution. After selecting commands, you choose one of two secondary modes:
+
+- **Run selected**: Executes only the selected commands sequentially
+- **Step-by-step selected**: Executes the selected commands with confirmation
+  between each step
+
 ## Error Handling
 
 When a command fails during execution, you're prompted with three options:
 
 | Option | Behavior |
-|--------|----------|
+| --- | --- |
 | **Continue** | Skip the failed command and proceed with the next one |
 | **Stop** | End execution immediately |
 | **Retry** | Attempt to run the failed command again |
@@ -256,6 +270,9 @@ If you see "Configuration file not found", ensure:
 
 1. `command-sets.json` exists in your current directory, or
 2. `COMMAND_SETS_PATH` environment variable points to a valid file
+
+If `COMMAND_SETS_PATH` is set but the file is missing, the CLI will prompt you
+to create an example configuration file at that path.
 
 ### Invalid Command Reference
 

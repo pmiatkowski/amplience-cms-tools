@@ -1,0 +1,14 @@
+status: completed
+current_phase: 3
+created: 2026-01-30
+updated: '2026-01-30'
+phases:
+- name: Add "Pick Commands" Execution Mode
+  status: completed
+  tasks: 8
+- name: Graceful Missing File Handling
+  status: completed
+  tasks: 8
+- name: Testing & Documentation
+  status: completed
+  tasks: 5

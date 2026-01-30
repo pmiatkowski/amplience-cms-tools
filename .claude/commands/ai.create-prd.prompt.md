@@ -95,11 +95,9 @@ Handle response accordingly.
 Read all relevant files for PRD generation:
 
 **Required:**
-
 - `.ai/features/{name}/request.md` - original feature description (includes `## Clarifications` section if clarified)
 
 **Optional (if exist):**
-
 - `.ai/features/{name}/context.md` - codebase/business context
 - `.ai/memory/tech-stack.md` - global tech stack
 
@@ -235,13 +233,11 @@ Next steps:
 ```
 
 **AI reads:**
-
 - request.md (original description + 5 clarifications about data scope, format, etc.)
 - context.md (mentions existing import feature, rate limiting rule)
 - tech-stack.md (Node.js, PostgreSQL)
 
 **AI generates PRD** synthesizing all sources:
-
 - Overview from request.md
 - Functional requirements from clarification answers
 - Technical considerations from tech-stack.md and context.md

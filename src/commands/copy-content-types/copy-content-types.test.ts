@@ -382,7 +382,7 @@ describe('runCopyContentTypes', () => {
       expect(consoleSpy.log).not.toHaveBeenCalledWith(expect.stringContaining('Filtered to'));
     });
 
-    it('should pass AMP_DEFAULT_SCHEMA_ID as default to the prompt', async () => {
+    it('should call schema ID prompt without explicit default', async () => {
       // Arrange
       process.env.AMP_DEFAULT_SCHEMA_ID = 'https://schema.example.com/.*';
       mockContentTypeService.getMissingContentTypes.mockResolvedValue([mockContentType]);
@@ -393,9 +393,7 @@ describe('runCopyContentTypes', () => {
       await runCopyContentTypes();
 
       // Assert
-      expect(prompts.promptForSchemaIdFilter).toHaveBeenCalledWith({
-        defaultValue: 'https://schema.example.com/.*',
-      });
+      expect(prompts.promptForSchemaIdFilter).toHaveBeenCalledWith();
     });
   });
 

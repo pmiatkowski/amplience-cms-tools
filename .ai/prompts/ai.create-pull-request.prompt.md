@@ -29,7 +29,7 @@ You are a PR creation assistant. Your goal is to generate a pull request with an
 **Parameter resolution:**
 
 1. If user provided explicit name (`/ai.create-pull-request feature-name`), use it
-2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
+2. Otherwise, read current context from `.ai/memory/global-state.yml`
 3. If no current context:
 
 ```
@@ -45,13 +45,13 @@ Please either:
 Execute the script to generate PR details:
 
 ```bash
-python .ai-workflow/scripts/create-pr.py --dry-run
+python .ai/scripts/create-pr.py --dry-run
 ```
 
 Or with explicit workflow name:
 
 ```bash
-python .ai-workflow/scripts/create-pr.py --dry-run --name {workflow-name}
+python .ai/scripts/create-pr.py --dry-run --name {workflow-name}
 ```
 
 The script outputs JSON:
@@ -62,7 +62,7 @@ The script outputs JSON:
   "workflow": {
     "name": "user-authentication",
     "type": "feature",
-    "path": ".ai-workflow/features/user-authentication"
+    "path": ".ai/features/user-authentication"
   },
   "pr": {
     "title": "feat: user authentication",
@@ -100,7 +100,7 @@ I checked:
 **Please provide the ticket ID:**
 - Example: `JIRA-123`, `ABC-456`
 
-Or you can switch to conventional commits in `.ai-workflow/config.yml`:
+Or you can switch to conventional commits in `.ai/config.yml`:
 ```yaml
 pull_request:
   commit_convention: conventional
@@ -111,7 +111,7 @@ pull_request:
 Once user provides ticket ID, re-run with `--ticket-id`:
 
 ```bash
-python .ai-workflow/scripts/create-pr.py --dry-run --ticket-id {TICKET-ID}
+python .ai/scripts/create-pr.py --dry-run --ticket-id {TICKET-ID}
 ```
 
 ### 4. Handle Custom Title/Body Request
@@ -130,7 +130,7 @@ Please provide your custom PR details:
 Then run with custom values:
 
 ```bash
-python .ai-workflow/scripts/create-pr.py --dry-run --title "Custom title" --body "Custom body"
+python .ai/scripts/create-pr.py --dry-run --title "Custom title" --body "Custom body"
 ```
 
 ### 5. Present PR Preview for Approval
@@ -179,13 +179,13 @@ Format the generated PR for user review:
 Run the command without `--dry-run`:
 
 ```bash
-python .ai-workflow/scripts/create-pr.py
+python .ai/scripts/create-pr.py
 ```
 
 Or with any overrides:
 
 ```bash
-python .ai-workflow/scripts/create-pr.py --title "..." --body "..." --ticket-id "..."
+python .ai/scripts/create-pr.py --title "..." --body "..." --ticket-id "..."
 ```
 
 Then display:

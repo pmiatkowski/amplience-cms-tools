@@ -359,9 +359,7 @@ describe('runCopyContentTypes', () => {
 
       // Assert
       expect(consoleSpy.log).toHaveBeenCalledWith('Filtered to 1 of 2 content types');
-      expect(commandPrompts.promptForContentTypesToSync).toHaveBeenCalledWith([
-        mockContentType,
-      ]);
+      expect(commandPrompts.promptForContentTypesToSync).toHaveBeenCalledWith([mockContentType]);
     });
 
     it('should skip filtering when input is empty', async () => {
@@ -381,9 +379,7 @@ describe('runCopyContentTypes', () => {
         mockContentType,
         secondContentType,
       ]);
-      expect(consoleSpy.log).not.toHaveBeenCalledWith(
-        expect.stringContaining('Filtered to')
-      );
+      expect(consoleSpy.log).not.toHaveBeenCalledWith(expect.stringContaining('Filtered to'));
     });
 
     it('should pass AMP_DEFAULT_SCHEMA_ID as default to the prompt', async () => {

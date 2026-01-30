@@ -49,7 +49,7 @@ You are a documentation analyst verifying that project documentation accurately 
 **Parameter resolution:**
 
 1. If user provided explicit name (`/ai.docs feature-name`), use it
-2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
+2. Otherwise, read current context from `.ai/memory/global-state.yml`
 
 ```yaml
 current:
@@ -69,7 +69,7 @@ Please either:
 
 **Verify workflow exists:**
 
-Check if `.ai-workflow/{workflow_type}s/{name}/` exists.
+Check if `.ai/{workflow_type}s/{name}/` exists.
 
 If missing:
 
@@ -83,7 +83,7 @@ Available workflows:
 
 ### 2. Verify Implementation Status
 
-**For features**, check `.ai-workflow/features/{name}/implementation-plan/plan-state.yml`:
+**For features**, check `.ai/features/{name}/implementation-plan/plan-state.yml`:
 
 ```yaml
 status: completed  # Should be completed or have significant progress
@@ -91,7 +91,7 @@ status: completed  # Should be completed or have significant progress
 
 Also check `plan.md` for completed tasks (`- [x]`).
 
-**For bugs**, check `.ai-workflow/bugs/{name}/fix-plan.md` for completed tasks (`- [x]`).
+**For bugs**, check `.ai/bugs/{name}/fix-plan.md` for completed tasks (`- [x]`).
 
 **If implementation has NOT started:**
 
@@ -116,15 +116,15 @@ Read the following artifacts based on workflow type:
 
 **For features:**
 
-1. `.ai-workflow/features/{name}/request.md` - Original request and clarifications
-2. `.ai-workflow/features/{name}/prd.md` - Product requirements document
-3. `.ai-workflow/features/{name}/implementation-plan/plan.md` - Implementation details
+1. `.ai/features/{name}/request.md` - Original request and clarifications
+2. `.ai/features/{name}/prd.md` - Product requirements document
+3. `.ai/features/{name}/implementation-plan/plan.md` - Implementation details
 
 **For bugs:**
 
-1. `.ai-workflow/bugs/{name}/report.md` - Bug description and reproduction
-2. `.ai-workflow/bugs/{name}/triage.md` - Root cause analysis
-3. `.ai-workflow/bugs/{name}/fix-plan.md` - Fix implementation checklist
+1. `.ai/bugs/{name}/report.md` - Bug description and reproduction
+2. `.ai/bugs/{name}/triage.md` - Root cause analysis
+3. `.ai/bugs/{name}/fix-plan.md` - Fix implementation checklist
 
 **Extract key information:**
 
@@ -290,9 +290,9 @@ Proceeding with analysis of {N} documentation files...
 
 ## Workflow Artifacts Referenced
 
-- Request/Report: `.ai-workflow/{type}s/{name}/request.md` or `report.md`
-- PRD/Triage: `.ai-workflow/{type}s/{name}/prd.md` or `triage.md`
-- Plan: `.ai-workflow/{type}s/{name}/implementation-plan/plan.md` or `fix-plan.md`
+- Request/Report: `.ai/{type}s/{name}/request.md` or `report.md`
+- PRD/Triage: `.ai/{type}s/{name}/prd.md` or `triage.md`
+- Plan: `.ai/{type}s/{name}/implementation-plan/plan.md` or `fix-plan.md`
 
 ```
 

@@ -13,7 +13,7 @@ You are an objective thinking partner. Your goal is to help refine ideas through
 1. Check if user provided description in quotes: `/ai.define-idea "Add AI search"`
    - If yes: Extract description, generate kebab-case name, go to Step 2 (Initialize)
 2. If user provided explicit name: `/ai.define-idea ai-search`, use it
-3. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
+3. Otherwise, read current context from `.ai/memory/global-state.yml`
 4. If no current context set, error:
 
 ```
@@ -38,20 +38,20 @@ Example:
 
 **Check if idea exists:**
 
-Check if `.ai-workflow/ideas/{name}/` exists.
+Check if `.ai/ideas/{name}/` exists.
 
 **If new idea:**
 
 Execute:
 
 ```bash
-python .ai-workflow/scripts/init-workflow.py "{name}" "{description}" --type idea
+python .ai/scripts/init-workflow.py "{name}" "{description}" --type idea
 ```
 
 The script will create:
 
 ```
-.ai-workflow/ideas/{name}/
+.ai/ideas/{name}/
 ├── state.yml (status: exploring)
 ├── description.md
 ├── context.md
@@ -60,7 +60,7 @@ The script will create:
 
 **If exists:**
 
-Read from `.ai-workflow/ideas/{name}/`:
+Read from `.ai/ideas/{name}/`:
 
 ```
 ├── state.yml           # current status
@@ -626,7 +626,7 @@ updated: {YYYY-MM-DD}
 
 ## What You Can Do Now
 
-1. **Review the document**: .ai-workflow/ideas/{name}/refined-idea.md
+1. **Review the document**: .ai/ideas/{name}/refined-idea.md
 
 2. **Convert to feature** (if ready to build):
    /ai.add "{feature description based on idea}"
@@ -658,7 +658,7 @@ updated: {YYYY-MM-DD}
 
 ```
 ✓ Idea initialized: ai-powered-search
-Created: .ai-workflow/ideas/ai-powered-search/
+Created: .ai/ideas/ai-powered-search/
 Status: exploring
 
 Based on your idea description, I'd like to understand it better. I have some clarifying questions:
@@ -770,7 +770,7 @@ synthesize
 
 ## What You Can Do Now
 
-1. **Review the document**: .ai-workflow/ideas/ai-powered-search/refined-idea.md
+1. **Review the document**: .ai/ideas/ai-powered-search/refined-idea.md
 
 2. **Convert to feature** (if ready to build):
    /ai.add "Implement semantic search with pgvector for documentation"

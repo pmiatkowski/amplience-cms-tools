@@ -30,7 +30,7 @@ Please type `1` or `2` (or `full`/`validate`):
 Run the cleanup script in dry-run mode to see what exists:
 
 ```bash
-python .ai-workflow/scripts/cleanup.py --dry-run
+python .ai/scripts/cleanup.py --dry-run
 ```
 
 The script outputs JSON with the following structure:
@@ -121,7 +121,7 @@ Please confirm:
 Run the actual cleanup script:
 
 ```bash
-python .ai-workflow/scripts/cleanup.py
+python .ai/scripts/cleanup.py
 ```
 
 After successful cleanup, display:
@@ -169,7 +169,7 @@ No changes were made. Your workflows remain intact.
 Run the cleanup script with validate flag in dry-run mode:
 
 ```bash
-python .ai-workflow/scripts/cleanup.py --validate --dry-run
+python .ai/scripts/cleanup.py --validate --dry-run
 ```
 
 The script outputs JSON with the following structure:
@@ -256,7 +256,7 @@ Please confirm:
 Run the validation script:
 
 ```bash
-python .ai-workflow/scripts/cleanup.py --validate
+python .ai/scripts/cleanup.py --validate
 ```
 
 After successful validation, display:

@@ -14,9 +14,7 @@ export async function promptForCommandSelection(
   commands: Amplience.CommandSetEntry[]
 ): Promise<Amplience.CommandSetEntry[]> {
   const choices = commands.map((entry, index) => {
-    const label = entry.description
-      ? `${entry.command} - ${entry.description}`
-      : entry.command;
+    const label = entry.description ? `${entry.command} - ${entry.description}` : entry.command;
 
     return {
       name: label,

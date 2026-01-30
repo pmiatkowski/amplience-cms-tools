@@ -31,7 +31,6 @@ import {
   promptForStepByStepContinue,
 } from './prompts';
 
-
 /**
  * Display instructions when a user declines creating an example file.
  * Provides guidance for manual setup when COMMAND_SETS_PATH is set.
@@ -144,7 +143,6 @@ function displayExecutionSummary(summary: Amplience.ExecutionSummary): void {
 
   console.log('='.repeat(40) + '\n');
 }
-
 
 /**
  * Main command orchestrator for User Command Sets feature.

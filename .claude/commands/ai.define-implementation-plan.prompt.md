@@ -45,7 +45,7 @@ You are a technical lead planning implementation. Your goal is to break down the
 **Parameter resolution:**
 
 1. If user provided explicit name (`/ai.define-implementation-plan feature-name`), use it
-2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
+2. Otherwise, read current context from `.ai/memory/global-state.yml`
 3. If current context is a bug:
 
 ```
@@ -70,11 +70,11 @@ Please either:
 
 **Verify feature exists:**
 
-Check if `.ai-workflow/features/{name}/` exists.
+Check if `.ai/features/{name}/` exists.
 
 ### 2. Verify PRD Exists
 
-Check `.ai-workflow/features/{name}/prd.md` exists.
+Check `.ai/features/{name}/prd.md` exists.
 
 If missing:
 
@@ -86,12 +86,12 @@ Run /ai.create-prd first.
 
 ### 3. Initialize Plan Structure (if needed)
 
-Check if `.ai-workflow/features/{name}/implementation-plan/` exists.
+Check if `.ai/features/{name}/implementation-plan/` exists.
 
 If missing, execute:
 
 ```bash
-python .ai-workflow/scripts/init-impl-plan.py {feature-name}
+python .ai/scripts/init-impl-plan.py {feature-name}
 ```
 
 Then continue to step 4.
@@ -101,7 +101,7 @@ Then continue to step 4.
 Read and understand the following files:
 
 ```
-.ai-workflow/features/{feature-name}/
+.ai/features/{feature-name}/
 ├── prd.md                  # Functional requirements (FR-1, FR-2, ...)
 ├── context.md              # Technical considerations
 └── implementation-plan/
@@ -112,7 +112,7 @@ Read and understand the following files:
 **Also read global context (if available):**
 
 ```
-.ai-workflow/memory/
+.ai/memory/
 ├── tech-stack.md           # Global tech stack (optional)
 └── coding-rules/           # Coding standards (optional)
     └── index.md
@@ -320,7 +320,7 @@ Please respond with 1 or 2.
 
 1. Inform user: `Starting verification...`
 2. Invoke verification internally:
-   - Read `.ai-workflow/prompts/ai.verify.prompt.md`
+   - Read `.ai/prompts/ai.verify.prompt.md`
    - Execute verification using current workflow context
    - Use "plan verification mode" (default)
 3. After verification completes, display summary:
@@ -328,7 +328,7 @@ Please respond with 1 or 2.
 ```
 ✓ Verification complete
 
-Report: .ai-workflow/reports/verification-{name}-{timestamp}.report.md
+Report: .ai/reports/verification-{name}-{timestamp}.report.md
 
 {Display verdict from verification: PASS / PASS WITH WARNINGS / FAIL}
 ```
@@ -420,9 +420,9 @@ Proceeding with analysis of {N} documentation files...
 
 Read the following to extract key information:
 
-1. `.ai-workflow/features/{name}/request.md` - Original request
-2. `.ai-workflow/features/{name}/prd.md` - Product requirements
-3. `.ai-workflow/features/{name}/implementation-plan/plan.md` - Implementation details
+1. `.ai/features/{name}/request.md` - Original request
+2. `.ai/features/{name}/prd.md` - Product requirements
+3. `.ai/features/{name}/implementation-plan/plan.md` - Implementation details
 
 **Extract key information:**
 
@@ -679,7 +679,7 @@ Next steps:
 #### If User Selects Option 2 (Mark for Review)
 
 ```bash
-python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state in-review
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-review
 ```
 
 Show confirmation:
@@ -867,7 +867,7 @@ Starting verification...
 
 ✓ Verification complete
 
-Report: .ai-workflow/reports/verification-user-auth-20250108-143022.report.md
+Report: .ai/reports/verification-user-auth-20250108-143022.report.md
 
 Verdict: PASS WITH WARNINGS
 - Critical issues: 0

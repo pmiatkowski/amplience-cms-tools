@@ -45,7 +45,7 @@ You are an implementation engineer executing a pre-defined plan. Your goal is to
 **Parameter resolution:**
 
 1. If user provided explicit name (`/ai.execute feature-name`), use it
-2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
+2. Otherwise, read current context from `.ai/memory/global-state.yml`
 3. If current context is a bug:
 
 ```
@@ -70,11 +70,11 @@ Please either:
 
 **Verify feature exists:**
 
-Check if `.ai-workflow/features/{name}/` exists.
+Check if `.ai/features/{name}/` exists.
 
 ### 2. Verify Plan Exists
 
-Check `.ai-workflow/features/{name}/implementation-plan/plan.md` exists.
+Check `.ai/features/{name}/implementation-plan/plan.md` exists.
 
 If missing:
 
@@ -86,7 +86,7 @@ Run /ai.define-implementation-plan first.
 
 ### 3. Read Plan State
 
-Read `.ai-workflow/features/{name}/implementation-plan/plan-state.yml`:
+Read `.ai/features/{name}/implementation-plan/plan-state.yml`:
 
 ```yaml
 status: planning               # or in-progress, completed
@@ -142,13 +142,13 @@ First, check if this is Phase 1 AND the feature's `state.yml` status is `plannin
 
 ```bash
 # Only if Phase 1 AND state.yml status is 'planning'
-python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state in-progress
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-progress
 ```
 
 Then start the phase:
 
 ```bash
-python .ai-workflow/scripts/update-plan-state.py {feature-name} start-phase {N}
+python .ai/scripts/update-plan-state.py {feature-name} start-phase {N}
 ```
 
 **Step 2: Read phase details**
@@ -239,7 +239,7 @@ After all tasks are done:
 3. **Complete the phase**:
 
 ```bash
-python .ai-workflow/scripts/update-plan-state.py {feature-name} complete-phase {N}
+python .ai/scripts/update-plan-state.py {feature-name} complete-phase {N}
 ```
 
 **Step 6: Confirm completion**
@@ -263,7 +263,7 @@ Next steps:
 
 **Step 7: Check for next phase**
 
-Read `.ai-workflow/features/{name}/implementation-plan/plan-state.yml` to determine if more phases remain.
+Read `.ai/features/{name}/implementation-plan/plan-state.yml` to determine if more phases remain.
 
 After completing Phase {N}, the script automatically increments `current_phase` to {N+1}.
 
@@ -349,7 +349,7 @@ Please respond with 1, 2, or 3.
 - **If user responds "1":**
 
   ```bash
-  python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state completed
+  python .ai/scripts/update-plan-state.py {feature-name} update-feature-state completed
   ```
 
   Show confirmation:
@@ -363,7 +363,7 @@ Please respond with 1, 2, or 3.
 - **If user responds "2":**
 
   ```bash
-  python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state in-review
+  python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-review
   ```
 
   Show confirmation:
@@ -404,13 +404,13 @@ First, check if the feature's `state.yml` status is `planning`. If so, update it
 
 ```bash
 # Only if state.yml status is 'planning'
-python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state in-progress
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state in-progress
 ```
 
 Then, if plan-state.yml `status` is "planning":
 
 ```bash
-python .ai-workflow/scripts/update-plan-state.py {feature-name} start-plan
+python .ai/scripts/update-plan-state.py {feature-name} start-plan
 ```
 
 **Step 2: Execute phases sequentially**
@@ -420,7 +420,7 @@ For each phase (starting from `current_phase`):
 1. If phase not already `in-progress`, start it:
 
    ```bash
-   python .ai-workflow/scripts/update-plan-state.py {feature-name} start-phase {N}
+   python .ai/scripts/update-plan-state.py {feature-name} start-phase {N}
    ```
 
 2. Execute phase tasks (same as 5A Step 4)
@@ -428,7 +428,7 @@ For each phase (starting from `current_phase`):
 3. Complete phase:
 
    ```bash
-   python .ai-workflow/scripts/update-plan-state.py {feature-name} complete-phase {N}
+   python .ai/scripts/update-plan-state.py {feature-name} complete-phase {N}
    ```
 
 4. If blocker or ambiguity encountered: STOP and report to user
@@ -485,7 +485,7 @@ The feature `state.yml` is updated automatically during execution:
 
 ```bash
 # Update feature state.yml status
-python .ai-workflow/scripts/update-plan-state.py {feature-name} update-feature-state {status}
+python .ai/scripts/update-plan-state.py {feature-name} update-feature-state {status}
 
 # Valid statuses: clarifying, clarified, prd-draft, prd-approved, planning, in-progress, in-review, completed
 ```

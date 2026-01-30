@@ -47,7 +47,7 @@ You are a quality assurance analyst verifying alignment between implementation a
 **Parameter resolution:**
 
 1. If user provided explicit name (`/ai.verify feature-name` or `/ai.verify bug-name`), use it
-2. Otherwise, read current context from `.ai-workflow/memory/global-state.yml`
+2. Otherwise, read current context from `.ai/memory/global-state.yml`
 
 ```yaml
 current:
@@ -67,7 +67,7 @@ Please either:
 
 **Verify workflow exists:**
 
-Check if `.ai-workflow/{workflow_type}s/{name}/` exists.
+Check if `.ai/{workflow_type}s/{name}/` exists.
 
 If missing:
 
@@ -91,7 +91,7 @@ Available workflows:
 
 Check if implementation has started by examining:
 
-**For features**, read `.ai-workflow/features/{name}/implementation-plan/plan-state.yml`:
+**For features**, read `.ai/features/{name}/implementation-plan/plan-state.yml`:
 
 ```yaml
 status: in-progress | completed  # Either indicates implementation started
@@ -106,7 +106,7 @@ phases:
 - Search for `- [x]` (checked checkboxes) in the plan file
 - Any checked task indicates implementation has started
 
-**For bugs**, check `.ai-workflow/bugs/{name}/fix-plan.md`:
+**For bugs**, check `.ai/bugs/{name}/fix-plan.md`:
 
 - Search for `- [x]` (checked checkboxes)
 - Any checked task indicates implementation has started
@@ -170,7 +170,7 @@ Do NOT continue until user provides their choice (1, 2, or 3).
 
 **If workflow is a feature:**
 
-- Read `.ai-workflow/features/{name}/implementation-plan/plan.md`
+- Read `.ai/features/{name}/implementation-plan/plan.md`
 - If missing:
 
   ```
@@ -181,7 +181,7 @@ Do NOT continue until user provides their choice (1, 2, or 3).
 
 **If workflow is a bug:**
 
-- Read `.ai-workflow/bugs/{name}/fix-plan.md`
+- Read `.ai/bugs/{name}/fix-plan.md`
 - If missing:
 
   ```
@@ -221,8 +221,8 @@ Read the provided files.
 When user selects option 3 (verify both):
 
 1. First, read the plan artifact:
-   - For features: `.ai-workflow/features/{name}/implementation-plan/plan.md`
-   - For bugs: `.ai-workflow/bugs/{name}/fix-plan.md`
+   - For features: `.ai/features/{name}/implementation-plan/plan.md`
+   - For bugs: `.ai/bugs/{name}/fix-plan.md`
 
 2. Then, ask user for code file paths:
 
@@ -246,7 +246,7 @@ Example:
 
 **Step 1: Check if coding standards exist**
 
-Check if `.ai-workflow/memory/coding-rules/index.md` exists.
+Check if `.ai/memory/coding-rules/index.md` exists.
 
 If missing:
 
@@ -267,11 +267,11 @@ Generate a minimal PASS report and skip to step 7.
 
 Read in this order:
 
-1. `.ai-workflow/memory/coding-rules/index.md` - General principles and methodology
+1. `.ai/memory/coding-rules/index.md` - General principles and methodology
 2. Check for category-specific rules mentioned in index.md
 3. Read relevant category indices (e.g., `react/index.md`, `typescript/index.md`)
 4. Read up to 10-15 most relevant individual rule files based on:
-   - Tech stack (from `.ai-workflow/memory/tech-stack.md` if exists)
+   - Tech stack (from `.ai/memory/tech-stack.md` if exists)
    - Plan/code content (technologies mentioned)
    - Testing, architecture, security categories (high priority)
 
@@ -340,10 +340,10 @@ Compare the implementation plan/code against coding standards and identify discr
 
 **Step 1: Create reports directory**
 
-Check if `.ai-workflow/reports/` exists. If not, create it:
+Check if `.ai/reports/` exists. If not, create it:
 
 ```bash
-mkdir -p .ai-workflow/reports
+mkdir -p .ai/reports
 ```
 
 **Step 2: Generate timestamp**
@@ -514,14 +514,14 @@ All loaded standards were applicable to this verification.
 
 ```bash
 # Create copy as "latest" (Windows may not support symlinks without admin)
-copy .ai-workflow\reports\verification-{name}-{timestamp}.report.md .ai-workflow\reports\verification-{name}-latest.report.md
+copy .ai\reports\verification-{name}-{timestamp}.report.md .ai\reports\verification-{name}-latest.report.md
 ```
 
 **On Linux/Mac:**
 
 ```bash
 # Create symlink
-ln -sf verification-{name}-{timestamp}.report.md .ai-workflow/reports/verification-{name}-latest.report.md
+ln -sf verification-{name}-{timestamp}.report.md .ai/reports/verification-{name}-latest.report.md
 ```
 
 ### 7. Update State (Optional)
@@ -540,8 +540,8 @@ Display to user:
 ```
 ✓ Verification complete for '{workflow-name}'
 
-Report generated: .ai-workflow/reports/verification-{name}-{timestamp}.report.md
-Latest report: .ai-workflow/reports/verification-{name}-latest.report.md
+Report generated: .ai/reports/verification-{name}-{timestamp}.report.md
+Latest report: .ai/reports/verification-{name}-latest.report.md
 
 Verdict: {PASS | PASS WITH WARNINGS | FAIL}
 - Critical issues: {count}
@@ -558,7 +558,7 @@ Verdict: {PASS | PASS WITH WARNINGS | FAIL}
 ✓ All clear! Ready to proceed with implementation.
 
 Next steps:
-  1. Review report: cat .ai-workflow/reports/verification-{name}-latest.report.md
+  1. Review report: cat .ai/reports/verification-{name}-latest.report.md
   2. {If FAIL: Fix issues and re-verify}
      {If PASS/WARNINGS: Proceed with /ai.execute}
 ```
@@ -606,7 +606,7 @@ Verdict: PASS
 - Warnings: 2
 - Info: 3
 
-Report: .ai-workflow/reports/verification-user-authentication-20250103-143022.report.md
+Report: .ai/reports/verification-user-authentication-20250103-143022.report.md
 
 💡 Warnings found. Consider reviewing before implementation.
 
@@ -712,7 +712,7 @@ Verdict: PASS WITH WARNINGS
 - Warnings: 3
 - Info: 2
 
-Report: .ai-workflow/reports/verification-user-authentication-20250130-143022.report.md
+Report: .ai/reports/verification-user-authentication-20250130-143022.report.md
 ```
 
 ---

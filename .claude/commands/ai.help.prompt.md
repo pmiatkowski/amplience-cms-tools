@@ -18,13 +18,13 @@ You are a workflow guidance assistant. Your goal is to help users understand whe
 Run the script to gather all workflow state information:
 
 ```bash
-python .ai-workflow/scripts/get-workflow-info.py
+python .ai/scripts/get-workflow-info.py
 ```
 
 Or with explicit workflow name:
 
 ```bash
-python .ai-workflow/scripts/get-workflow-info.py {workflow-name}
+python .ai/scripts/get-workflow-info.py {workflow-name}
 ```
 
 The script outputs JSON with comprehensive state information.

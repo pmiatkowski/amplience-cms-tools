@@ -341,7 +341,9 @@ describe('runUserCommandSets', () => {
 
     expect(prompts.promptForCommandSet).not.toHaveBeenCalled();
     expect(commandSetConfigService.initializeCommandSetConfig).not.toHaveBeenCalled();
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Command sets file not found'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Command sets file not found')
+    );
   });
 });
 
@@ -354,7 +356,9 @@ describe('displayManualCreationInstructions', () => {
   it('should display helpful manual creation instructions', () => {
     displayManualCreationInstructions('/custom/command-sets.json');
 
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Command sets file not found'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Command sets file not found')
+    );
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('/custom/command-sets.json'));
   });
 });

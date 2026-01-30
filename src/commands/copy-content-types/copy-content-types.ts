@@ -87,13 +87,7 @@ export async function runCopyContentTypes(): Promise<void> {
       return;
     }
 
-    const defaultSchemaId = process.env.AMP_DEFAULT_SCHEMA_ID;
-    const filterPattern =
-      (
-        await promptForSchemaIdFilter(
-          defaultSchemaId ? { defaultValue: defaultSchemaId } : undefined
-        )
-      )?.trim() ?? '';
+    const filterPattern = (await promptForSchemaIdFilter())?.trim() ?? '';
 
     let filteredContentTypes = missingContentTypes;
 

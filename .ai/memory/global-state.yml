@@ -1,7 +1,7 @@
 version: 1
 current:
-  name: enhance-user-sets-commands
-  workflow_type: feature
+  name: schema-id-filter-default
+  workflow_type: bug
   set_date: 2026-01-30
   set_method: auto
 last_updated: 2026-01-30

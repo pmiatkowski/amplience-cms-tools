@@ -8,12 +8,13 @@ export async function promptForSchemaIdFilter({
 }: {
   defaultValue?: string;
 } = {}): Promise<string> {
+  const resolvedDefaultValue = defaultValue ?? process.env.AMP_DEFAULT_SCHEMA_ID ?? '';
   const { schemaIdFilter } = await inquirer.prompt([
     {
       type: 'input',
       name: 'schemaIdFilter',
       message: 'Filter by schema ID (leave blank for any):',
-      default: defaultValue ?? '',
+      default: resolvedDefaultValue,
       validate: (value: string): boolean | string => {
         if (value.trim() === '') {
           return true;

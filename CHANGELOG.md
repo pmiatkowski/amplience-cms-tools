@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.6.0...v1.6.1) (2026-01-30)
+
+
+### Bug Fixes
+
+* enhance user sets commands ([#18](https://github.com/pmiatkowski/amplience-cms-tools/issues/18)) ([fa35bd6](https://github.com/pmiatkowski/amplience-cms-tools/commit/fa35bd63f831ac5af13e0163ba4b805759751b52))
+
 # [1.6.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.5.1...v1.6.0) (2026-01-29)
 
 

@@ -8,6 +8,7 @@ export * from './cleanup-folder';
 export * from './copy-content-type-schemas';
 export * from './copy-content-types';
 export * from './copy-folder-with-content';
+export * from './full-hierarchy-copy';
 export * from './list-folder-tree';
 export * from './manage-extensions';
 export * from './recreate-content-items';

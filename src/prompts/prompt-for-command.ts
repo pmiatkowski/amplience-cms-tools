@@ -43,6 +43,10 @@ export async function promptForCommand(): Promise<CommandChoice> {
         { name: 'Copy folder with its content-items', value: 'copy-folder-with-content' },
         { name: 'Copy content-items (including hierarchies)', value: 'recreate-content-items' },
         {
+          name: 'Full hierarchy copy with embedded content (copies hierarchy trees including all Content Links and References)',
+          value: 'full-hierarchy-copy',
+        },
+        {
           name: 'Copy folders tree structure (without content-items)',
           value: 'recreate-folder-structure',
         },
@@ -75,6 +79,7 @@ type CommandChoice =
   | 'recreate-folder-structure'
   | 'recreate-content-items'
   | 'copy-folder-with-content'
+  | 'full-hierarchy-copy'
   | 'copy-content-type-schemas'
   | 'copy-content-types'
   | 'sync-content-type-properties'

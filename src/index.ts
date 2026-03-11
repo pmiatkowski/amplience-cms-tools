@@ -5,6 +5,7 @@ import { runCleanupFolderCommand } from './commands/cleanup-folder';
 import { copyContentTypeSchemas } from './commands/copy-content-type-schemas';
 import { runCopyContentTypes } from './commands/copy-content-types';
 import { runCopyFolderWithContent } from './commands/copy-folder-with-content';
+import { runFullHierarchyCopy } from './commands/full-hierarchy-copy';
 import { runListFolderTree } from './commands/list-folder-tree';
 import { runManageExtensions } from './commands/manage-extensions';
 import { runRecreateContentItems } from './commands/recreate-content-items';
@@ -89,6 +90,9 @@ async function main(): Promise<void> {
         break;
       case 'recreate-content-items':
         await runRecreateContentItems();
+        break;
+      case 'full-hierarchy-copy':
+        await runFullHierarchyCopy();
         break;
       case 'copy-folder-with-content':
         await runCopyFolderWithContent();

@@ -231,12 +231,12 @@ The CLI tool provides 16 specialized commands for different bulk operations:
 
 ### 1. VSE Management
 
-**Command**: VSE Management
-**Documentation**: [vse-management.md](docs/vse-management.md)
+**Command**: VSE Management **Documentation**:
+[vse-management.md](docs/vse-management.md)
 
-Provides operations for managing Visual Studio Edition (VSE) visualization settings
-across multiple content types. **Bulk Update Visualizations** operation enables
-efficient updates to visualization configurations with support for:
+Provides operations for managing Visual Studio Edition (VSE) visualization
+settings across multiple content types. **Bulk Update Visualizations** operation
+enables efficient updates to visualization configurations with support for:
 
 - Content type selection via API regex filtering or JSON file
 - Visualization configuration from JSON file with hub-specific URL replacement
@@ -254,8 +254,8 @@ support for hierarchical structures and complex filtering options.
 
 ### 3. Cleanup Folder
 
-**Command**: Cleanup Folder
-**Documentation**: [cleanup-folder.md](docs/cleanup-folder.md)
+**Command**: Cleanup Folder **Documentation**:
+[cleanup-folder.md](docs/cleanup-folder.md)
 
 Moves all content items from a folder to a designated deleted folder, archives
 them, and removes empty folder structures systematically.
@@ -270,8 +270,8 @@ destination, supporting cross-hub content migration and duplication.
 
 ### 5. List Folder Tree Structure
 
-**Command**: List folder tree structure
-**Documentation**: [list-folder-tree.md](docs/list-folder-tree.md)
+**Command**: List folder tree structure **Documentation**:
+[list-folder-tree.md](docs/list-folder-tree.md)
 
 Visualizes repository folder hierarchy in multiple formats (tree, table, JSON)
 with detailed statistics and navigation options.
@@ -284,10 +284,22 @@ with detailed statistics and navigation options.
 Recreates content items across different hubs, repositories, and folders with
 comprehensive filtering, hierarchy handling, and locale management.
 
+### 6a. Full Hierarchy Copy
+
+**Command**: Full Hierarchy Copy  
+**Documentation**: [full-hierarchy-copy.md](docs/full-hierarchy-copy.md)
+
+Copies entire hierarchy trees including all embedded content items (Content
+Links, Content References, Inline Content Links) between Amplience hubs.
+Automatically discovers and copies all referenced content, replaces source IDs
+with target IDs in content bodies, validates schema compatibility before
+execution, and mirrors folder structure in the target hub. Supports three
+duplicate-handling strategies (skip, update, rename) and dry-run mode.
+
 ### 7. Recreate Folder Structure
 
-**Command**: Recreate Folder Structure
-**Documentation**: [recreate-folder-structure.md](docs/recreate-folder-structure.md)
+**Command**: Recreate Folder Structure **Documentation**:
+[recreate-folder-structure.md](docs/recreate-folder-structure.md)
 
 Replicates folder hierarchies from source to target locations without content,
 perfect for environment setup and structural consistency.
@@ -303,8 +315,8 @@ synchronization.
 
 ### 9. Archive Content Type Schemas
 
-**Command**: Archive Content Type Schemas
-**Documentation**: [archive-content-type-schemas.md](docs/archive-content-type-schemas.md)
+**Command**: Archive Content Type Schemas **Documentation**:
+[archive-content-type-schemas.md](docs/archive-content-type-schemas.md)
 
 Archives content type schemas and their dependencies (content types and content
 items) in the correct dependency order to maintain data integrity and prevent
@@ -320,8 +332,8 @@ validation and repository assignments.
 
 ### 11. Sync Content Type Properties
 
-**Command**: Sync Content Type Properties
-**Documentation**: [sync-content-type-properties.md](docs/sync-content-type-properties.md)
+**Command**: Sync Content Type Properties **Documentation**:
+[sync-content-type-properties.md](docs/sync-content-type-properties.md)
 
 Synchronizes content types with their schemas on a target hub, ensuring content
 types reflect the latest schema versions with flexible filtering options.
@@ -337,8 +349,8 @@ parent-child relationships and handling locale strategies for delivery keys.
 
 ### 13. Bulk Sync Hierarchies
 
-**Command**: Bulk Sync Hierarchies
-**Documentation**: [bulk-sync-hierarchies.md](docs/bulk-sync-hierarchies.md)
+**Command**: Bulk Sync Hierarchies **Documentation**:
+[bulk-sync-hierarchies.md](docs/bulk-sync-hierarchies.md)
 
 Synchronize multiple content item hierarchies from source to target
 hub/repository in a single operation. Features multi-select interface, automatic
@@ -355,8 +367,8 @@ prefix/suffix patterns and optional publishing workflow.
 
 ### 15. Manage Extensions
 
-**Command**: Manage Extensions
-**Documentation**: [export-extensions.md](docs/export-extensions.md) |
+**Command**: Manage Extensions **Documentation**:
+[export-extensions.md](docs/export-extensions.md) |
 [import-extensions.md](docs/import-extensions.md)
 
 Provides a submenu for extension management operations with two capabilities:
@@ -377,8 +389,8 @@ Future enhancements will add delete capabilities.
 
 ### 16. User Command Sets
 
-**Command**: User Sets
-**Documentation**: [user-command-sets.md](docs/user-command-sets.md)
+**Command**: User Sets **Documentation**:
+[user-command-sets.md](docs/user-command-sets.md)
 
 Create and execute predefined sequences of CLI commands, allowing users to
 bundle commonly used operations into reusable sets. Features include:

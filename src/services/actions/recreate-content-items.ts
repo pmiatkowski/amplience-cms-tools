@@ -178,7 +178,11 @@ export async function recreateContentItems(
 
             // Assign delivery key if present
             if (entry.sourceItem.body._meta?.deliveryKey) {
-              await assignDeliveryKey(targetService, newItem.id, entry.sourceItem.body._meta.deliveryKey);
+              await assignDeliveryKey(
+                targetService,
+                newItem.id,
+                entry.sourceItem.body._meta.deliveryKey
+              );
               console.log(`  ✓ Assigned delivery key: ${entry.sourceItem.body._meta.deliveryKey}`);
             }
 

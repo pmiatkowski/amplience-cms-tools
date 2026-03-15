@@ -12,7 +12,6 @@ import { isContentReference } from './content-reference-discovery';
 import { CONTENT_REFERENCE_SCHEMAS } from './types';
 import type { BodyTransformOptions, DetectedReference } from './types';
 
-
 /**
  * Deep clone and transform an object recursively
  * Handles nested objects and arrays
@@ -96,7 +95,6 @@ export function deepTransform(
   return result;
 }
 
-
 /**
  * Nullify all content references in a body (for phase 1 of circular ref handling)
  * Sets reference IDs to null while preserving structure
@@ -104,9 +102,7 @@ export function deepTransform(
  * @param body - Original body from source item
  * @returns New body with all references nullified
  */
-export function nullifyReferences(
-  body: Record<string, unknown>
-): Record<string, unknown> {
+export function nullifyReferences(body: Record<string, unknown>): Record<string, unknown> {
   const transformer = (): { id: string | null } | null => {
     // Return null to indicate nullification
     return null;
@@ -114,7 +110,6 @@ export function nullifyReferences(
 
   return deepTransform(body, transformer, 'body') as Record<string, unknown>;
 }
-
 
 /**
  * Prepare item body for phase 1 creation (with circular refs nullified)
@@ -149,7 +144,6 @@ export function prepareBodyForPhase1Creation(
   return prepareItemBody(transformedBody, sourceItem);
 }
 
-
 /**
  * Prepare item body for phase 2 update (resolve circular refs)
  *
@@ -182,7 +176,6 @@ export function prepareBodyForPhase2Update(
   return transformedBody;
 }
 
-
 /**
  * Prepare item body for creation by removing read-only properties
  * Similar to prepareItemBodyForCreation in recreate-content-items.ts
@@ -206,7 +199,6 @@ function prepareItemBody(
 
   return prepared;
 }
-
 
 /**
  * Resolve references in a body using the source-to-target ID map (phase 2)
@@ -233,7 +225,6 @@ export function resolveReferences(
 
   return deepTransform(body, transformer, 'body') as Record<string, unknown>;
 }
-
 
 /**
  * Transform a content item body by replacing content references with target IDs
@@ -273,7 +264,6 @@ export function transformBodyReferences(
 
   return deepTransform(body, transformer, 'body') as Record<string, unknown>;
 }
-
 
 /**
  * Transform a single reference object
@@ -324,7 +314,6 @@ export function transformReference(
   };
 }
 
-
 /**
  * Validate that all references in a body have valid target IDs
  *
@@ -344,7 +333,7 @@ export function validateResolvedReferences(
     }
 
     if (Array.isArray(obj)) {
-      obj.forEach((item) => scanForUnresolved(item));
+      obj.forEach(item => scanForUnresolved(item));
 
       return;
     }

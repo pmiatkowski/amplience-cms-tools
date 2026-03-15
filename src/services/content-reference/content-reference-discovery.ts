@@ -19,7 +19,6 @@ type ContentReferenceObject = {
   };
 };
 
-
 /**
  * Batch fetch multiple content items in parallel for performance
  *
@@ -49,7 +48,7 @@ export async function batchFetchItems(
 
   // Process each batch
   for (const batch of batches) {
-    const fetchPromises = batch.map(async (id) => {
+    const fetchPromises = batch.map(async id => {
       const item = await sourceService.getContentItemWithDetails(id);
       if (item !== null) {
         results.set(id, item);
@@ -117,9 +116,6 @@ function scanObjectForReferences(
   }
 }
 
-
-
-
 /**
  * Recursively discover all content items referenced by the initial set
  *
@@ -170,11 +166,6 @@ export async function discoverAllReferences(
   return discovered;
 }
 
-
-
-
-
-
 /**
  * Get the set of item IDs that are referenced but not in the discovered set
  *
@@ -203,11 +194,6 @@ export function getMissingReferenceIds(
   return missingIds;
 }
 
-
-
-
-
-
 /**
  * Check if an object is a content reference or content link
  *
@@ -219,9 +205,7 @@ export function getMissingReferenceIds(
  * @param obj - The object to check
  * @returns Type guard result - true if obj is a content reference
  */
-export function isContentReference(
-  obj: unknown
-): obj is ContentReferenceObject {
+export function isContentReference(obj: unknown): obj is ContentReferenceObject {
   // Check if obj is null or not an object
   if (obj === null || typeof obj !== 'object') {
     return false;
@@ -257,9 +241,6 @@ export function isContentReference(
   );
 }
 
-
-
-
 /**
  * Scan a content item body recursively for all content references
  *
@@ -277,7 +258,6 @@ export function scanBodyForReferences(
   return references;
 }
 
-
 /**
  * Scan a single content item and return all references found
  *
@@ -288,7 +268,7 @@ export function scanContentItem(
   item: Amplience.ContentItem | Amplience.ContentItemWithDetails
 ): ReferenceScanResult {
   const references = scanBodyForReferences(item.body as Record<string, unknown>, 'body');
-  const referencedItemIds = [...new Set(references.map((ref) => ref.sourceId))];
+  const referencedItemIds = [...new Set(references.map(ref => ref.sourceId))];
 
   return {
     sourceItemId: item.id,

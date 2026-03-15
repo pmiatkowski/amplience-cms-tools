@@ -8,9 +8,7 @@
  * 4. Determines creation order
  * 5. Executes two-phase creation for circular references
  */
-import {
-  scanContentItem,
-} from './content-reference-discovery';
+import { scanContentItem } from './content-reference-discovery';
 import { buildDependencyGraph } from './content-reference-graph';
 import {
   createReferenceRegistry,
@@ -29,8 +27,6 @@ import {
 } from './content-reference-transform';
 import type { ReferenceResolutionResult, ReferenceRegistry } from './types';
 import type { AmplienceService } from '../amplience-service';
-
-
 
 /**
  * Execute phase 1: Create items with circular references nullified
@@ -101,11 +97,6 @@ export async function executePhase1Creation(
   return { created, failed, errors };
 }
 
-
-
-
-
-
 /**
  * Execute phase 2: Update items to resolve circular references
  */
@@ -133,10 +124,7 @@ export async function executePhase2Update(
 
     try {
       // Prepare body for phase 2 (resolve refs with target IDs)
-      const body = prepareBodyForPhase2Update(
-        entry.sourceItem,
-        registry.sourceToTargetIdMap
-      );
+      const body = prepareBodyForPhase2Update(entry.sourceItem, registry.sourceToTargetIdMap);
 
       // Fetch current item to get version
       const currentItem = await targetService.getContentItemWithDetails(entry.targetId);
@@ -174,18 +162,10 @@ export async function executePhase2Update(
   return { updated, failed, errors };
 }
 
-
-
-
-
-
-
 /**
  * Get pre-flight summary for user confirmation
  */
-export function getPreFlightSummary(
-  resolution: ReferenceResolutionResult
-): {
+export function getPreFlightSummary(resolution: ReferenceResolutionResult): {
   summary: string;
   warnings: string[];
   details: {
@@ -225,7 +205,8 @@ export function getPreFlightSummary(
     );
   }
 
-  const summary = `Discovered ${resolution.totalDiscovered} items: ` +
+  const summary =
+    `Discovered ${resolution.totalDiscovered} items: ` +
     `${resolution.matchedCount} already exist in target, ` +
     `${resolution.toCreateCount} need to be created, ` +
     `${resolution.unresolvedCount} could not be matched`;
@@ -244,11 +225,6 @@ export function getPreFlightSummary(
   };
 }
 
-
-
-
-
-
 /**
  * Main orchestration function that performs full reference resolution
  * 1. Discovers all references recursively
@@ -256,9 +232,7 @@ export function getPreFlightSummary(
  * 3. Builds dependency graph
  * 4. Determines creation order
  */
-export async function resolveContentReferences(
-  options: ResolverOptions
-): Promise<ResolverResult> {
+export async function resolveContentReferences(options: ResolverOptions): Promise<ResolverResult> {
   const {
     sourceService,
     targetService,
@@ -276,8 +250,12 @@ export async function resolveContentReferences(
     onProgress?.('discovery', 0, initialItemIds.length);
 
     // Fetch all items in source repository to determine external references
-    const sourceRepoItems = await sourceService.getAllContentItems(sourceRepositoryId, () => {}, {});
-    const sourceRepoItemIds = new Set(sourceRepoItems.map((item) => item.id));
+    const sourceRepoItems = await sourceService.getAllContentItems(
+      sourceRepositoryId,
+      () => {},
+      {}
+    );
+    const sourceRepoItemIds = new Set(sourceRepoItems.map(item => item.id));
 
     // Process each initial item and discover its references
     const processedIds = new Set<string>();
@@ -394,9 +372,6 @@ export async function resolveContentReferences(
   }
 }
 
-
-
-
 /**
  * Options for the content reference resolver
  */
@@ -413,8 +388,7 @@ export type ResolverOptions = {
   initialItemIds: string[];
   /** Progress callback for UI updates */
   onProgress?: (phase: string, current: number, total: number) => void;
-}
-
+};
 
 /**
  * Result of the content reference resolution
@@ -428,4 +402,4 @@ export type ResolverResult = {
   registry: ReferenceRegistry;
   /** Error message if resolution failed */
   error?: string;
-}
+};

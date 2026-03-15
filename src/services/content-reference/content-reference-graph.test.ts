@@ -14,10 +14,7 @@ import {
   getTransitiveDependencies,
   type DependencyGraph,
 } from './content-reference-graph';
-import {
-  createReferenceRegistry,
-  registerItem,
-} from './content-reference-mapping';
+import { createReferenceRegistry, registerItem } from './content-reference-mapping';
 import type { DetectedReference, ReferenceRegistry } from './types';
 
 // Helper function to create a mock content item with details
@@ -66,14 +63,12 @@ function createMockReference(
 }
 
 // Helper to create a simple graph for testing
-function createSimpleRegistry(
-  items: { id: string; deps: string[] }[]
-): ReferenceRegistry {
+function createSimpleRegistry(items: { id: string; deps: string[] }[]): ReferenceRegistry {
   const registry = createReferenceRegistry();
 
   for (const { id, deps } of items) {
     const item = createMockContentItem(id, `Item ${id}`, 'https://schema.test.com/test');
-    const refs = deps.map((depId) =>
+    const refs = deps.map(depId =>
       createMockReference(depId, 'https://schema.test.com/test', `body.link-${depId}`)
     );
     registerItem(registry, item, refs);
@@ -275,9 +270,7 @@ describe('detectStronglyConnectedComponents', () => {
   });
 
   it('should detect self-cycle A -> A', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: ['a'] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: ['a'] }]);
 
     const graph = buildDependencyGraph(registry);
     const sccs = detectStronglyConnectedComponents(graph);
@@ -315,7 +308,7 @@ describe('detectStronglyConnectedComponents', () => {
     expect(sccs.length).toBe(2);
 
     // Each SCC should have 2 nodes
-    const sccSizes = sccs.map((scc) => scc.length);
+    const sccSizes = sccs.map(scc => scc.length);
     expect(sccSizes).toContain(2);
     expect(sccSizes).toContain(2);
   });
@@ -338,9 +331,7 @@ describe('detectStronglyConnectedComponents', () => {
   });
 
   it('should not include single nodes without self-reference', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: [] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: [] }]);
 
     const graph = buildDependencyGraph(registry);
     const sccs = detectStronglyConnectedComponents(graph);
@@ -461,9 +452,7 @@ describe('getPhase2Items', () => {
   });
 
   it('should handle self-referencing items', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: ['a'] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: ['a'] }]);
 
     const graph = buildDependencyGraph(registry);
     const phase2 = getPhase2Items(graph, graph.circularGroups);
@@ -541,9 +530,7 @@ describe('wouldCreateCycle', () => {
 
 describe('getDependencyDepth', () => {
   it('should return 0 for items with no dependencies', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: [] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: [] }]);
 
     const graph = buildDependencyGraph(registry);
     expect(getDependencyDepth(graph, 'a')).toBe(0);
@@ -596,9 +583,7 @@ describe('getDependencyDepth', () => {
   });
 
   it('should return 0 for non-existent node', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: [] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: [] }]);
 
     const graph = buildDependencyGraph(registry);
     expect(getDependencyDepth(graph, 'nonexistent')).toBe(0);
@@ -607,9 +592,7 @@ describe('getDependencyDepth', () => {
 
 describe('getTransitiveDependencies', () => {
   it('should return empty set for items with no dependencies', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: [] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: [] }]);
 
     const graph = buildDependencyGraph(registry);
     const deps = getTransitiveDependencies(graph, 'a');
@@ -668,9 +651,7 @@ describe('getTransitiveDependencies', () => {
   });
 
   it('should return empty set for non-existent node', () => {
-    const registry = createSimpleRegistry([
-      { id: 'a', deps: [] },
-    ]);
+    const registry = createSimpleRegistry([{ id: 'a', deps: [] }]);
 
     const graph = buildDependencyGraph(registry);
     const deps = getTransitiveDependencies(graph, 'nonexistent');

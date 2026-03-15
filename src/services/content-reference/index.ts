@@ -1,4 +1,3 @@
-
 // Discovery functions
 export {
   batchFetchItems,
@@ -8,7 +7,6 @@ export {
   scanBodyForReferences,
   scanContentItem,
 } from './content-reference-discovery';
-
 
 /**
  * Content Reference Service Module
@@ -34,8 +32,6 @@ export {
   type TargetMatchResult,
 } from './types';
 
-
-
 // Graph functions
 export {
   buildDependencyGraph,
@@ -50,7 +46,6 @@ export {
   topologicalSort,
   wouldCreateCycle,
 } from './content-reference-graph';
-
 
 // Mapping functions
 export {
@@ -69,8 +64,6 @@ export {
   recordMapping,
   registerItem,
 } from './content-reference-mapping';
-
-
 
 // Report functions
 export {
@@ -93,10 +86,6 @@ export {
   type UnresolvedItemReport,
 } from './content-reference-report';
 
-
-
-
-
 // Transform functions
 export {
   deepTransform,
@@ -109,11 +98,6 @@ export {
   validateResolvedReferences,
 } from './content-reference-transform';
 
-
-
-
-
-
 // Resolver functions
 export {
   executePhase1Creation,
@@ -123,9 +107,6 @@ export {
   type ResolverOptions,
   type ResolverResult,
 } from './content-reference-resolver';
-
-
-
 
 // Publisher functions
 export {

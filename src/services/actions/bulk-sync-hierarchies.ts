@@ -83,7 +83,9 @@ export async function bulkSyncHierarchies(
           success: true,
           itemsCreated: syncResult.itemsCreated,
           itemsRemoved: syncResult.itemsRemoved,
-          ...(syncResult.referenceResolution && { referenceResolution: syncResult.referenceResolution }),
+          ...(syncResult.referenceResolution && {
+            referenceResolution: syncResult.referenceResolution,
+          }),
         });
       } catch (error) {
         // Track failure but continue with remaining hierarchies

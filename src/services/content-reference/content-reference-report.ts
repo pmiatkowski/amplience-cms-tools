@@ -9,8 +9,6 @@ import * as path from 'path';
 import { detectCircularGroups } from './content-reference-mapping';
 import type { ReferenceResolutionResult, ReferenceRegistry } from './types';
 
-
-
 /**
  * Report for a circular reference group
  */
@@ -21,11 +19,7 @@ export type CircularGroupReport = {
   itemIds: string[];
   /** Labels of items in the circular group */
   itemLabels: string[];
-}
-
-
-
-
+};
 
 /**
  * Report for a created item
@@ -39,11 +33,7 @@ export type CreatedItemReport = {
   label: string;
   /** Whether this item had circular references */
   hadCircularRefs: boolean;
-}
-
-
-
-
+};
 
 /**
  * Report for a discovered item
@@ -59,12 +49,7 @@ export type DiscoveredItemReport = {
   referenceCount: number;
   /** Number of items that reference this item */
   referencedByCount: number;
-}
-
-
-
-
-
+};
 
 /**
  * Display a summary of the report to the console
@@ -112,12 +97,6 @@ export function displayReportSummary(report: ReferenceReport): void {
   console.log('\n==========================================\n');
 }
 
-
-
-
-
-
-
 /**
  * Report for an external reference
  */
@@ -128,13 +107,7 @@ export type ExternalReferenceReport = {
   referencedByIds: string[];
   /** Note about the external reference */
   note: string;
-}
-
-
-
-
-
-
+};
 
 /**
  * Format the report as markdown for file output
@@ -175,7 +148,9 @@ export function formatReportAsMarkdown(report: ReferenceReport): string {
     lines.push('| Source ID | Source Label | Target ID | Match Method |');
     lines.push('|-----------|--------------|-----------|--------------|');
     for (const item of report.matched) {
-      lines.push(`| ${item.sourceId} | ${item.sourceLabel} | ${item.targetId} | ${item.matchMethod} |`);
+      lines.push(
+        `| ${item.sourceId} | ${item.sourceLabel} | ${item.targetId} | ${item.matchMethod} |`
+      );
     }
     lines.push('');
   }
@@ -189,7 +164,9 @@ export function formatReportAsMarkdown(report: ReferenceReport): string {
     lines.push('| Source ID | Target ID | Label | Had Circular Refs |');
     lines.push('|-----------|-----------|-------|-------------------|');
     for (const item of report.created) {
-      lines.push(`| ${item.sourceId} | ${item.targetId} | ${item.label} | ${item.hadCircularRefs ? 'Yes' : 'No'} |`);
+      lines.push(
+        `| ${item.sourceId} | ${item.targetId} | ${item.label} | ${item.hadCircularRefs ? 'Yes' : 'No'} |`
+      );
     }
     lines.push('');
   }
@@ -249,21 +226,15 @@ export function formatReportAsMarkdown(report: ReferenceReport): string {
     lines.push('| Source ID | Label | Schema | References | Referenced By |');
     lines.push('|-----------|-------|--------|------------|---------------|');
     for (const item of report.discovered) {
-      lines.push(`| ${item.sourceId} | ${item.label} | ${item.schemaId} | ${item.referenceCount} | ${item.referencedByCount} |`);
+      lines.push(
+        `| ${item.sourceId} | ${item.label} | ${item.schemaId} | ${item.referenceCount} | ${item.referencedByCount} |`
+      );
     }
     lines.push('');
   }
 
   return lines.join('\n');
 }
-
-
-
-
-
-
-
-
 
 /**
  * Format rollback guidance as markdown
@@ -318,15 +289,6 @@ export function formatRollbackGuidanceAsMarkdown(guidance: RollbackGuidance): st
   return lines.join('\n');
 }
 
-
-
-
-
-
-
-
-
-
 /**
  * Generate a comprehensive report from resolution results
  *
@@ -369,7 +331,8 @@ export function generateResolutionReport(
       });
     } else if (entry.targetId) {
       // Check if it was matched or created
-      const wasCreated = !registry.sourceToTargetIdMap.has(sourceId) ||
+      const wasCreated =
+        !registry.sourceToTargetIdMap.has(sourceId) ||
         registry.unresolvedIds.has(sourceId) === false;
 
       if (wasCreated && circularItemIds.has(sourceId)) {
@@ -444,16 +407,6 @@ export function generateResolutionReport(
     generatedAt: new Date().toISOString(),
   };
 }
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Generate rollback guidance for the resolution
@@ -549,7 +502,8 @@ export function generateRollbackGuidance(
 
   return {
     title: 'Content Reference Resolution Rollback Guide',
-    introduction: `This guide provides steps to undo the content reference resolution operation ` +
+    introduction:
+      `This guide provides steps to undo the content reference resolution operation ` +
       `that created ${createdItems.length} items in the target hub.`,
     prerequisites: [
       'Access to the target hub with archive/delete permissions',
@@ -561,17 +515,6 @@ export function generateRollbackGuidance(
     generatedAt: new Date().toISOString(),
   };
 }
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Report for a matched item
@@ -587,17 +530,7 @@ export type MatchedItemReport = {
   targetLabel: string;
   /** Method used for matching */
   matchMethod: 'delivery_key' | 'schema_label';
-}
-
-
-
-
-
-
-
-
-
-
+};
 
 /**
  * Complete reference resolution report
@@ -619,16 +552,7 @@ export type ReferenceReport = {
   circularGroups: CircularGroupReport[];
   /** Timestamp when report was generated */
   generatedAt: string;
-}
-
-
-
-
-
-
-
-
-
+};
 
 /**
  * Summary statistics for the report
@@ -650,15 +574,7 @@ export type ReportSummary = {
   phase1Count: number;
   /** Phase 2 update count (items with resolved refs) */
   phase2Count: number;
-}
-
-
-
-
-
-
-
-
+};
 
 /**
  * Rollback guidance document
@@ -676,14 +592,7 @@ export type RollbackGuidance = {
   warnings: string[];
   /** Generated timestamp */
   generatedAt: string;
-}
-
-
-
-
-
-
-
+};
 
 /**
  * Rollback step for guidance
@@ -697,11 +606,7 @@ export type RollbackStep = {
   command?: string;
   /** Warning or note about the step */
   warning?: string;
-}
-
-
-
-
+};
 
 /**
  * Save report to file in the reports directory
@@ -733,8 +638,6 @@ export function saveReportToFile(
   return filePath;
 }
 
-
-
 /**
  * Save rollback guidance to file
  *
@@ -765,7 +668,6 @@ export function saveRollbackGuidanceToFile(
   return filePath;
 }
 
-
 /**
  * Report for an unresolved item
  */
@@ -778,4 +680,4 @@ export type UnresolvedItemReport = {
   reason: string;
   /** Suggested action for resolution */
   suggestedAction: string;
-}
+};

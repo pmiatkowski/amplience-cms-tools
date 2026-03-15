@@ -25,10 +25,7 @@ type TestBody = {
 };
 
 // Helper to create mock content items
-function createMockContentItem(
-  id: string,
-  body: TestBody
-): Amplience.ContentItemWithDetails {
+function createMockContentItem(id: string, body: TestBody): Amplience.ContentItemWithDetails {
   return {
     id,
     label: `Item ${id}`,
@@ -344,7 +341,9 @@ describe('deepTransform', () => {
 
     const result = deepTransform(obj, transformer, '') as TestBody;
 
-    expect((((result.level1 as TestBody).level2 as TestBody).ref as TestBody).id).toBe('transformed');
+    expect((((result.level1 as TestBody).level2 as TestBody).ref as TestBody).id).toBe(
+      'transformed'
+    );
   });
 
   it('should transform arrays', () => {

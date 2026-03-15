@@ -35,7 +35,6 @@ export type LocaleStrategy = {
   targetLocale?: string;
 };
 
-
 /**
  * Execute hierarchy synchronization action
  */
@@ -112,8 +111,6 @@ export async function syncHierarchy(options: SyncHierarchyOptions): Promise<Sync
   }
 }
 
-
-
 /**
  * Options for hierarchy synchronization
  */
@@ -130,7 +127,6 @@ export type SyncHierarchyOptions = {
   /** Whether to resolve content references in item bodies (default: true) */
   resolveReferences?: boolean;
 };
-
 
 /**
  * Result of a hierarchy synchronization operation

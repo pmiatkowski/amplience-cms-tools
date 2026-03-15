@@ -100,11 +100,7 @@ describe('replicatePublishingStatus', () => {
 
     vi.mocked(mockTargetService.publishContentItem).mockResolvedValue({ success: true });
 
-    const result = await replicatePublishingStatus(
-      mockTargetService,
-      registry,
-      sourceStatusMap
-    );
+    const result = await replicatePublishingStatus(mockTargetService, registry, sourceStatusMap);
 
     expect(result.published).toBe(1);
     expect(result.failed).toBe(0);
@@ -118,11 +114,7 @@ describe('replicatePublishingStatus', () => {
 
     vi.mocked(mockTargetService.publishContentItem).mockResolvedValue({ success: true });
 
-    const result = await replicatePublishingStatus(
-      mockTargetService,
-      registry,
-      sourceStatusMap
-    );
+    const result = await replicatePublishingStatus(mockTargetService, registry, sourceStatusMap);
 
     expect(result.published).toBe(1);
     expect(result.failed).toBe(0);
@@ -133,11 +125,7 @@ describe('replicatePublishingStatus', () => {
     const sourceStatusMap = new Map<string, PublishingStatus>();
     sourceStatusMap.set('source-1', 'UNPUBLISHED');
 
-    const result = await replicatePublishingStatus(
-      mockTargetService,
-      registry,
-      sourceStatusMap
-    );
+    const result = await replicatePublishingStatus(mockTargetService, registry, sourceStatusMap);
 
     expect(result.published).toBe(0);
     expect(result.failed).toBe(0);
@@ -155,11 +143,7 @@ describe('replicatePublishingStatus', () => {
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: false, error: 'Publish failed' });
 
-    const result = await replicatePublishingStatus(
-      mockTargetService,
-      registry,
-      sourceStatusMap
-    );
+    const result = await replicatePublishingStatus(mockTargetService, registry, sourceStatusMap);
 
     expect(result.published).toBe(1);
     expect(result.failed).toBe(1);
@@ -175,12 +159,7 @@ describe('replicatePublishingStatus', () => {
 
     vi.mocked(mockTargetService.publishContentItem).mockResolvedValue({ success: true });
 
-    await replicatePublishingStatus(
-      mockTargetService,
-      registry,
-      sourceStatusMap,
-      progressCallback
-    );
+    await replicatePublishingStatus(mockTargetService, registry, sourceStatusMap, progressCallback);
 
     expect(progressCallback).toHaveBeenCalledWith(1, 1);
   });
@@ -190,15 +169,9 @@ describe('replicatePublishingStatus', () => {
     const sourceStatusMap = new Map<string, PublishingStatus>();
     sourceStatusMap.set('source-1', 'LATEST');
 
-    vi.mocked(mockTargetService.publishContentItem).mockRejectedValue(
-      new Error('Network error')
-    );
+    vi.mocked(mockTargetService.publishContentItem).mockRejectedValue(new Error('Network error'));
 
-    const result = await replicatePublishingStatus(
-      mockTargetService,
-      registry,
-      sourceStatusMap
-    );
+    const result = await replicatePublishingStatus(mockTargetService, registry, sourceStatusMap);
 
     expect(result.published).toBe(0);
     expect(result.failed).toBe(1);

@@ -13,7 +13,6 @@ import {
 } from './content-reference-discovery';
 import type { ReferenceScanResult } from './types';
 
-
 // Helper function to create a mock content item
 function createMockContentItem(
   id: string,
@@ -134,7 +133,9 @@ describe('scanBodyForReferences', () => {
         image: {
           id: 'ref-2',
           contentType: 'https://schema.example.com/image',
-          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+          },
         },
       },
     };
@@ -151,7 +152,9 @@ describe('scanBodyForReferences', () => {
         {
           id: 'ref-1',
           contentType: 'https://schema.example.com/item',
-          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+          },
         },
         {
           id: 'ref-2',
@@ -179,7 +182,9 @@ describe('scanBodyForReferences', () => {
             deepRef: {
               id: 'ref-deep',
               contentType: 'https://schema.example.com/deep',
-              _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
+              _meta: {
+                schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+              },
             },
           },
         },
@@ -213,14 +218,18 @@ describe('scanBodyForReferences', () => {
       items: [
         {
           // Inline content - has _meta.schema but no id
-          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+          },
           title: 'Inline Item',
         },
         {
           // Reference - has id and contentType
           id: 'ref-1',
           contentType: 'https://schema.example.com/ref',
-          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+          },
         },
         {
           // Another inline content - no id or contentType
@@ -256,7 +265,9 @@ describe('scanBodyForReferences', () => {
         {
           id: 'ref-1',
           contentType: 'https://schema.example.com/test',
-          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+          },
         },
       ],
     };
@@ -385,14 +396,14 @@ describe('batchFetchItems', () => {
       createMockContentItem(`item-${i}`, { title: `Item ${i}` })
     );
     vi.mocked(mockService.getContentItemWithDetails).mockImplementation(async (id: string) => {
-      const item = items.find((item) => item.id === id);
+      const item = items.find(item => item.id === id);
       if (item) {
         return item;
       }
 
       return null;
     });
-    const ids = items.map((item) => item.id);
+    const ids = items.map(item => item.id);
     const result = await batchFetchItems(mockService, ids, 5);
     expect(result.size).toBe(25);
     expect(mockService.getContentItemWithDetails).toHaveBeenCalledTimes(25);
@@ -435,11 +446,9 @@ describe('discoverAllReferences', () => {
 
       return null;
     });
-    const result = await discoverAllReferences(
-      mockService,
-      ['item-1'],
-      { sourceRepositoryId: 'repo-123' }
-    );
+    const result = await discoverAllReferences(mockService, ['item-1'], {
+      sourceRepositoryId: 'repo-123',
+    });
     expect(result.size).toBe(3);
     expect(result.has('item-1')).toBe(true);
     expect(result.has('item-2')).toBe(true);
@@ -476,11 +485,9 @@ describe('discoverAllReferences', () => {
 
       return null;
     });
-    const result = await discoverAllReferences(
-      mockService,
-      ['item-1'],
-      { sourceRepositoryId: 'repo-123' }
-    );
+    const result = await discoverAllReferences(mockService, ['item-1'], {
+      sourceRepositoryId: 'repo-123',
+    });
     // Should have discovered both items without infinite loop
     expect(result.size).toBe(2);
     expect(result.has('item-1')).toBe(true);
@@ -506,11 +513,9 @@ describe('discoverAllReferences', () => {
 
       return null;
     });
-    const result = await discoverAllReferences(
-      mockService,
-      ['item-1'],
-      { sourceRepositoryId: 'repo-123' }
-    );
+    const result = await discoverAllReferences(mockService, ['item-1'], {
+      sourceRepositoryId: 'repo-123',
+    });
     // Should have discovered the item only once
     expect(result.size).toBe(1);
     expect(result.has('item-1')).toBe(true);
@@ -538,11 +543,9 @@ describe('discoverAllReferences', () => {
       // External item fetch fails (simulating item not in source repository)
       return null;
     });
-    const result = await discoverAllReferences(
-      mockService,
-      ['item-1'],
-      { sourceRepositoryId: 'repo-123' }
-    );
+    const result = await discoverAllReferences(mockService, ['item-1'], {
+      sourceRepositoryId: 'repo-123',
+    });
     // Should have discovered item1
     expect(result.size).toBe(1);
     expect(result.has('item-1')).toBe(true);

@@ -6,8 +6,6 @@
  */
 import type { ReferenceRegistry } from './types';
 
-
-
 /**
  * Build a dependency graph from the reference registry
  * An edge A -> B means "A depends on B" (A references B)
@@ -18,9 +16,7 @@ export function buildDependencyGraph(registry: ReferenceRegistry): DependencyGra
   // Create nodes for all registered items
   for (const [sourceId, entry] of registry.entries) {
     // Filter to only include dependencies on items also in the registry
-    const dependencies = new Set(
-      entry.referencesTo.filter((refId) => registry.entries.has(refId))
-    );
+    const dependencies = new Set(entry.referencesTo.filter(refId => registry.entries.has(refId)));
 
     nodes.set(sourceId, {
       id: sourceId,
@@ -45,9 +41,6 @@ export function buildDependencyGraph(registry: ReferenceRegistry): DependencyGra
   return { nodes, circularGroups };
 }
 
-
-
-
 /**
  * The dependency graph structure
  */
@@ -56,8 +49,7 @@ export type DependencyGraph = {
   nodes: Map<string, DependencyNode>;
   /** Circular reference groups detected in the graph */
   circularGroups: string[][];
-}
-
+};
 
 /**
  * A node in the dependency graph
@@ -69,9 +61,7 @@ export type DependencyNode = {
   dependencies: Set<string>;
   /** Set of item IDs that depend on this node (referenced by) */
   dependents: Set<string>;
-}
-
-
+};
 
 /**
  * Detect all strongly connected components (cycles) using Tarjan's algorithm
@@ -155,11 +145,6 @@ export function detectStronglyConnectedComponents(graph: DependencyGraph): strin
   return sccs;
 }
 
-
-
-
-
-
 /**
  * Get the dependency depth for an item (longest path to a leaf)
  * Returns 0 for items with no dependencies
@@ -215,11 +200,6 @@ export function getDependencyDepth(graph: DependencyGraph, nodeId: string): numb
   return depthCache.get(nodeId) ?? 0;
 }
 
-
-
-
-
-
 /**
  * Get items that can be created in phase 1 (no circular dependencies)
  * These items have all their dependencies resolvable in topological order
@@ -239,10 +219,6 @@ export function getPhase1Items(graph: DependencyGraph, circularGroups: string[][
   return phase1Items;
 }
 
-
-
-
-
 /**
  * Get items that need phase 2 update (items in circular groups)
  * These items are created with null references in phase 1, then updated in phase 2
@@ -261,11 +237,6 @@ export function getPhase2Items(graph: DependencyGraph, circularGroups: string[][
 
   return phase2Items;
 }
-
-
-
-
-
 
 /**
  * Get all transitive dependencies for an item
@@ -297,11 +268,6 @@ export function getTransitiveDependencies(graph: DependencyGraph, nodeId: string
 
   return result;
 }
-
-
-
-
-
 
 /**
  * Perform Kahn's algorithm for topological sort
@@ -352,9 +318,6 @@ export function kahnTopologicalSort(graph: DependencyGraph): string[] {
   return result;
 }
 
-
-
-
 /**
  * Perform topological sort on the dependency graph
  * Returns items in order where dependencies come before dependents
@@ -364,16 +327,11 @@ export function topologicalSort(graph: DependencyGraph): string[] {
   return kahnTopologicalSort(graph);
 }
 
-
 /**
  * Check if adding a dependency from fromId to toId would create a cycle
  * Uses DFS to check if toId is reachable from fromId
  */
-export function wouldCreateCycle(
-  graph: DependencyGraph,
-  fromId: string,
-  toId: string
-): boolean {
+export function wouldCreateCycle(graph: DependencyGraph, fromId: string, toId: string): boolean {
   // If toId doesn't exist in graph, no cycle possible
   if (!graph.nodes.has(toId)) {
     return false;

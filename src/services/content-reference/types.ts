@@ -21,10 +21,8 @@ export type BodyTransformOptions = {
  * Schema URIs that identify content reference types in Amplience
  */
 export const CONTENT_REFERENCE_SCHEMAS = {
-  CONTENT_REFERENCE:
-    'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
-  CONTENT_LINK:
-    'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link',
+  CONTENT_REFERENCE: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+  CONTENT_LINK: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link',
 } as const;
 
 /**
@@ -52,9 +50,7 @@ export type DetectedReference = {
 /**
  * Extracts the reference type literal from a schema URI
  */
-export function getReferenceSchemaType(
-  schema: string
-): ReferenceSchemaTypeLiteral | null {
+export function getReferenceSchemaType(schema: string): ReferenceSchemaTypeLiteral | null {
   if (schema === CONTENT_REFERENCE_SCHEMAS.CONTENT_REFERENCE) {
     return 'content-reference';
   }

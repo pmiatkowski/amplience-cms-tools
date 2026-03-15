@@ -52,7 +52,7 @@ function createMockContentItem(
 
   // Add references to body if present
   if (options.references && options.references.length > 0) {
-    body.refs = options.references.map((refId) => ({
+    body.refs = options.references.map(refId => ({
       id: refId,
       _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
     }));
@@ -494,8 +494,8 @@ describe('Content Reference Report Service', () => {
       const guidance = generateRollbackGuidance(registry, resolution);
 
       // Should have a step for delivery keys
-      const deliveryKeyStep = guidance.steps.find(
-        s => s.action.toLowerCase().includes('delivery key')
+      const deliveryKeyStep = guidance.steps.find(s =>
+        s.action.toLowerCase().includes('delivery key')
       );
       expect(deliveryKeyStep).toBeDefined();
     });
@@ -516,9 +516,7 @@ describe('Content Reference Report Service', () => {
 
       const guidance = generateRollbackGuidance(registry, resolution);
 
-      const circularWarning = guidance.warnings.find(w =>
-        w.toLowerCase().includes('circular')
-      );
+      const circularWarning = guidance.warnings.find(w => w.toLowerCase().includes('circular'));
       expect(circularWarning).toBeDefined();
     });
   });

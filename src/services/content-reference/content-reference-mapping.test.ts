@@ -249,15 +249,21 @@ describe('getItemsReferencing', () => {
     const item2 = createMockContentItem('item-2', 'Item 2', 'https://schema.test.com/test');
     const item3 = createMockContentItem('item-3', 'Item 3', 'https://schema.test.com/test');
 
-    registerItem(registry, item1, [createMockReference('ref-1', 'https://schema.test.com/ref', 'body.link')]);
-    registerItem(registry, item2, [createMockReference('ref-1', 'https://schema.test.com/ref', 'body.link')]);
-    registerItem(registry, item3, [createMockReference('ref-2', 'https://schema.test.com/ref', 'body.link')]);
+    registerItem(registry, item1, [
+      createMockReference('ref-1', 'https://schema.test.com/ref', 'body.link'),
+    ]);
+    registerItem(registry, item2, [
+      createMockReference('ref-1', 'https://schema.test.com/ref', 'body.link'),
+    ]);
+    registerItem(registry, item3, [
+      createMockReference('ref-2', 'https://schema.test.com/ref', 'body.link'),
+    ]);
 
     const referencing = getItemsReferencing(registry, 'ref-1');
 
     expect(referencing.length).toBe(2);
-    expect(referencing.map((e) => e.sourceItem.id)).toContain('item-1');
-    expect(referencing.map((e) => e.sourceItem.id)).toContain('item-2');
+    expect(referencing.map(e => e.sourceItem.id)).toContain('item-1');
+    expect(referencing.map(e => e.sourceItem.id)).toContain('item-2');
   });
 
   it('should return empty array when no items reference the item', () => {
@@ -280,7 +286,12 @@ describe('matchSourceToTarget', () => {
     );
 
     const targets = [
-      createMockTargetItem('target-1', 'Different Label', 'https://schema.test.com/test', 'test/key'),
+      createMockTargetItem(
+        'target-1',
+        'Different Label',
+        'https://schema.test.com/test',
+        'test/key'
+      ),
       createMockTargetItem('target-2', 'Test Source', 'https://schema.test.com/test', 'other/key'),
     ];
 
@@ -300,8 +311,18 @@ describe('matchSourceToTarget', () => {
     );
 
     const targets = [
-      createMockTargetItem('target-1', 'Different Label', 'https://schema.test.com/test', 'other/key'),
-      createMockTargetItem('target-2', 'Test Source', 'https://schema.test.com/test', 'another/key'),
+      createMockTargetItem(
+        'target-1',
+        'Different Label',
+        'https://schema.test.com/test',
+        'other/key'
+      ),
+      createMockTargetItem(
+        'target-2',
+        'Test Source',
+        'https://schema.test.com/test',
+        'another/key'
+      ),
     ];
 
     const result = matchSourceToTarget(source, targets);
@@ -320,7 +341,12 @@ describe('matchSourceToTarget', () => {
     );
 
     const targets = [
-      createMockTargetItem('target-1', 'Different Label', 'https://schema.test.com/other', 'other/key'),
+      createMockTargetItem(
+        'target-1',
+        'Different Label',
+        'https://schema.test.com/other',
+        'other/key'
+      ),
     ];
 
     const result = matchSourceToTarget(source, targets);
@@ -331,11 +357,7 @@ describe('matchSourceToTarget', () => {
   });
 
   it('should return multiple_matches with alternatives', () => {
-    const source = createMockContentItem(
-      'source-1',
-      'Test Source',
-      'https://schema.test.com/test'
-    );
+    const source = createMockContentItem('source-1', 'Test Source', 'https://schema.test.com/test');
 
     const targets = [
       createMockTargetItem('target-1', 'Test Source', 'https://schema.test.com/test'),
@@ -349,16 +371,12 @@ describe('matchSourceToTarget', () => {
     expect(result.confidence).toBe('schema_label');
     expect(result.targetItem?.id).toBe('target-1');
     expect(result.alternatives?.length).toBe(2);
-    expect(result.alternatives?.map((t) => t.id)).toContain('target-2');
-    expect(result.alternatives?.map((t) => t.id)).toContain('target-3');
+    expect(result.alternatives?.map(t => t.id)).toContain('target-2');
+    expect(result.alternatives?.map(t => t.id)).toContain('target-3');
   });
 
   it('should match case-insensitive labels', () => {
-    const source = createMockContentItem(
-      'source-1',
-      'TEST SOURCE',
-      'https://schema.test.com/test'
-    );
+    const source = createMockContentItem('source-1', 'TEST SOURCE', 'https://schema.test.com/test');
 
     const targets = [
       createMockTargetItem('target-1', 'test source', 'https://schema.test.com/test'),
@@ -392,8 +410,12 @@ describe('matchSourceToTarget', () => {
 describe('matchAllSourcesToTargets', () => {
   it('should match multiple source items to target items', () => {
     const sources = [
-      createMockContentItem('source-1', 'Item A', 'https://schema.test.com/test', { deliveryKey: 'key/a' }),
-      createMockContentItem('source-2', 'Item B', 'https://schema.test.com/test', { deliveryKey: 'key/b' }),
+      createMockContentItem('source-1', 'Item A', 'https://schema.test.com/test', {
+        deliveryKey: 'key/a',
+      }),
+      createMockContentItem('source-2', 'Item B', 'https://schema.test.com/test', {
+        deliveryKey: 'key/b',
+      }),
     ];
 
     const targets = [
@@ -424,9 +446,13 @@ describe('buildReverseReferences', () => {
     const item3 = createMockContentItem('item-3', 'Item 3', 'https://schema.test.com/test');
 
     // item1 references item2
-    registerItem(registry, item1, [createMockReference('item-2', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item1, [
+      createMockReference('item-2', 'https://schema.test.com/test', 'body.link'),
+    ]);
     // item2 references item3
-    registerItem(registry, item2, [createMockReference('item-3', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item2, [
+      createMockReference('item-3', 'https://schema.test.com/test', 'body.link'),
+    ]);
     // item3 has no references
     registerItem(registry, item3, []);
 
@@ -452,8 +478,12 @@ describe('buildReverseReferences', () => {
     const item3 = createMockContentItem('item-3', 'Item 3', 'https://schema.test.com/test');
 
     // Both item1 and item2 reference item3
-    registerItem(registry, item1, [createMockReference('item-3', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, item2, [createMockReference('item-3', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item1, [
+      createMockReference('item-3', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, item2, [
+      createMockReference('item-3', 'https://schema.test.com/test', 'body.link'),
+    ]);
     registerItem(registry, item3, []);
 
     buildReverseReferences(registry);
@@ -467,7 +497,9 @@ describe('buildReverseReferences', () => {
   it('should ignore references to items not in registry', () => {
     const item = createMockContentItem('item-1', 'Item 1', 'https://schema.test.com/test');
     // References item not in registry
-    registerItem(registry, item, [createMockReference('external-item', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item, [
+      createMockReference('external-item', 'https://schema.test.com/test', 'body.link'),
+    ]);
 
     buildReverseReferences(registry);
 
@@ -489,7 +521,9 @@ describe('getTopologicalOrder', () => {
     const item2 = createMockContentItem('item-2', 'Item 2', 'https://schema.test.com/test');
 
     // item1 references item2
-    registerItem(registry, item1, [createMockReference('item-2', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item1, [
+      createMockReference('item-2', 'https://schema.test.com/test', 'body.link'),
+    ]);
     registerItem(registry, item2, []);
 
     const order = getTopologicalOrder(registry);
@@ -504,8 +538,12 @@ describe('getTopologicalOrder', () => {
     const item3 = createMockContentItem('item-3', 'Item 3', 'https://schema.test.com/test');
 
     // item1 -> item2 -> item3
-    registerItem(registry, item1, [createMockReference('item-2', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, item2, [createMockReference('item-3', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item1, [
+      createMockReference('item-2', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, item2, [
+      createMockReference('item-3', 'https://schema.test.com/test', 'body.link'),
+    ]);
     registerItem(registry, item3, []);
 
     const order = getTopologicalOrder(registry);
@@ -524,8 +562,12 @@ describe('getTopologicalOrder', () => {
     const item4 = createMockContentItem('item-4', 'Item 4', 'https://schema.test.com/test');
 
     registerItem(registry, item1, []);
-    registerItem(registry, item2, [createMockReference('item-1', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, item3, [createMockReference('item-1', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item2, [
+      createMockReference('item-1', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, item3, [
+      createMockReference('item-1', 'https://schema.test.com/test', 'body.link'),
+    ]);
     registerItem(registry, item4, [
       createMockReference('item-2', 'https://schema.test.com/test', 'body.link'),
       createMockReference('item-3', 'https://schema.test.com/test', 'body.link'),
@@ -568,8 +610,12 @@ describe('detectCircularGroups', () => {
     const itemB = createMockContentItem('item-b', 'Item B', 'https://schema.test.com/test');
 
     // A -> B, B -> A
-    registerItem(registry, itemA, [createMockReference('item-b', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemB, [createMockReference('item-a', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, itemA, [
+      createMockReference('item-b', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemB, [
+      createMockReference('item-a', 'https://schema.test.com/test', 'body.link'),
+    ]);
 
     const groups = detectCircularGroups(registry);
 
@@ -582,7 +628,9 @@ describe('detectCircularGroups', () => {
     const itemA = createMockContentItem('item-a', 'Item A', 'https://schema.test.com/test');
 
     // A -> A
-    registerItem(registry, itemA, [createMockReference('item-a', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, itemA, [
+      createMockReference('item-a', 'https://schema.test.com/test', 'body.link'),
+    ]);
 
     const groups = detectCircularGroups(registry);
 
@@ -596,9 +644,15 @@ describe('detectCircularGroups', () => {
     const itemB = createMockContentItem('item-b', 'Item B', 'https://schema.test.com/test');
     const itemC = createMockContentItem('item-c', 'Item C', 'https://schema.test.com/test');
 
-    registerItem(registry, itemA, [createMockReference('item-b', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemB, [createMockReference('item-c', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemC, [createMockReference('item-a', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, itemA, [
+      createMockReference('item-b', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemB, [
+      createMockReference('item-c', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemC, [
+      createMockReference('item-a', 'https://schema.test.com/test', 'body.link'),
+    ]);
 
     const groups = detectCircularGroups(registry);
 
@@ -615,8 +669,12 @@ describe('detectCircularGroups', () => {
     const item3 = createMockContentItem('item-3', 'Item 3', 'https://schema.test.com/test');
 
     // Linear chain: item1 -> item2 -> item3
-    registerItem(registry, item1, [createMockReference('item-2', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, item2, [createMockReference('item-3', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, item1, [
+      createMockReference('item-2', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, item2, [
+      createMockReference('item-3', 'https://schema.test.com/test', 'body.link'),
+    ]);
     registerItem(registry, item3, []);
 
     const groups = detectCircularGroups(registry);
@@ -632,10 +690,18 @@ describe('detectCircularGroups', () => {
     const itemC = createMockContentItem('item-c', 'Item C', 'https://schema.test.com/test');
     const itemD = createMockContentItem('item-d', 'Item D', 'https://schema.test.com/test');
 
-    registerItem(registry, itemA, [createMockReference('item-b', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemB, [createMockReference('item-a', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemC, [createMockReference('item-d', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemD, [createMockReference('item-c', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, itemA, [
+      createMockReference('item-b', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemB, [
+      createMockReference('item-a', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemC, [
+      createMockReference('item-d', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemD, [
+      createMockReference('item-c', 'https://schema.test.com/test', 'body.link'),
+    ]);
 
     const groups = detectCircularGroups(registry);
 
@@ -727,8 +793,12 @@ describe('getRegistryStats', () => {
     const itemA = createMockContentItem('item-a', 'Item A', 'https://schema.test.com/test');
     const itemB = createMockContentItem('item-b', 'Item B', 'https://schema.test.com/test');
 
-    registerItem(registry, itemA, [createMockReference('item-b', 'https://schema.test.com/test', 'body.link')]);
-    registerItem(registry, itemB, [createMockReference('item-a', 'https://schema.test.com/test', 'body.link')]);
+    registerItem(registry, itemA, [
+      createMockReference('item-b', 'https://schema.test.com/test', 'body.link'),
+    ]);
+    registerItem(registry, itemB, [
+      createMockReference('item-a', 'https://schema.test.com/test', 'body.link'),
+    ]);
 
     const stats = getRegistryStats(registry);
 

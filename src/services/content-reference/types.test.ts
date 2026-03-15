@@ -63,9 +63,7 @@ describe('Content Reference Types', () => {
 
     it('should return false for non-reference schemas', () => {
       expect(
-        isContentReferenceSchema(
-          'http://bigcontent.io/cms/schema/v1/core#/definitions/other'
-        )
+        isContentReferenceSchema('http://bigcontent.io/cms/schema/v1/core#/definitions/other')
       ).toBe(false);
     });
 
@@ -74,9 +72,7 @@ describe('Content Reference Types', () => {
     });
 
     it('should return false for unrelated URIs', () => {
-      expect(isContentReferenceSchema('https://example.com/schema')).toBe(
-        false
-      );
+      expect(isContentReferenceSchema('https://example.com/schema')).toBe(false);
     });
   });
 
@@ -91,17 +87,13 @@ describe('Content Reference Types', () => {
 
     it('should return "content-link" for content-link schema', () => {
       expect(
-        getReferenceSchemaType(
-          'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link'
-        )
+        getReferenceSchemaType('http://bigcontent.io/cms/schema/v1/core#/definitions/content-link')
       ).toBe('content-link');
     });
 
     it('should return null for non-reference schemas', () => {
       expect(
-        getReferenceSchemaType(
-          'http://bigcontent.io/cms/schema/v1/core#/definitions/other'
-        )
+        getReferenceSchemaType('http://bigcontent.io/cms/schema/v1/core#/definitions/other')
       ).toBeNull();
     });
 

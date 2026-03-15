@@ -7,7 +7,6 @@ import {
   type BodyTransformOptions,
 } from '../content-reference';
 
-
 /**
  * Core logic for recreating content items from source to target hub
  * Note: This action assumes hierarchy analysis has already been done by the caller
@@ -95,7 +94,9 @@ export async function recreateContentItems(
         sourceToTargetIdMap = resolverResult.registry.sourceToTargetIdMap;
 
         console.log(`  ✓ Discovered ${referenceResolutionResult.totalDiscovered} items`);
-        console.log(`  ✓ Matched ${referenceResolutionResult.matchedCount} existing items in target`);
+        console.log(
+          `  ✓ Matched ${referenceResolutionResult.matchedCount} existing items in target`
+        );
         console.log(`  ✓ Need to create ${referenceResolutionResult.toCreateCount} new items`);
 
         if (referenceResolutionResult.circularGroups.length > 0) {
@@ -450,9 +451,7 @@ export async function recreateContentItems(
     console.log(`\n🔄 Phase 3: Resolving circular references...`);
 
     // Collect all item IDs in circular groups
-    const circularGroupIds = new Set(
-      referenceResolutionResult.circularGroups.flat()
-    );
+    const circularGroupIds = new Set(referenceResolutionResult.circularGroups.flat());
 
     for (const itemId of circularGroupIds) {
       const result = results.find(r => r.id === itemId && r.success && r.newId);
@@ -497,10 +496,7 @@ export async function recreateContentItems(
           console.warn(`    ⚠️ Failed to update ${result.newId}: ${updateResult.error}`);
         }
       } catch (updateError) {
-        console.warn(
-          `    ⚠️ Error updating ${result.newId}:`,
-          updateError
-        );
+        console.warn(`    ⚠️ Error updating ${result.newId}:`, updateError);
       }
     }
   }
@@ -531,7 +527,6 @@ export async function recreateContentItems(
     referenceResolution: referenceResolutionResult,
   };
 }
-
 
 /**
  * Result of the recreate content items operation

@@ -7,8 +7,6 @@
 import type { AmplienceService } from '../amplience-service';
 import type { ReferenceRegistry } from './types';
 
-
-
 /**
  * Extract publishing status from source items
  * Checks _meta.publishingStatus to determine LATEST, EARLY, or UNPUBLISHED
@@ -36,9 +34,6 @@ export function extractPublishingStatus(
   return statusMap;
 }
 
-
-
-
 /**
  * Result of publishing operation
  */
@@ -49,14 +44,12 @@ export type PublishingResult = {
   failed: number;
   /** Errors encountered during publishing */
   errors: Array<{ itemId: string; error: string }>;
-}
-
+};
 
 /**
  * Publishing status types
  */
 export type PublishingStatus = 'LATEST' | 'EARLY' | 'UNPUBLISHED';
-
 
 /**
  * Publish a single content item in target hub
@@ -89,7 +82,6 @@ export async function publishItem(
     };
   }
 }
-
 
 /**
  * Replicate publishing status in target hub after items are created

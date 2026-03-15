@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AmplienceService } from '../amplience-service';
 import * as contentReferenceModule from '../content-reference';
-import {
-  recreateContentItems,
-} from './recreate-content-items';
+import { recreateContentItems } from './recreate-content-items';
 
 type ViMock = ReturnType<typeof vi.fn>;
 
@@ -78,17 +76,15 @@ describe('recreateContentItems', () => {
     } as Amplience.ContentItemWithDetails;
   };
 
-  const createMockTargetItem = (
-    id: string,
-    label: string
-  ): Amplience.ContentItemWithDetails => ({
-    id,
-    label,
-    body: { _meta: { schema: 'https://schema.example.com/test' } },
-    contentRepositoryId: 'target-repo-id',
-    createdBy: 'test-user',
-    lastModifiedBy: 'test-user',
-  } as Amplience.ContentItemWithDetails);
+  const createMockTargetItem = (id: string, label: string): Amplience.ContentItemWithDetails =>
+    ({
+      id,
+      label,
+      body: { _meta: { schema: 'https://schema.example.com/test' } },
+      contentRepositoryId: 'target-repo-id',
+      createdBy: 'test-user',
+      lastModifiedBy: 'test-user',
+    }) as Amplience.ContentItemWithDetails;
 
   const baseParams = {
     sourceService,
@@ -153,7 +149,7 @@ describe('recreateContentItems', () => {
         externalReferenceIds: new Set(),
       },
     });
-    transformBodyReferencesMock = vi.fn((body) => body);
+    transformBodyReferencesMock = vi.fn(body => body);
 
     vi.spyOn(contentReferenceModule, 'resolveContentReferences').mockImplementation(
       resolveContentReferencesMock

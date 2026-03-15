@@ -12,7 +12,6 @@ import type {
   TargetMatchResult,
 } from './types';
 
-
 /**
  * Build the reverse reference mapping (referencedBy) for all entries
  */
@@ -33,11 +32,6 @@ export function buildReverseReferences(registry: ReferenceRegistry): void {
   }
 }
 
-
-
-
-
-
 /**
  * Create a new empty reference registry
  */
@@ -49,14 +43,6 @@ export function createReferenceRegistry(): ReferenceRegistry {
     externalReferenceIds: new Set<string>(),
   };
 }
-
-
-
-
-
-
-
-
 
 /**
  * Detect circular reference groups in the registry
@@ -110,14 +96,6 @@ export function detectCircularGroups(registry: ReferenceRegistry): string[][] {
   return mergeCircularGroups(circularGroups, registry);
 }
 
-
-
-
-
-
-
-
-
 /**
  * Get all items that reference a specific item (reverse lookup)
  */
@@ -135,15 +113,6 @@ export function getItemsReferencing(
 
   return items;
 }
-
-
-
-
-
-
-
-
-
 
 /**
  * Get registry statistics for reporting
@@ -176,31 +145,12 @@ export function getRegistryStats(registry: ReferenceRegistry): {
   };
 }
 
-
-
-
-
-
-
-
-
 /**
  * Get the target ID for a source ID, if mapped
  */
-export function getTargetId(
-  registry: ReferenceRegistry,
-  sourceId: string
-): string | undefined {
+export function getTargetId(registry: ReferenceRegistry, sourceId: string): string | undefined {
   return registry.sourceToTargetIdMap.get(sourceId);
 }
-
-
-
-
-
-
-
-
 
 /**
  * Get all source IDs in topological order (dependencies first)
@@ -274,15 +224,6 @@ export function getTopologicalOrder(registry: ReferenceRegistry): string[] {
   return result;
 }
 
-
-
-
-
-
-
-
-
-
 /**
  * Check if an item has been registered
  */
@@ -290,32 +231,12 @@ export function isRegistered(registry: ReferenceRegistry, sourceId: string): boo
   return registry.entries.has(sourceId);
 }
 
-
-
-
-
-
-
-
-
 /**
  * Mark an item as having an external reference (outside repository)
  */
-export function markExternalReference(
-  registry: ReferenceRegistry,
-  sourceId: string
-): void {
+export function markExternalReference(registry: ReferenceRegistry, sourceId: string): void {
   registry.externalReferenceIds.add(sourceId);
 }
-
-
-
-
-
-
-
-
-
 
 /**
  * Mark an item as unresolved (could not match in target)
@@ -323,16 +244,6 @@ export function markExternalReference(
 export function markUnresolved(registry: ReferenceRegistry, sourceId: string): void {
   registry.unresolvedIds.add(sourceId);
 }
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Match multiple source items to target items
@@ -355,10 +266,7 @@ export function matchAllSourcesToTargets(
 /**
  * Merge overlapping circular groups into unique groups
  */
-function mergeCircularGroups(
-  groups: string[][],
-  registry: ReferenceRegistry
-): string[][] {
+function mergeCircularGroups(groups: string[][], registry: ReferenceRegistry): string[][] {
   if (groups.length === 0) {
     return [];
   }
@@ -379,10 +287,10 @@ function mergeCircularGroups(
         if (usedIndices.has(j)) continue;
 
         const otherGroup = groups[j];
-        const hasOverlap = otherGroup.some((id) => currentGroup.has(id));
+        const hasOverlap = otherGroup.some(id => currentGroup.has(id));
 
         if (hasOverlap) {
-          otherGroup.forEach((id) => currentGroup.add(id));
+          otherGroup.forEach(id => currentGroup.add(id));
           usedIndices.add(j);
           changed = true;
         }
@@ -407,16 +315,6 @@ function mergeCircularGroups(
   return merged;
 }
 
-
-
-
-
-
-
-
-
-
-
 /**
  * Match a source item to target hub items using priority strategy
  * Priority: 1) Delivery key (exact), 2) Schema ID + Label
@@ -431,7 +329,7 @@ export function matchSourceToTarget(
   // Strategy 1: Match by delivery key (exact match)
   if (sourceDeliveryKey) {
     const deliveryKeyMatch = targetItems.find(
-      (target) => target.body._meta?.deliveryKey === sourceDeliveryKey
+      target => target.body._meta?.deliveryKey === sourceDeliveryKey
     );
 
     if (deliveryKeyMatch) {
@@ -449,14 +347,13 @@ export function matchSourceToTarget(
   const sourceSchema = sourceItem.body._meta?.schema;
 
   if (sourceSchema) {
-    const schemaLabelMatches = targetItems.filter((target) => {
+    const schemaLabelMatches = targetItems.filter(target => {
       const targetSchema = target.body._meta?.schema;
       const targetLabel = target.label;
 
       // Match schema exactly and label (case-insensitive for fuzzy matching)
       return (
-        targetSchema === sourceSchema &&
-        targetLabel?.toLowerCase() === sourceLabel?.toLowerCase()
+        targetSchema === sourceSchema && targetLabel?.toLowerCase() === sourceLabel?.toLowerCase()
       );
     });
 
@@ -488,14 +385,6 @@ export function matchSourceToTarget(
   };
 }
 
-
-
-
-
-
-
-
-
 /**
  * Record a source-to-target ID mapping after item creation
  */
@@ -513,9 +402,6 @@ export function recordMapping(
   }
 }
 
-
-
-
 /**
  * Add a content item to the registry with its references
  */
@@ -529,13 +415,13 @@ export function registerItem(
   if (existingEntry) {
     // Update existing entry with new references
     existingEntry.references = references;
-    existingEntry.referencesTo = [...new Set(references.map((ref) => ref.sourceId))];
+    existingEntry.referencesTo = [...new Set(references.map(ref => ref.sourceId))];
   } else {
     // Create new entry
     const entry: ReferenceRegistryEntry = {
       sourceItem,
       references,
-      referencesTo: [...new Set(references.map((ref) => ref.sourceId))],
+      referencesTo: [...new Set(references.map(ref => ref.sourceId))],
       referencedBy: [],
       processed: false,
     };

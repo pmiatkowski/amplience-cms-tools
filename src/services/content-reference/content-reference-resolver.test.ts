@@ -14,11 +14,7 @@ import type { ReferenceRegistry, ReferenceResolutionResult } from './types';
 /**
  * Helper to record mapping in registry (for tests)
  */
-function recordMapping(
-  registry: ReferenceRegistry,
-  sourceId: string,
-  targetId: string
-): void {
+function recordMapping(registry: ReferenceRegistry, sourceId: string, targetId: string): void {
   registry.sourceToTargetIdMap.set(sourceId, targetId);
   const entry = registry.entries.get(sourceId);
   if (entry) {
@@ -53,7 +49,7 @@ const createMockItem = (
 
   // Add references to body
   if (references.length > 0) {
-    body.references = references.map((ref) => ({
+    body.references = references.map(ref => ({
       id: ref.id,
       contentType: ref.contentType,
       _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference' },
@@ -98,14 +94,17 @@ describe('resolveContentReferences', () => {
     };
 
     vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1, item2]);
-    vi.mocked(mockSourceService.getContentItemWithDetails)
-      .mockImplementation(async (id: string) => {
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(
+      async (id: string) => {
         if (id === 'item-1') return item1;
         if (id === 'item-2') return item2;
 
         return null;
-      });
-    vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue([targetItem2 as Amplience.ContentItem]);
+      }
+    );
+    vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue([
+      targetItem2 as Amplience.ContentItem,
+    ]);
 
     const options: ResolverOptions = {
       sourceService: mockSourceService,
@@ -125,12 +124,13 @@ describe('resolveContentReferences', () => {
     const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1');
 
     vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1]);
-    vi.mocked(mockSourceService.getContentItemWithDetails)
-      .mockImplementation(async (id: string) => {
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(
+      async (id: string) => {
         if (id === 'item-1') return item1;
 
         return null;
-      });
+      }
+    );
     vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue([]);
 
     const options: ResolverOptions = {
@@ -158,13 +158,14 @@ describe('resolveContentReferences', () => {
     ]);
 
     vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1, item2]);
-    vi.mocked(mockSourceService.getContentItemWithDetails)
-      .mockImplementation(async (id: string) => {
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(
+      async (id: string) => {
         if (id === 'item-1') return item1;
         if (id === 'item-2') return item2;
 
         return null;
-      });
+      }
+    );
     vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue([]);
 
     const options: ResolverOptions = {
@@ -187,12 +188,13 @@ describe('resolveContentReferences', () => {
     const progressCallback = vi.fn();
 
     vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1]);
-    vi.mocked(mockSourceService.getContentItemWithDetails)
-      .mockImplementation(async (id: string) => {
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(
+      async (id: string) => {
         if (id === 'item-1') return item1;
 
         return null;
-      });
+      }
+    );
     vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue([]);
 
     const options: ResolverOptions = {
@@ -266,12 +268,7 @@ describe('executePhase1Creation', () => {
     });
 
     const circularGroupIds = new Set<string>(['item-1']);
-    await executePhase1Creation(
-      registry,
-      mockTargetService,
-      'target-repo',
-      circularGroupIds
-    );
+    await executePhase1Creation(registry, mockTargetService, 'target-repo', circularGroupIds);
 
     expect(registry.sourceToTargetIdMap.get('item-1')).toBe('new-item-1');
   });
@@ -356,7 +353,7 @@ describe('executePhase2Update', () => {
 
     vi.mocked(mockTargetService.updateContentItem).mockResolvedValue({
       success: true,
-      });
+    });
 
     // Only item-1 is in circular group
     const circularGroupIds = new Set<string>(['item-1']);
@@ -432,7 +429,7 @@ describe('getPreFlightSummary', () => {
 
     const summary = getPreFlightSummary(resolution);
 
-    expect(summary.warnings.some((w) => w.includes('circular reference'))).toBe(true);
+    expect(summary.warnings.some(w => w.includes('circular reference'))).toBe(true);
     expect(summary.details.circularGroups).toBe(1);
   });
 
@@ -453,7 +450,7 @@ describe('getPreFlightSummary', () => {
 
     const summary = getPreFlightSummary(resolution);
 
-    expect(summary.warnings.some((w) => w.includes('outside the source repository'))).toBe(true);
+    expect(summary.warnings.some(w => w.includes('outside the source repository'))).toBe(true);
     expect(summary.details.externalItems).toContain('external-item-1');
   });
 });

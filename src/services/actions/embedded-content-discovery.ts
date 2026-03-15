@@ -31,7 +31,7 @@ export async function discoverEmbeddedContent(
 
   // Mark all initial items as visited
   for (const item of items) {
-    visited.add(item.id);
+    markVisitedItemIdentifiers(visited, item);
   }
 
   // Process each item's body for embedded references
@@ -79,8 +79,6 @@ async function discoverEmbeddedInItem(
   }
 
   for (const refId of referencedIds) {
-    itemDependencies.get(item.id)!.add(refId);
-
     // Skip already visited items (circular reference protection)
     if (visited.has(refId)) {
       continue;
@@ -102,6 +100,11 @@ async function discoverEmbeddedInItem(
       continue;
     }
 
+    // Normalize dependencies to canonical source item IDs so topological ordering
+    // remains correct even when references are represented by deliveryId.
+    itemDependencies.get(item.id)!.add(referencedItem.id);
+    markVisitedItemIdentifiers(visited, referencedItem);
+
     // Check if the referenced item is in the same repository
     if (referencedItem.contentRepositoryId !== sourceRepositoryId) {
       warnings.push({
@@ -114,7 +117,7 @@ async function discoverEmbeddedInItem(
       continue;
     }
 
-    embeddedItemIds.add(refId);
+    embeddedItemIds.add(referencedItem.id);
 
     // Recursively discover embedded content in the referenced item
     await discoverEmbeddedInItem(
@@ -126,6 +129,16 @@ async function discoverEmbeddedInItem(
       warnings,
       itemDependencies
     );
+  }
+}
+
+function markVisitedItemIdentifiers(
+  visited: Set<string>,
+  item: Pick<Amplience.ContentItemWithDetails, 'id' | 'deliveryId'>
+): void {
+  visited.add(item.id);
+  if (item.deliveryId) {
+    visited.add(item.deliveryId);
   }
 }
 
@@ -177,8 +190,8 @@ export function extractReferencedIds(body: Record<string, unknown>): string[] {
 
     const obj = value as Record<string, unknown>;
 
-    // Check if this object is a Content Reference (has _meta.schema pointing to content-reference def + id)
-    if (isContentReference(obj)) {
+    // Check if this object is a core reference (content-reference/content-link with id)
+    if (isCoreReference(obj)) {
       const id = obj.id as string;
 
       if (id && !seen.has(id)) {
@@ -222,17 +235,19 @@ export function extractReferencedIds(body: Record<string, unknown>): string[] {
 }
 
 /**
- * Checks if an object represents a Content Reference
- * (schema = content-reference definition, has `id` field)
+ * Checks if an object represents a core reference
+ * (schema = content-reference/content-link definition, has `id` field)
  */
-function isContentReference(obj: Record<string, unknown>): boolean {
+function isCoreReference(obj: Record<string, unknown>): boolean {
   const meta = obj._meta as Record<string, unknown> | undefined;
 
   if (!meta?.schema) return false;
 
   const schema = meta.schema as string;
 
-  return schema === CONTENT_REFERENCE_REF && typeof obj.id === 'string';
+  return (
+    (schema === CONTENT_REFERENCE_REF || schema === CONTENT_LINK_REF) && typeof obj.id === 'string'
+  );
 }
 
 /**

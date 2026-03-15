@@ -734,6 +734,36 @@ export class AmplienceService {
   }
 
   /**
+   * Copies an existing content item in the specified content repository.
+   *
+   * @param contentRepositoryId - The unique identifier of the content repository
+   * @param sourceContentItemId - The unique identifier of the source content item to copy
+   * @param contentItemData - The content item data for the copied content item
+   * @returns Promise resolving to the operation result containing the copied content item
+   */
+  public async copyContentItem(
+    contentRepositoryId: string,
+    sourceContentItemId: string,
+    contentItemData: Amplience.CopyContentItemRequest
+  ): Promise<Amplience.OperationResult<Amplience.ContentItemWithDetails>> {
+    const url = `https://api.amplience.net/v2/content/content-repositories/${contentRepositoryId}/content-items/${encodeURIComponent(sourceContentItemId)}`;
+
+    try {
+      const copiedItem = await this._request<Amplience.ContentItemWithDetails>(url, {
+        method: 'POST',
+        body: JSON.stringify(contentItemData),
+      });
+
+      return { success: true, updatedItem: copiedItem };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
    * Get content item with full details including hierarchy information
    */
   public async getContentItemWithDetails(
@@ -756,16 +786,25 @@ export class AmplienceService {
    */
   public async assignDeliveryKey(itemId: string, deliveryKey: string): Promise<boolean> {
     try {
-      const url = `https://api.amplience.net/v2/content/content-items/${itemId}/delivery-key`;
+      // Prefer the versioned delivery-key update API.
+      const item = await this.getContentItemWithDetails(itemId);
+      if (!item) {
+        console.warn(`Could not assign delivery key for ${itemId}: content item not found`);
 
-      await this._request(url, {
-        method: 'PUT',
-        body: JSON.stringify({ deliveryKey }),
-      });
+        return false;
+      }
 
-      return true;
+      const result = await this.updateDeliveryKey(itemId, item.version, deliveryKey);
+      if (result.success) {
+        return true;
+      }
+
+      console.warn(`Could not assign delivery key for ${itemId}: ${result.error}`);
+
+      return false;
     } catch (error) {
-      console.error(`Error assigning delivery key:`, error);
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.warn(`Could not assign delivery key for ${itemId}: ${message}`);
 
       return false;
     }

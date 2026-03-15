@@ -53,6 +53,7 @@ function buildReportContent(result: FullHierarchyCopyResult, context: ReportCont
   lines.push(`| Duration | ${(result.duration / 1000).toFixed(1)}s |`);
   lines.push(`| Items Created/Updated | ${result.itemsCreated.length} |`);
   lines.push(`| Items Skipped | ${result.itemsSkipped.length} |`);
+  lines.push(`| Items Permission Denied | ${result.itemsPermissionDenied.length} |`);
   lines.push(`| Items Failed | ${result.itemsFailed.length} |`);
   lines.push(`| Items Published | ${result.itemsPublished.length} |`);
   lines.push('');
@@ -103,10 +104,48 @@ function buildReportContent(result: FullHierarchyCopyResult, context: ReportCont
   if (result.itemsFailed.length > 0) {
     lines.push('## Items Failed');
     lines.push('');
-    lines.push('| Source ID | Label | Error |');
-    lines.push('| --- | --- | --- |');
+    lines.push('| Source ID | Label | Error | Failed Request |');
+    lines.push('| --- | --- | --- | --- |');
     for (const item of result.itemsFailed) {
-      lines.push(`| ${item.sourceId} | ${item.label} | ${item.error} |`);
+      lines.push(
+        `| ${escapeMarkdownTableCell(item.sourceId)} | ${escapeMarkdownTableCell(item.label)} | ${escapeMarkdownTableCell(formatApiError(item.error))} | ${escapeMarkdownTableCell(formatFailedRequest(item.failedRequest))} |`
+      );
+    }
+    lines.push('');
+  }
+
+  // Permission denied items
+  if (result.itemsPermissionDenied.length > 0) {
+    lines.push('## Items Permission Denied (403)');
+    lines.push('');
+    lines.push(
+      'These items were blocked by target hub authorization. The table includes likely cause and what to verify.'
+    );
+    lines.push('');
+    lines.push(
+      '| Source ID | Label | Operation | Schema | Target Folder | Target Locale | Likely Cause | Recommended Check | Error | Failed Request |'
+    );
+    lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+    for (const item of result.itemsPermissionDenied) {
+      lines.push(
+        `| ${escapeMarkdownTableCell(item.sourceId)} | ${escapeMarkdownTableCell(item.label)} | ${escapeMarkdownTableCell(item.operation)} | ${escapeMarkdownTableCell(item.schemaId || 'Unknown')} | ${escapeMarkdownTableCell(item.targetFolderId || '(repository root)')} | ${escapeMarkdownTableCell(item.targetLocale || 'Keep source')} | ${escapeMarkdownTableCell(item.likelyCause || 'Authorization required')} | ${escapeMarkdownTableCell(item.recommendedAction || 'Verify target hub roles/permissions')} | ${escapeMarkdownTableCell(formatApiError(item.error))} | ${escapeMarkdownTableCell(formatFailedRequest(item.failedRequest))} |`
+      );
+    }
+    lines.push('');
+
+    lines.push('### Permission Denied Summary');
+    lines.push('');
+
+    const byCause = new Map<string, number>();
+    for (const item of result.itemsPermissionDenied) {
+      const cause = item.likelyCause || 'Authorization required';
+      byCause.set(cause, (byCause.get(cause) || 0) + 1);
+    }
+
+    lines.push('| Likely Cause | Count |');
+    lines.push('| --- | --- |');
+    for (const [cause, count] of byCause.entries()) {
+      lines.push(`| ${escapeMarkdownTableCell(cause)} | ${count} |`);
     }
     lines.push('');
   }
@@ -160,3 +199,46 @@ export type ReportContext = {
   targetLocale?: string | null;
   targetRepositoryName: string;
 };
+
+function escapeMarkdownTableCell(value: string): string {
+  return value.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
+}
+
+function formatApiError(error: string): string {
+  const compact = error.replace(/\s+/g, ' ').trim();
+  const jsonMatch = compact.match(/-\s*(\{.*\})$/);
+
+  if (!jsonMatch) {
+    return compact;
+  }
+
+  try {
+    const parsed = JSON.parse(jsonMatch[1]) as {
+      errors?: Array<{ code?: string; message?: string }>;
+    };
+    const details = (parsed.errors || [])
+      .map(entry => {
+        const code = entry.code || 'UNKNOWN';
+        const message = entry.message || 'No message';
+
+        return `${code}: ${message}`;
+      })
+      .join('; ');
+
+    return details ? compact.replace(jsonMatch[1], details) : compact;
+  } catch {
+    return compact;
+  }
+}
+
+function formatFailedRequest(failedRequest?: {
+  endpoint: string;
+  method: string;
+  payloadJson: string;
+}): string {
+  if (!failedRequest) {
+    return 'N/A';
+  }
+
+  return `${failedRequest.method} ${failedRequest.endpoint} payload=${failedRequest.payloadJson}`;
+}

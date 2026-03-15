@@ -9,7 +9,7 @@ export async function promptForRecreationFilters(): Promise<
         type: 'input',
         name: 'schemaId',
         message: 'Filter by Schema ID (optional):',
-        default: '',
+        default: 'https://greenfield.gn/content/schema/page-hierarchy',
       },
       {
         type: 'checkbox',
@@ -36,13 +36,13 @@ export async function promptForRecreationFilters(): Promise<
         type: 'input',
         name: 'deliveryKey',
         message: 'Filter by Delivery Key pattern (optional):',
-        default: '',
+        default: '^en-gb$',
       },
       {
         type: 'confirm',
         name: 'rootHierarchyOnly',
         message: 'Include only root hierarchy nodes?',
-        default: false,
+        default: true,
       },
     ]);
 

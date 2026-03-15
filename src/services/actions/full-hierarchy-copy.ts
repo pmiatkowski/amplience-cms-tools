@@ -57,6 +57,7 @@ export async function executeFullHierarchyCopy(
     itemsCreated: [],
     itemsSkipped: [],
     itemsFailed: [],
+    itemsPermissionDenied: [],
     itemsPublished: [],
     folderMappings: new Map(folderMapping),
     discoveryWarnings: [],
@@ -99,7 +100,7 @@ export async function executeFullHierarchyCopy(
   // --- Phase 2: Validation ---
   console.log('\n🔎 Phase 2: Validating schema and content type compatibility...');
 
-  const allSchemaIds = [...new Set(allItems.map(item => item.schemaId))];
+  const allSchemaIds = extractUniqueSchemaIds(allItems);
   const validationResult = await validateHubCompatibility(
     sourceService,
     targetService,
@@ -139,16 +140,29 @@ export async function executeFullHierarchyCopy(
     result.folderMappings
   );
 
+  // Ensure all mapped target folders still exist and fallback to user-selected target folder.
+  await normalizeTargetFolderMappings(targetService, targetRepositoryId, result.folderMappings);
+
   // --- Phase 4: Create items in dependency order ---
   console.log('\n🏗️  Phase 4: Creating content items in dependency order...');
 
   const sortedItems = topologicalSort(allItems, discovery.itemDependencies);
   const idMapping = new Map<string, string>(); // source ID → target ID
 
+  console.log('  🔎 Pre-indexing target repository items for reference mapping...');
+  const targetIndexedItems = await targetService.getAllContentItems(targetRepositoryId, () => {}, {
+    size: 100,
+  });
+  const seededMappings = seedIdMappingFromIndexedItems(allItems, targetIndexedItems, idMapping);
+  console.log(
+    `  ✅ Indexed ${targetIndexedItems.length} target items, pre-seeded ${seededMappings} source→target mappings`
+  );
+
   const progressBar = createProgressBar(sortedItems.length, 'Creating items');
 
   for (const item of sortedItems) {
-    const targetFolderId = result.folderMappings.get(item.folderId || '') || undefined;
+    const targetFolderId =
+      result.folderMappings.get(item.folderId || '') || result.folderMappings.get('') || undefined;
 
     // Check for duplicates
     const resolution = await resolveDuplicate(
@@ -160,7 +174,7 @@ export async function executeFullHierarchyCopy(
     );
 
     if (resolution.action === 'skip') {
-      idMapping.set(item.id, resolution.existingItemId);
+      await mapSourceToTargetIdentifiers(targetService, item, resolution.existingItemId, idMapping);
       result.itemsSkipped.push({
         sourceId: item.id,
         targetId: resolution.existingItemId,
@@ -172,10 +186,12 @@ export async function executeFullHierarchyCopy(
     }
 
     // Prepare body with updated reference IDs
-    const preparedBody = replaceReferenceIdsInBody(item.body, idMapping);
+    const preparedBody = sanitizeHierarchyMetadataForCopy(
+      replaceReferenceIdsInBody(item.body, idMapping)
+    );
 
     if (resolution.action === 'update') {
-      const updateSuccess = await retryOperation(() =>
+      const updateResult = await retryOperation(() =>
         updateExistingItem(
           targetService,
           resolution.existingItemId,
@@ -184,8 +200,13 @@ export async function executeFullHierarchyCopy(
           item.label
         )
       );
-      if (updateSuccess) {
-        idMapping.set(item.id, resolution.existingItemId);
+      if (updateResult.value) {
+        await mapSourceToTargetIdentifiers(
+          targetService,
+          item,
+          resolution.existingItemId,
+          idMapping
+        );
         result.itemsCreated.push({
           sourceId: item.id,
           targetId: resolution.existingItemId,
@@ -193,11 +214,40 @@ export async function executeFullHierarchyCopy(
           action: 'updated',
         });
       } else {
-        result.itemsFailed.push({
-          sourceId: item.id,
-          label: item.label,
-          error: 'Update failed after retries',
-        });
+        const errorMessage = updateResult.error || 'Unknown error occurred';
+        if (isForbiddenApiError(errorMessage)) {
+          const forbiddenDetails = analyzeForbiddenError(errorMessage, {
+            operation: 'update',
+            ...(resolveSchemaId(item) && { schemaId: resolveSchemaId(item) }),
+            ...(item.folderId && { sourceFolderId: item.folderId }),
+            ...(targetFolderId && { targetFolderId }),
+            ...(item.locale && { targetLocale: item.locale }),
+          });
+          result.itemsPermissionDenied.push({
+            sourceId: item.id,
+            label: item.label,
+            operation: 'update',
+            error: errorMessage,
+            ...(updateResult.request && { failedRequest: updateResult.request }),
+            likelyCause: forbiddenDetails.likelyCause,
+            recommendedAction: forbiddenDetails.recommendedAction,
+            ...(forbiddenDetails.schemaId && { schemaId: forbiddenDetails.schemaId }),
+            ...(forbiddenDetails.sourceFolderId && {
+              sourceFolderId: forbiddenDetails.sourceFolderId,
+            }),
+            ...(forbiddenDetails.targetFolderId && {
+              targetFolderId: forbiddenDetails.targetFolderId,
+            }),
+            ...(forbiddenDetails.targetLocale && { targetLocale: forbiddenDetails.targetLocale }),
+          });
+        } else {
+          result.itemsFailed.push({
+            sourceId: item.id,
+            label: item.label,
+            error: `Update failed: ${errorMessage}`,
+            ...(updateResult.request && { failedRequest: updateResult.request }),
+          });
+        }
       }
       progressBar.increment();
       continue;
@@ -205,7 +255,7 @@ export async function executeFullHierarchyCopy(
 
     // Create new item
     const locale = targetLocale || item.locale;
-    const newItem = await retryOperation(() =>
+    let createResult = await retryOperation(() =>
       createItemInTarget(
         targetService,
         targetRepositoryId,
@@ -216,11 +266,29 @@ export async function executeFullHierarchyCopy(
       )
     );
 
-    if (newItem) {
-      idMapping.set(item.id, newItem.id);
+    // Bulk sync creates items without folderId. If folder-scoped create is denied,
+    // retry once in repository root to avoid false negatives caused by folder access.
+    if (!createResult.value && targetFolderId && isForbiddenApiError(createResult.error || '')) {
+      console.warn(
+        `  ⚠️  Folder-scoped create denied for "${item.label}". Retrying in repository root...`
+      );
+      createResult = await retryOperation(() =>
+        createItemInTarget(
+          targetService,
+          targetRepositoryId,
+          preparedBody,
+          resolution.label,
+          undefined,
+          locale
+        )
+      );
+    }
+
+    if (createResult.value) {
+      mapItemIdentifiers(item, createResult.value, idMapping);
       result.itemsCreated.push({
         sourceId: item.id,
-        targetId: newItem.id,
+        targetId: createResult.value.id,
         label: resolution.label,
         action: 'created',
       });
@@ -228,14 +296,53 @@ export async function executeFullHierarchyCopy(
       // Handle delivery key
       const deliveryKey = item.body._meta?.deliveryKey;
       if (deliveryKey) {
-        await targetService.assignDeliveryKey(newItem.id, deliveryKey);
+        const keyResult = await targetService.updateDeliveryKey(
+          createResult.value.id,
+          createResult.value.version,
+          deliveryKey
+        );
+
+        if (!keyResult.success) {
+          console.warn(
+            `  ⚠️  Could not assign delivery key for item "${resolution.label}" (${createResult.value.id}): ${keyResult.error}`
+          );
+        }
       }
     } else {
-      result.itemsFailed.push({
-        sourceId: item.id,
-        label: item.label,
-        error: 'Creation failed after retries',
-      });
+      const errorMessage = createResult.error || 'Unknown error occurred';
+      if (isForbiddenApiError(errorMessage)) {
+        const forbiddenDetails = analyzeForbiddenError(errorMessage, {
+          operation: 'create',
+          ...(resolveSchemaId(item) && { schemaId: resolveSchemaId(item) }),
+          ...(item.folderId && { sourceFolderId: item.folderId }),
+          ...(targetFolderId && { targetFolderId }),
+          ...(locale && { targetLocale: locale }),
+        });
+        result.itemsPermissionDenied.push({
+          sourceId: item.id,
+          label: item.label,
+          operation: 'create',
+          error: errorMessage,
+          ...(createResult.request && { failedRequest: createResult.request }),
+          likelyCause: forbiddenDetails.likelyCause,
+          recommendedAction: forbiddenDetails.recommendedAction,
+          ...(forbiddenDetails.schemaId && { schemaId: forbiddenDetails.schemaId }),
+          ...(forbiddenDetails.sourceFolderId && {
+            sourceFolderId: forbiddenDetails.sourceFolderId,
+          }),
+          ...(forbiddenDetails.targetFolderId && {
+            targetFolderId: forbiddenDetails.targetFolderId,
+          }),
+          ...(forbiddenDetails.targetLocale && { targetLocale: forbiddenDetails.targetLocale }),
+        });
+      } else {
+        result.itemsFailed.push({
+          sourceId: item.id,
+          label: item.label,
+          error: `Creation failed: ${errorMessage}`,
+          ...(createResult.request && { failedRequest: createResult.request }),
+        });
+      }
     }
 
     progressBar.increment();
@@ -247,9 +354,14 @@ export async function executeFullHierarchyCopy(
   console.log('\n🔗 Phase 5: Establishing hierarchy relationships...');
 
   const hierarchyDetailedItems = detailedItems.filter(item => item.hierarchy);
+  const hierarchyBySourceId = new Map(hierarchyDetailedItems.map(item => [item.id, item]));
   const rootItems = hierarchyDetailedItems.filter(item => item.hierarchy?.root);
-  const childItems = hierarchyDetailedItems.filter(
+  const unsortedChildItems = hierarchyDetailedItems.filter(
     item => item.hierarchy && !item.hierarchy.root && item.hierarchy.parentId
+  );
+  const childItems = sortHierarchyChildrenByDepth(unsortedChildItems, hierarchyDetailedItems);
+  const parentSourceIds = new Set(
+    childItems.map(item => (item.hierarchy as { root: false; parentId: string }).parentId)
   );
 
   // Establish roots first
@@ -281,19 +393,84 @@ export async function executeFullHierarchyCopy(
     }
   }
 
-  // Establish child relationships
-  for (const child of childItems) {
-    const targetChildId = idMapping.get(child.id);
-    const targetParentId = idMapping.get(
-      (child.hierarchy as { root: false; parentId: string }).parentId
-    );
-    if (!targetChildId || !targetParentId) continue;
+  // Ensure all target parents are valid hierarchy nodes before linking children.
+  for (const parentSourceId of parentSourceIds) {
+    const targetParentId = idMapping.get(parentSourceId);
+    const sourceParent = hierarchyBySourceId.get(parentSourceId);
 
-    await retryOperation(() =>
-      targetService
-        .createHierarchyNode(targetRepositoryId, targetChildId, targetParentId)
-        .then(success => (success ? ({} as Amplience.ContentItemWithDetails) : null))
-    );
+    if (!targetParentId || !sourceParent) {
+      continue;
+    }
+
+    const conversionOk = await ensureItemIsHierarchyNode(targetService, targetParentId);
+    if (!conversionOk) {
+      result.itemsFailed.push({
+        sourceId: parentSourceId,
+        label: sourceParent.label,
+        error: 'Hierarchy conversion failed: could not convert target parent to hierarchy node',
+      });
+    }
+  }
+
+  // Establish child relationships in passes so unresolved descendants can be retried
+  // after their parents are successfully linked.
+  let pendingChildren = [...childItems];
+  const maxPasses = Math.max(1, childItems.length);
+
+  for (let pass = 1; pass <= maxPasses && pendingChildren.length > 0; pass++) {
+    let establishedThisPass = 0;
+    const nextPending: Amplience.ContentItemWithDetails[] = [];
+
+    for (const child of pendingChildren) {
+      const targetChildId = idMapping.get(child.id);
+      const targetParentId = idMapping.get(
+        (child.hierarchy as { root: false; parentId: string }).parentId
+      );
+      if (!targetChildId || !targetParentId) {
+        continue;
+      }
+
+      const linked = await targetService.createHierarchyNode(
+        targetRepositoryId,
+        targetChildId,
+        targetParentId
+      );
+
+      if (linked) {
+        establishedThisPass++;
+
+        // Some hierarchies require parent nodes to be published before they can
+        // be used as valid parents for deeper descendants.
+        if (parentSourceIds.has(child.id) && shouldPublishItem(child)) {
+          const published = await publishWithRetry(targetService, targetChildId);
+          if (published) {
+            result.itemsPublished.push({ sourceId: child.id, targetId: targetChildId });
+            await delay(100);
+          }
+        }
+      } else {
+        nextPending.push(child);
+      }
+    }
+
+    if (nextPending.length === 0) {
+      pendingChildren = nextPending;
+      break;
+    }
+
+    if (establishedThisPass === 0) {
+      for (const unresolved of nextPending) {
+        result.itemsFailed.push({
+          sourceId: unresolved.id,
+          label: unresolved.label,
+          error: 'Hierarchy relationship failed: parent could not be established as hierarchy node',
+        });
+      }
+      pendingChildren = nextPending;
+      break;
+    }
+
+    pendingChildren = nextPending;
   }
 
   // --- Phase 6: Publish ---
@@ -328,6 +505,7 @@ export async function executeFullHierarchyCopy(
   console.log('\n📊 Operation Summary:');
   console.log(`  ✅ Created/Updated: ${result.itemsCreated.length}`);
   console.log(`  ⏩ Skipped: ${result.itemsSkipped.length}`);
+  console.log(`  🔒 Permission Denied: ${result.itemsPermissionDenied.length}`);
   console.log(`  ❌ Failed: ${result.itemsFailed.length}`);
   console.log(`  📤 Published: ${result.itemsPublished.length}`);
   console.log(`  ⏱️  Duration: ${(result.duration / 1000).toFixed(1)}s`);
@@ -335,10 +513,40 @@ export async function executeFullHierarchyCopy(
   return result;
 }
 
+/**
+ * Extracts unique schema IDs from items using runtime-safe fallback logic.
+ * Some API responses can omit `schemaId` while still exposing `_meta.schema`.
+ */
+export function extractUniqueSchemaIds(items: Amplience.ContentItemWithDetails[]): string[] {
+  const schemaIds = new Set<string>();
+
+  for (const item of items) {
+    const schemaId = resolveSchemaId(item);
+    if (schemaId) {
+      schemaIds.add(schemaId);
+    }
+  }
+
+  return [...schemaIds];
+}
+
 export type FailedItemRecord = {
   error: string;
+  failedRequest?: FailedRequestRecord;
   label: string;
   sourceId: string;
+};
+
+export type FailedRequestRecord = {
+  endpoint: string;
+  method: 'PATCH' | 'POST';
+  payloadJson: string;
+};
+
+type RetryResult<T> = {
+  error?: string;
+  request?: FailedRequestRecord;
+  value: T | null;
 };
 
 export type FullHierarchyCopyOptions = {
@@ -359,14 +567,37 @@ export type FullHierarchyCopyResult = {
   folderMappings: Map<string, string>;
   itemsCreated: CreatedItemRecord[];
   itemsFailed: FailedItemRecord[];
+  itemsPermissionDenied: PermissionDeniedItemRecord[];
   itemsPublished: PublishedItemRecord[];
   itemsSkipped: SkippedItemRecord[];
   validationResult: HubValidationResult | null;
 };
 
+export type PermissionDeniedItemRecord = {
+  error: string;
+  failedRequest?: FailedRequestRecord;
+  label: string;
+  likelyCause?: string;
+  operation: 'create' | 'update';
+  recommendedAction?: string;
+  schemaId?: string;
+  sourceId: string;
+  sourceFolderId?: string;
+  targetFolderId?: string;
+  targetLocale?: string;
+};
+
 export type PublishedItemRecord = {
   sourceId: string;
   targetId: string;
+};
+
+type MappingCandidate = {
+  body?: unknown;
+  deliveryId?: string;
+  id: string;
+  label: string;
+  schemaId?: string;
 };
 
 /**
@@ -400,6 +631,11 @@ export function replaceReferenceIdsInBody(
       obj.id = idMapping.get(obj.id)!;
     }
 
+    // Replace deliveryId fields represented directly on objects
+    if (typeof obj.deliveryId === 'string' && idMapping.has(obj.deliveryId)) {
+      obj.deliveryId = idMapping.get(obj.deliveryId)!;
+    }
+
     // Replace deliveryId in _meta if it maps
     if (obj._meta && typeof obj._meta === 'object') {
       const meta = obj._meta as Record<string, unknown>;
@@ -418,6 +654,149 @@ export function replaceReferenceIdsInBody(
   return cloned;
 }
 
+function mapItemIdentifiers(
+  sourceItem: Pick<Amplience.ContentItemWithDetails, 'id' | 'deliveryId'>,
+  targetItem: Pick<Amplience.ContentItemWithDetails, 'id' | 'deliveryId'>,
+  idMapping: Map<string, string>
+): void {
+  idMapping.set(sourceItem.id, targetItem.id);
+  if (sourceItem.deliveryId) {
+    idMapping.set(sourceItem.deliveryId, targetItem.deliveryId || targetItem.id);
+  }
+}
+
+function mapCandidateIdentifiers(
+  sourceItem: Pick<MappingCandidate, 'id' | 'deliveryId'>,
+  targetItem: Pick<MappingCandidate, 'id' | 'deliveryId'>,
+  idMapping: Map<string, string>
+): void {
+  idMapping.set(sourceItem.id, targetItem.id);
+
+  if (sourceItem.deliveryId) {
+    idMapping.set(sourceItem.deliveryId, targetItem.deliveryId || targetItem.id);
+  }
+}
+
+export function seedIdMappingFromIndexedItems(
+  sourceItems: MappingCandidate[],
+  targetItems: MappingCandidate[],
+  idMapping: Map<string, string>
+): number {
+  const targetByDeliveryKey = new Map<string, MappingCandidate[]>();
+  const targetBySchemaAndLabel = new Map<string, MappingCandidate[]>();
+
+  for (const target of targetItems) {
+    const deliveryKey = normalizeForLookup(extractDeliveryKey(target));
+    if (deliveryKey) {
+      const candidates = targetByDeliveryKey.get(deliveryKey) || [];
+      candidates.push(target);
+      targetByDeliveryKey.set(deliveryKey, candidates);
+    }
+
+    const schema = normalizeForLookup(extractSchemaId(target));
+    const label = normalizeForLookup(target.label);
+    if (schema && label) {
+      const key = `${schema}::${label}`;
+      const candidates = targetBySchemaAndLabel.get(key) || [];
+      candidates.push(target);
+      targetBySchemaAndLabel.set(key, candidates);
+    }
+  }
+
+  let seededCount = 0;
+
+  for (const source of sourceItems) {
+    if (idMapping.has(source.id)) {
+      continue;
+    }
+
+    let matched: MappingCandidate | undefined;
+
+    const sourceDeliveryKey = normalizeForLookup(extractDeliveryKey(source));
+    if (sourceDeliveryKey) {
+      const candidates = targetByDeliveryKey.get(sourceDeliveryKey) || [];
+      if (candidates.length === 1) {
+        matched = candidates[0];
+      }
+    }
+
+    if (!matched) {
+      const sourceSchema = normalizeForLookup(extractSchemaId(source));
+      const sourceLabel = normalizeForLookup(source.label);
+      if (sourceSchema && sourceLabel) {
+        const candidates = targetBySchemaAndLabel.get(`${sourceSchema}::${sourceLabel}`) || [];
+        if (candidates.length === 1) {
+          matched = candidates[0];
+        }
+      }
+    }
+
+    if (!matched) {
+      continue;
+    }
+
+    mapCandidateIdentifiers(source, matched, idMapping);
+    seededCount++;
+  }
+
+  return seededCount;
+}
+
+function extractDeliveryKey(item: Pick<MappingCandidate, 'body'>): string {
+  if (!item.body || typeof item.body !== 'object') {
+    return '';
+  }
+
+  const body = item.body as { _meta?: Record<string, unknown> };
+  const meta = body._meta;
+  if (!meta || typeof meta !== 'object') {
+    return '';
+  }
+
+  return typeof meta.deliveryKey === 'string' ? meta.deliveryKey : '';
+}
+
+function extractSchemaId(item: Pick<MappingCandidate, 'schemaId' | 'body'>): string {
+  if (item.schemaId && item.schemaId.trim()) {
+    return item.schemaId.trim();
+  }
+
+  if (!item.body || typeof item.body !== 'object') {
+    return '';
+  }
+
+  const body = item.body as { _meta?: Record<string, unknown> };
+  const meta = body._meta;
+  if (!meta || typeof meta !== 'object') {
+    return '';
+  }
+
+  return typeof meta.schema === 'string' ? meta.schema.trim() : '';
+}
+
+function normalizeForLookup(value?: string): string {
+  return (value || '').trim().toLowerCase();
+}
+
+async function mapSourceToTargetIdentifiers(
+  targetService: AmplienceService,
+  sourceItem: Pick<Amplience.ContentItemWithDetails, 'id' | 'deliveryId'>,
+  targetItemId: string,
+  idMapping: Map<string, string>
+): Promise<void> {
+  const targetDetails = await targetService.getContentItemWithDetails(targetItemId);
+  if (targetDetails) {
+    mapItemIdentifiers(sourceItem, targetDetails, idMapping);
+
+    return;
+  }
+
+  idMapping.set(sourceItem.id, targetItemId);
+  if (sourceItem.deliveryId) {
+    idMapping.set(sourceItem.deliveryId, targetItemId);
+  }
+}
+
 export type SkippedItemRecord = {
   label: string;
   reason: string;
@@ -434,20 +813,29 @@ async function createItemInTarget(
   label: string,
   folderId?: string,
   locale?: string | null
-): Promise<Amplience.ContentItemWithDetails | null> {
+): Promise<RetryResult<Amplience.ContentItemWithDetails>> {
   const request: Amplience.CreateContentItemRequest = {
     body,
     label,
     ...(folderId && { folderId }),
     ...(locale && { locale }),
   };
+  const failedRequest: FailedRequestRecord = {
+    method: 'POST',
+    endpoint: `https://api.amplience.net/v2/content/content-repositories/${repositoryId}/content-items`,
+    payloadJson: JSON.stringify(request),
+  };
 
   const result = await service.createContentItem(repositoryId, request);
   if (result.success && result.updatedItem) {
-    return result.updatedItem;
+    return { value: result.updatedItem };
   }
 
-  return null;
+  return {
+    value: null,
+    error: result.error || 'Unknown error occurred while creating content item',
+    request: failedRequest,
+  };
 }
 
 function delay(ms: number): Promise<void> {
@@ -508,30 +896,136 @@ async function mirrorFolderStructure(
   }
 }
 
+async function normalizeTargetFolderMappings(
+  targetService: AmplienceService,
+  targetRepositoryId: string,
+  folderMappings: Map<string, string>
+): Promise<void> {
+  if (folderMappings.size === 0) {
+    return;
+  }
+
+  const targetFolders = await targetService.getAllFolders(targetRepositoryId, () => {});
+  const existingTargetFolderIds = new Set(targetFolders.map(folder => folder.id));
+  const selectedTargetFolderId = folderMappings.get('');
+
+  for (const [sourceFolderId, mappedTargetFolderId] of folderMappings.entries()) {
+    if (existingTargetFolderIds.has(mappedTargetFolderId)) {
+      continue;
+    }
+
+    if (selectedTargetFolderId && existingTargetFolderIds.has(selectedTargetFolderId)) {
+      folderMappings.set(sourceFolderId, selectedTargetFolderId);
+      console.warn(
+        `  ⚠️  Target folder mapping for source "${sourceFolderId || '(repository root)'}" is unavailable. Falling back to selected target folder ${selectedTargetFolderId}.`
+      );
+      continue;
+    }
+
+    folderMappings.delete(sourceFolderId);
+    console.warn(
+      `  ⚠️  Target folder mapping for source "${sourceFolderId || '(repository root)'}" is unavailable and no fallback folder is accessible. Item will be created in repository root.`
+    );
+  }
+}
+
 async function publishWithRetry(service: AmplienceService, itemId: string): Promise<boolean> {
   const result = await service.publishContentItem(itemId);
 
   return result.success;
 }
 
-async function retryOperation<T>(
-  operation: () => Promise<T | null>,
-  attempt: number = 1
-): Promise<T | null> {
-  try {
-    return await operation();
-  } catch {
-    if (attempt >= MAX_RETRIES) {
-      console.error(`  ❌ Operation failed after ${MAX_RETRIES} retries`);
+async function ensureItemIsHierarchyNode(
+  targetService: AmplienceService,
+  targetItemId: string
+): Promise<boolean> {
+  const targetItem = await targetService.getContentItemWithDetails(targetItemId);
+  if (!targetItem) {
+    return false;
+  }
 
-      return null;
+  if (targetItem.body._meta?.hierarchy) {
+    return true;
+  }
+
+  const updateResult = await targetService.updateContentItem(targetItemId, {
+    body: {
+      ...targetItem.body,
+      _meta: {
+        ...targetItem.body._meta,
+        hierarchy: { root: true, parentId: null },
+      },
+    },
+    label: targetItem.label,
+    version: targetItem.version,
+    ...(targetItem.folderId && { folderId: targetItem.folderId }),
+    ...(targetItem.locale && { locale: targetItem.locale }),
+  });
+
+  return updateResult.success;
+}
+
+async function retryOperation<T>(
+  operation: () => Promise<RetryResult<T>>,
+  attempt: number = 1,
+  lastError?: string,
+  lastRequest?: FailedRequestRecord
+): Promise<RetryResult<T>> {
+  try {
+    const outcome = await operation();
+
+    if (outcome.value !== null) {
+      return outcome;
+    }
+
+    const errorMessage = outcome.error || lastError || 'Unknown error occurred';
+    const request = outcome.request || lastRequest;
+
+    if (!isRetryableApiError(errorMessage)) {
+      return { value: null, error: errorMessage, ...(request && { request }) };
+    }
+
+    if (attempt >= MAX_RETRIES) {
+      console.error(
+        `  ❌ Operation failed after ${MAX_RETRIES} retries. Last error: ${errorMessage}`
+      );
+
+      return { value: null, error: errorMessage, ...(request && { request }) };
     }
 
     const backoff = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
-    console.warn(`  ⚠️  Retry ${attempt}/${MAX_RETRIES} after ${backoff}ms...`);
+    console.warn(`  ⚠️  Retry ${attempt}/${MAX_RETRIES} after ${backoff}ms. ${errorMessage}`);
     await delay(backoff);
 
-    return retryOperation(operation, attempt + 1);
+    return retryOperation(operation, attempt + 1, errorMessage, request);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    if (!isRetryableApiError(errorMessage)) {
+      return {
+        value: null,
+        error: errorMessage,
+        ...(lastRequest && { request: lastRequest }),
+      };
+    }
+
+    if (attempt >= MAX_RETRIES) {
+      console.error(
+        `  ❌ Operation failed after ${MAX_RETRIES} retries. Last error: ${errorMessage}`
+      );
+
+      return {
+        value: null,
+        error: errorMessage,
+        ...(lastRequest && { request: lastRequest }),
+      };
+    }
+
+    const backoff = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+    console.warn(`  ⚠️  Retry ${attempt}/${MAX_RETRIES} after ${backoff}ms. ${errorMessage}`);
+    await delay(backoff);
+
+    return retryOperation(operation, attempt + 1, errorMessage, lastRequest);
   }
 }
 
@@ -540,6 +1034,152 @@ function shouldPublishItem(item: Amplience.ContentItemWithDetails): boolean {
     item.status === 'ACTIVE' &&
     (item.publishingStatus === 'EARLY' || item.publishingStatus === 'LATEST')
   );
+}
+
+function sanitizeHierarchyMetadataForCopy(body: Amplience.Body): Amplience.Body {
+  const cloned = JSON.parse(JSON.stringify(body)) as Amplience.Body;
+
+  if (!cloned._meta || typeof cloned._meta !== 'object') {
+    return cloned;
+  }
+
+  const meta = cloned._meta as Record<string, unknown>;
+  if ('hierarchy' in meta) {
+    delete meta.hierarchy;
+  }
+
+  return cloned;
+}
+
+function isRetryableApiError(errorMessage: string): boolean {
+  const match = errorMessage.match(/API Error:\s*(\d{3})/);
+  if (!match) {
+    return true;
+  }
+
+  const status = Number(match[1]);
+  if (status === 429 || status >= 500) {
+    return true;
+  }
+
+  return false;
+}
+
+function isForbiddenApiError(errorMessage: string): boolean {
+  const match = errorMessage.match(/API Error:\s*(\d{3})/);
+  if (match && Number(match[1]) === 403) {
+    return true;
+  }
+
+  return (
+    errorMessage.includes('FORBIDDEN') ||
+    errorMessage.includes('Authorization required') ||
+    errorMessage.includes('403 Forbidden')
+  );
+}
+
+function analyzeForbiddenError(
+  errorMessage: string,
+  context: {
+    operation: 'create' | 'update';
+    schemaId?: string;
+    sourceFolderId?: string;
+    targetFolderId?: string;
+    targetLocale?: string | null;
+  }
+): {
+  likelyCause: string;
+  recommendedAction: string;
+  schemaId?: string;
+  sourceFolderId?: string;
+  targetFolderId?: string;
+  targetLocale?: string;
+} {
+  const normalized = errorMessage.toLowerCase();
+  const schemaContext = context.schemaId ? ` for schema ${context.schemaId}` : '';
+
+  let likelyCause = `Missing permission to ${context.operation} content${schemaContext}.`;
+  let recommendedAction =
+    'Verify the target hub credentials have repository write permissions and schema-level authoring rights.';
+
+  if (normalized.includes('authorization required') || normalized.includes('forbidden')) {
+    likelyCause = `The current token is authenticated but not authorized to ${context.operation} this content${schemaContext}.`;
+    recommendedAction =
+      'Check user/API client roles in the target hub, including repository access, folder restrictions, and content-type permissions.';
+  }
+
+  return {
+    likelyCause,
+    recommendedAction,
+    ...(context.schemaId && { schemaId: context.schemaId }),
+    ...(context.sourceFolderId && { sourceFolderId: context.sourceFolderId }),
+    ...(context.targetFolderId && { targetFolderId: context.targetFolderId }),
+    ...(context.targetLocale && { targetLocale: context.targetLocale }),
+  };
+}
+
+function sortHierarchyChildrenByDepth(
+  childItems: Amplience.ContentItemWithDetails[],
+  allHierarchyItems: Amplience.ContentItemWithDetails[]
+): Amplience.ContentItemWithDetails[] {
+  const byId = new Map(allHierarchyItems.map(item => [item.id, item]));
+  const depthCache = new Map<string, number>();
+
+  function getDepth(itemId: string, visited: Set<string> = new Set()): number {
+    if (depthCache.has(itemId)) {
+      return depthCache.get(itemId)!;
+    }
+
+    if (visited.has(itemId)) {
+      // Break potential cycles defensively; keep deterministic ordering.
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    const item = byId.get(itemId);
+    if (!item || !item.hierarchy) {
+      depthCache.set(itemId, 0);
+
+      return 0;
+    }
+
+    if (item.hierarchy.root) {
+      depthCache.set(itemId, 0);
+
+      return 0;
+    }
+
+    const parentId = item.hierarchy.parentId;
+    if (!parentId) {
+      depthCache.set(itemId, 1);
+
+      return 1;
+    }
+
+    const nextVisited = new Set(visited);
+    nextVisited.add(itemId);
+    const depth = getDepth(parentId, nextVisited) + 1;
+    depthCache.set(itemId, depth);
+
+    return depth;
+  }
+
+  return [...childItems].sort((a, b) => {
+    const depthA = getDepth(a.id);
+    const depthB = getDepth(b.id);
+
+    if (depthA !== depthB) {
+      return depthA - depthB;
+    }
+
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function resolveSchemaId(item: Amplience.ContentItemWithDetails): string {
+  const bodyMeta = item.body?._meta as Record<string, unknown> | undefined;
+  const fallbackSchema = typeof bodyMeta?.schema === 'string' ? bodyMeta.schema : '';
+
+  return (item.schemaId || fallbackSchema || '').trim();
 }
 
 /**
@@ -613,15 +1253,18 @@ async function updateExistingItem(
   version: number,
   body: Amplience.Body,
   label: string
-): Promise<Amplience.ContentItemWithDetails | null> {
-  const result = await service.updateContentItem(itemId, {
+): Promise<RetryResult<Amplience.ContentItemWithDetails>> {
+  const initialPayload: Amplience.UpdateContentItemRequest = {
     body,
     label,
     version,
-  });
+  };
+  const endpoint = `https://api.amplience.net/v2/content/content-items/${itemId}`;
+
+  const result = await service.updateContentItem(itemId, initialPayload);
 
   if (result.success && result.updatedItem) {
-    return result.updatedItem;
+    return { value: result.updatedItem };
   }
 
   // Handle 409 version conflict
@@ -634,10 +1277,28 @@ async function updateExistingItem(
         version: current.version,
       });
       if (retryResult.success && retryResult.updatedItem) {
-        return retryResult.updatedItem;
+        return { value: retryResult.updatedItem };
       }
+
+      return {
+        value: null,
+        error: retryResult.error || result.error || 'Version conflict could not be resolved',
+        request: {
+          method: 'PATCH',
+          endpoint,
+          payloadJson: JSON.stringify({ body, label, version: current.version }),
+        },
+      };
     }
   }
 
-  return null;
+  return {
+    value: null,
+    error: result.error || 'Unknown error occurred while updating content item',
+    request: {
+      method: 'PATCH',
+      endpoint,
+      payloadJson: JSON.stringify(initialPayload),
+    },
+  };
 }

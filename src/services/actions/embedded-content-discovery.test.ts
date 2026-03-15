@@ -3,6 +3,24 @@ import { discoverEmbeddedContent, extractReferencedIds } from './embedded-conten
 import type { AmplienceService } from '../amplience-service';
 
 describe('extractReferencedIds', () => {
+  it('should extract IDs from core content-link references', () => {
+    const body = {
+      _meta: { schema: 'https://example.com/page' },
+      component: [
+        {
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link',
+          },
+          id: 'linked-item-1',
+          contentType: 'https://example.com/banner',
+        },
+      ],
+    };
+
+    const ids = extractReferencedIds(body as Record<string, unknown>);
+    expect(ids).toEqual(['linked-item-1']);
+  });
+
   it('should extract content reference IDs from body', () => {
     const body = {
       _meta: { schema: 'https://example.com/page' },
@@ -246,6 +264,75 @@ describe('discoverEmbeddedContent', () => {
     expect(result.embeddedItemIds).toEqual([]);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].type).toBe('dangling-reference');
+  });
+
+  it('normalizes deliveryId references to canonical item IDs for dependencies', async () => {
+    const items = [
+      createMockItem('root-1', 'repo-1', {
+        _meta: { schema: 'https://example.com/page' },
+        hero: {
+          _meta: {
+            schema: 'https://example.com/media',
+            deliveryId: 'media-delivery-1',
+          },
+        },
+      }),
+    ];
+
+    vi.mocked(mockService.getContentItemWithDetails).mockResolvedValueOnce({
+      ...createMockItem('media-item-1', 'repo-1', {
+        _meta: { schema: 'https://example.com/media' },
+      }),
+      deliveryId: 'media-delivery-1',
+    });
+
+    const result = await discoverEmbeddedContent(mockService, items, 'repo-1');
+
+    expect(result.embeddedItemIds).toEqual(['media-item-1']);
+    expect(Array.from(result.itemDependencies.get('root-1') || [])).toEqual(['media-item-1']);
+  });
+
+  it('recursively discovers core content-link references by id', async () => {
+    const items = [
+      createMockItem('root-1', 'repo-1', {
+        _meta: { schema: 'https://example.com/page' },
+        component: [
+          {
+            _meta: {
+              schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link',
+            },
+            id: 'linked-item-1',
+            contentType: 'https://example.com/banner',
+          },
+        ],
+      }),
+    ];
+
+    vi.mocked(mockService.getContentItemWithDetails).mockResolvedValueOnce(
+      createMockItem('linked-item-1', 'repo-1', {
+        _meta: { schema: 'https://example.com/banner' },
+        nested: {
+          _meta: {
+            schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference',
+          },
+          id: 'linked-item-2',
+        },
+      })
+    );
+
+    vi.mocked(mockService.getContentItemWithDetails).mockResolvedValueOnce(
+      createMockItem('linked-item-2', 'repo-1', {
+        _meta: { schema: 'https://example.com/rich-text' },
+      })
+    );
+
+    const result = await discoverEmbeddedContent(mockService, items, 'repo-1');
+
+    expect(result.embeddedItemIds).toEqual(['linked-item-1', 'linked-item-2']);
+    expect(Array.from(result.itemDependencies.get('root-1') || [])).toEqual(['linked-item-1']);
+    expect(Array.from(result.itemDependencies.get('linked-item-1') || [])).toEqual([
+      'linked-item-2',
+    ]);
   });
 });
 

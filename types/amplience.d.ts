@@ -440,6 +440,11 @@ declare global {
     }
 
     /**
+     * Represents the request payload for copying an existing content item.
+     */
+    interface CopyContentItemRequest extends CreateContentItemRequest {}
+
+    /**
      * Represents a content item with full details including workflow and links.
      */
     interface ContentItemWithDetails extends ContentItem {

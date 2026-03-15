@@ -27,7 +27,6 @@ export async function runFullHierarchyCopy(): Promise<void> {
     const hubs = getHubConfigs();
 
     // Step 1: Source Selection
-    console.log('📁 Select source location:');
     const source = await selectSourceLocation(
       hubs,
       'Select source folder (or repository root):',
@@ -91,6 +90,9 @@ export async function runFullHierarchyCopy(): Promise<void> {
     // Step 4: Target Selection
     console.log('\n🎯 Select target location:');
     const target = await selectTargetLocation(hubs, 'Select target folder (optional):', true);
+
+    // Step 4b: Validate target folder access/existence early to avoid opaque 403s later.
+    await validateTargetFolderSelection(target.service, target.repository.id, target.folder?.id);
 
     // Step 5: Target Locale Selection
     console.log('\n🌐 Select target locale:');
@@ -181,5 +183,30 @@ export async function runFullHierarchyCopy(): Promise<void> {
   } catch (error) {
     console.error('\n❌ Error during full hierarchy copy:', error);
     throw error;
+  }
+}
+
+async function validateTargetFolderSelection(
+  targetService: {
+    getAllFolders: (
+      repositoryId: string,
+      onPageFetched: (fetched: number, total: number) => void
+    ) => Promise<Amplience.Folder[]>;
+  },
+  targetRepositoryId: string,
+  targetFolderId?: string
+): Promise<void> {
+  if (!targetFolderId) {
+    return;
+  }
+
+  const targetFolders = await targetService.getAllFolders(targetRepositoryId, () => {});
+  const targetFolderExists = targetFolders.some(folder => folder.id === targetFolderId);
+
+  if (!targetFolderExists) {
+    throw new Error(
+      `Selected target folder "${targetFolderId}" is not accessible in target repository "${targetRepositoryId}". ` +
+        'The folder may not exist anymore or your token cannot access it. Select a different target folder or repository root.'
+    );
   }
 }

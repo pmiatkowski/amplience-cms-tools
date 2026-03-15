@@ -123,6 +123,134 @@ describe('AmplienceService', () => {
       });
     });
 
+    describe('copyContentItem', () => {
+      it('should copy a content item successfully with OAuth credentials', async () => {
+        const mockAuthResponse = {
+          access_token: 'mock-token',
+          expires_in: 3600,
+          token_type: 'Bearer',
+          scope: 'read write',
+        };
+
+        const mockCopiedItemResponse = {
+          id: '00112233-4455-6677-8899-aabbccddeeff',
+          contentRepositoryId: '00112233445566778899aabb',
+          folderId: '00112233445566778899aabb',
+          body: {
+            _meta: {
+              name: 'main-banner',
+              schema: 'http://example.com/banner.json',
+            },
+            heading: 'Buy more stuff!!',
+            link: 'http://anyafinn.com/buymore?campaign=shouting',
+          },
+          version: 1,
+          label: 'Banner Ad Homepage',
+          status: 'ACTIVE',
+          createdBy: '00112233-4455-6677-8899-aabbccddeeff',
+          createdDate: '2019-01-01T00:00:00.000Z',
+          lastModifiedBy: '00112233-4455-6677-8899-aabbccddeeff',
+          lastModifiedDate: '2019-01-01T00:00:00.000Z',
+          deliveryId: '00112233-4455-6677-8899-aabbccddeeff',
+        };
+
+        const requestBody: Amplience.CopyContentItemRequest = {
+          body: {
+            _meta: {
+              name: 'main-banner',
+              schema: 'http://example.com/banner.json',
+            },
+            heading: 'Buy more stuff!!',
+            link: 'http://anyafinn.com/buymore?campaign=shouting',
+          },
+          label: 'Banner Ad Homepage',
+          folderId: '00112233445566778899aabb',
+          locale: 'en',
+        };
+
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockAuthResponse),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 201,
+            json: () => Promise.resolve(mockCopiedItemResponse),
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+          });
+
+        const result = await service.copyContentItem(
+          '00112233445566778899aabb',
+          '00112233-4455-6677-8899-aabbccddeeff',
+          requestBody
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.updatedItem).toEqual(mockCopiedItemResponse);
+        expect(result.error).toBeUndefined();
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(mockFetch).toHaveBeenNthCalledWith(
+          1,
+          'https://auth.amplience.net/oauth/token',
+          expect.any(Object)
+        );
+        expect(mockFetch).toHaveBeenNthCalledWith(
+          2,
+          'https://api.amplience.net/v2/content/content-repositories/00112233445566778899aabb/content-items/00112233-4455-6677-8899-aabbccddeeff',
+          expect.any(Object)
+        );
+
+        const copyCall = mockFetch.mock.calls[1];
+        expect(copyCall[1]?.method).toBe('POST');
+        expect(copyCall[1]?.body).toBe(JSON.stringify(requestBody));
+      });
+
+      it('should handle copy content item errors with OAuth', async () => {
+        const mockAuthResponse = {
+          access_token: 'mock-token',
+          expires_in: 3600,
+          token_type: 'Bearer',
+          scope: 'read write',
+        };
+
+        const requestBody: Amplience.CopyContentItemRequest = {
+          body: {
+            _meta: {
+              name: 'main-banner',
+              schema: 'http://example.com/banner.json',
+            },
+            heading: 'Buy more stuff!!',
+          },
+          label: 'Banner Ad Homepage',
+          locale: 'en',
+        };
+
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockAuthResponse),
+          })
+          .mockResolvedValueOnce({
+            ok: false,
+            status: 400,
+            statusText: 'Bad Request',
+            text: () => Promise.resolve('Invalid request payload'),
+          });
+
+        const result = await service.copyContentItem(
+          '00112233445566778899aabb',
+          '00112233-4455-6677-8899-aabbccddeeff',
+          requestBody
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('API Error: 400 Bad Request');
+        expect(result.updatedItem).toBeUndefined();
+      });
+    });
+
     it('should authenticate with OAuth and cache token', async () => {
       const mockAuthResponse = {
         access_token: 'oauth-token',

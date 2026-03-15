@@ -25,6 +25,20 @@ describe('generateFullHierarchyCopyReport', () => {
         },
       ],
       itemsFailed: [{ sourceId: 's3', label: 'Item 3', error: 'Content type missing' }],
+      itemsPermissionDenied: [
+        {
+          sourceId: 's4',
+          label: 'Item 4',
+          operation: 'create',
+          error: 'API Error: 403 Forbidden - Authorization required.',
+          failedRequest: {
+            method: 'POST',
+            endpoint:
+              'https://api.amplience.net/v2/content/content-repositories/repo-1/content-items',
+            payloadJson: '{"label":"Item 4"}',
+          },
+        },
+      ],
       itemsPublished: [{ sourceId: 's1', targetId: 't1' }],
       folderMappings: new Map([['folder-1', 'folder-2']]),
       discoveryWarnings: [
@@ -58,6 +72,11 @@ describe('generateFullHierarchyCopyReport', () => {
     expect(writtenContent).toContain('Items Created/Updated');
     expect(writtenContent).toContain('Items Skipped');
     expect(writtenContent).toContain('Items Failed');
+    expect(writtenContent).toContain('Items Permission Denied (403)');
     expect(writtenContent).toContain('Discovery Warnings');
+    expect(writtenContent).toContain('Failed Request');
+    expect(writtenContent).toContain(
+      'POST https://api.amplience.net/v2/content/content-repositories/repo-1/content-items payload={"label":"Item 4"}'
+    );
   });
 });

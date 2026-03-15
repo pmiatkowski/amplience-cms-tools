@@ -2,9 +2,21 @@ export function applyFilters(
   items: Amplience.ContentItem[],
   filters: Amplience.FilterCriteria & { rootHierarchyOnly: boolean }
 ): Amplience.ContentItem[] {
+  let deliveryKeyRegex: RegExp | undefined;
+  if (filters.deliveryKey) {
+    try {
+      deliveryKeyRegex = new RegExp(filters.deliveryKey);
+    } catch {
+      // Invalid regex should not crash filtering; treat as no-match filter.
+      return [];
+    }
+  }
+
   return items.filter(item => {
+    const schemaId = item.schemaId || item.body?._meta?.schema || '';
+
     // Schema ID filter
-    if (filters.schemaId && !item.schemaId.includes(filters.schemaId)) {
+    if (filters.schemaId && !schemaId.includes(filters.schemaId)) {
       return false;
     }
 
@@ -18,12 +30,8 @@ export function applyFilters(
       return false;
     }
 
-    // Delivery key filter
-    if (
-      filters.deliveryKey &&
-      item.body._meta?.deliveryKey &&
-      !item.body._meta.deliveryKey.includes(filters.deliveryKey)
-    ) {
+    // Delivery key filter (regex pattern)
+    if (deliveryKeyRegex && !deliveryKeyRegex.test(item.body._meta?.deliveryKey || '')) {
       return false;
     }
 

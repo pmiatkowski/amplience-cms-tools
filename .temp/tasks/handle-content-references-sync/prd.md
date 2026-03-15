@@ -209,4 +209,161 @@ These items are deferred for implementation-phase decisions:
 
 ## 9. Additional Context
 
-*Reserved — populated by /task-add-context*
+### [Source: codebase discovery] — 2026-03-15
+
+Research completed and saved to `.temp/research/amplience-content-reference/`. Key findings:
+
+#### Content Reference Detection Pattern
+
+References are identified by `_meta.schema` containing:
+- `http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference`
+- `http://bigcontent.io/cms/schema/v1/core#/definitions/content-link`
+
+Structure: `{ id: string, contentType: string, _meta: { schema: string } }`
+
+#### Existing Code Patterns to Reuse
+
+1. **`sourceToTargetIdMap`** pattern from `sync-hierarchy.ts` (line 153) - already used for hierarchy ID mapping
+2. **`prepareItemBodyForCreation()`** in `recreate-content-items.ts` - already detects content links but marks them for manual update (line 420-428)
+3. **`linked-content`** API link in `ContentItemWithDetails._links` (types/amplience.d.ts line 469) - can be used to find items referencing a specific item
+
+#### Missing Implementation Gap
+
+From `src/services/actions/recreate-content-items.ts` (lines 420-428):
+```typescript
+if (bodyAny.component && Array.isArray(bodyAny.component)) {
+  console.log(
+    `  🔗 Found ${bodyAny.component.length} content links - these will need to be updated manually after creation`
+  );
+  // In a future enhancement, this could be mapped to equivalent content in target hub
+}
+```
+
+#### Recommended Implementation Structure
+
+```
+src/services/actions/
+├── content-reference-service.ts     # New service for reference handling
+├── content-reference-discovery.ts   # Discovery and scanning logic
+├── content-reference-mapping.ts     # Mapping registry management
+└── content-reference-resolution.ts  # Reference resolution and update
+```
+
+#### Key Functions to Implement
+
+1. `discoverReferencesInBody(body)` - Recursively scan for content references
+2. `resolveReferences(sourceService, targetService, registry)` - Match references to target items
+3. `transformReferencesInBody(body, sourceToTargetIdMap)` - Update reference IDs in body
+
+#### Research Files
+
+- `research-1.md` - Content reference types in Amplience CMS
+- `research-2.md` - Type definitions analysis
+- `research-3.md` - Existing codebase patterns
+- `research-4.md` - Matching and resolution strategies
+- `research-5.md` - Implementation recommendations
+
+---
+
+### [Source: online research + codebase exploration] — 2026-03-15
+
+Comprehensive research from official Amplience docs and 3 parallel codebase exploration agents.
+
+#### Amplience Reference Types (from official docs)
+
+| Type | Schema URI | Auto-publishes Children | Use Case |
+|------|-----------|------------------------|----------|
+| **Content Link** | `core#/definitions/content-link` | ✅ Yes | Components, blocks, containers |
+| **Content Reference** | `core#/definitions/content-reference` | ❌ No | Hyperlinks, loose associations |
+| **Content Hierarchy** | `hierarchy` trait | Optional | Menus, taxonomies, page trees |
+
+**Key distinction:** Content links auto-publish children with parent; content references do not.
+
+#### DC-CLI Reference Handling (from official tool)
+
+DC-CLI's `ContentDependancyTree` class provides proven patterns:
+- **Two-pass import** for circular references: create with null refs, then update
+- **`ContentMapping` class** maintains `Map<sourceId, targetId>`
+- **Dependency scanning** automatically fetches missing referenced items
+- **Reference rewriting** replaces `id` field and handles `_meta.hierarchy.parentId` separately
+
+#### API Endpoints for Reference Operations
+
+| Operation | Endpoint |
+|-----------|----------|
+| Batch update items | `PATCH /v2/content/content-items` (array body) |
+| Get linked content | `GET /content-items/{id}/linked-content` |
+| Hierarchy descendants | `GET /hierarchies/descendants/{rootId}` |
+
+#### Existing Patterns Found in Codebase
+
+| Pattern | File | Lines | Reusability |
+|---------|------|-------|-------------|
+| `sourceToTargetIdMap` | `sync-hierarchy.ts` | 152-153 | **Direct reuse** |
+| `folderMapping` | `recreate-folder-structure.ts` | 35, 105 | Same Map pattern |
+| Recursive traversal | `update-extension-fields.ts` | 109-136 | Adapt for ID replacement |
+| Item signature | `hierarchy-service.ts` | 327-332 | Match by `name:schema` |
+| Body preparation | `recreate-content-items.ts` | 385-430 | Transformation base |
+
+#### Implementation Gaps Identified
+
+| Gap | Location | Priority |
+|-----|----------|----------|
+| Content links require manual update | `recreate-content-items.ts:420-428` | **HIGH** |
+| No recursive reference scanning | Missing entirely | **HIGH** |
+| Content update not implemented | `hierarchy-service.ts:252-255` | MEDIUM |
+| `shouldUpdateContent()` is stub | `hierarchy-service.ts:362-369` | MEDIUM |
+
+#### Current Reference Handling Coverage
+
+| Reference Type | Handled? | Mechanism |
+|---------------|----------|-----------|
+| Hierarchy (`_meta.hierarchy.parentId`) | ✅ Yes | `sourceToTargetIdMap` in sync-hierarchy.ts |
+| Folder (`folderId`) | ✅ Yes | `folderMapping` in recreate-folder-structure.ts |
+| Content links in body | ❌ No | Only logs warning, requires manual fix |
+| Content references in body | ❌ No | Copied as-is with invalid source IDs |
+
+#### Recommended Detection Algorithm
+
+```typescript
+function isContentReference(obj: Record<string, unknown>): boolean {
+  const meta = obj._meta as { schema?: string } | undefined;
+  const schema = meta?.schema;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.contentType === 'string' &&
+    (schema?.includes('content-reference') || schema?.includes('content-link'))
+  );
+}
+```
+
+#### Matching Strategy (Priority Order)
+
+1. **Delivery Key (exact)** - Highest confidence, unique per hub
+2. **Schema ID + Label** - When no delivery key match exists
+3. **Schema ID only** - Multiple matches possible, may require user input
+
+#### Two-Phase Creation for Circular References
+
+```typescript
+// Phase 1: Create all items with null/empty references
+for (const item of items) {
+  const bodyWithNullRefs = nullifyReferences(item.body);
+  const created = await targetService.createContentItem(repoId, bodyWithNullRefs);
+  registry.sourceToTargetIdMap.set(item.id, created.id);
+}
+
+// Phase 2: Update items with resolved references
+for (const item of items) {
+  const transformedBody = transformReferencesInBody(item.body, registry.sourceToTargetIdMap);
+  await targetService.updateContentItem(targetId, { body: transformedBody, version });
+}
+```
+
+#### Online Research Files
+
+- `research-online-1.md` - Content items management, lifecycle, publishing states
+- `research-online-2.md` - Content references comprehensive guide, detection algorithms
+- `research-online-3.md` - DC-CLI tool analysis, ContentDependancyTree patterns
+- `research-online-4.md` - Content modeling, schema definitions, traits
+- `research-online-5.md` - Content Management API reference, all endpoints

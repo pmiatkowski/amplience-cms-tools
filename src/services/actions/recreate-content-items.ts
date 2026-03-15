@@ -1,6 +1,7 @@
 import cliProgress from 'cli-progress';
 import { AmplienceService } from '../amplience-service';
 import {
+  nullifyReferences,
   resolveContentReferences,
   transformBodyReferences,
   type ReferenceResolutionResult,
@@ -72,6 +73,8 @@ export async function recreateContentItems(
   // Reference resolution state
   let referenceResolutionResult: ReferenceResolutionResult | undefined;
   let sourceToTargetIdMap = new Map<string, string>();
+  // Track whether we need to nullify references (when resolution is disabled or failed)
+  let shouldNullifyReferences = !resolveReferences;
 
   // Resolve content references if enabled
   if (resolveReferences && sourceRepositoryId) {
@@ -92,6 +95,7 @@ export async function recreateContentItems(
       if (resolverResult.success) {
         referenceResolutionResult = resolverResult.resolution;
         sourceToTargetIdMap = resolverResult.registry.sourceToTargetIdMap;
+        shouldNullifyReferences = false; // Resolution succeeded, no need to nullify
 
         console.log(`  ✓ Discovered ${referenceResolutionResult.totalDiscovered} items`);
         console.log(
@@ -106,16 +110,20 @@ export async function recreateContentItems(
         }
       } else {
         console.warn(`  ⚠️  Reference resolution failed: ${resolverResult.error}`);
-        console.log(`  📋 Continuing without reference resolution...`);
+        console.log(`  📋 References will be nullified to prevent 403 errors...`);
+        shouldNullifyReferences = true;
       }
     } catch (refError) {
       console.warn(`  ⚠️  Reference resolution error:`, refError);
-      console.log(`  📋 Continuing without reference resolution...`);
+      console.log(`  📋 References will be nullified to prevent 403 errors...`);
+      shouldNullifyReferences = true;
     }
   } else if (resolveReferences && !sourceRepositoryId) {
     console.log(
       `  ⚠️  Reference resolution requested but sourceRepositoryId not provided, skipping...`
     );
+    console.log(`  📋 References will be nullified to prevent 403 errors...`);
+    shouldNullifyReferences = true;
   }
 
   // Phase 1: Create all content items without hierarchy relationships
@@ -189,6 +197,12 @@ export async function recreateContentItems(
           newItemBody = transformBodyReferences(baseBody, transformOptions);
           console.log(`  🔄 Transformed body with resolved references`);
         }
+      } else if (shouldNullifyReferences) {
+        // Reference resolution was not performed or failed - nullify all references
+        // to prevent 403 Forbidden errors from invalid cross-hub content IDs
+        const baseBody = prepareItemBodyForCreation(sourceItem);
+        newItemBody = nullifyReferences(baseBody);
+        console.log(`  ⚠️  Nullified content references (resolution was skipped or failed)`);
       } else {
         newItemBody = prepareItemBodyForCreation(sourceItem);
       }
@@ -581,13 +595,14 @@ function prepareItemBodyForCreation(
 
     // Remove read-only fields that should not be included during content creation
     // For hierarchy, we'll handle relationships separately after all items are created
-    if (body._meta?.hierarchy?.root) {
-      body._meta.hierarchy = { root: true, parentId: null }; // Ensure root hierarchy is preserved
-    } else if (body._meta?.hierarchy) {
-      // For child items, remove hierarchy during creation - we'll establish relationships later
+    // IMPORTANT: We must remove ALL hierarchy metadata during creation - the Amplience API
+    // returns 403 Forbidden if we try to create items with _meta.hierarchy already set.
+    // Hierarchy relationships must be established after creation using the hierarchy API.
+    if (body._meta?.hierarchy) {
+      const wasRoot = body._meta.hierarchy.root;
       delete body._meta.hierarchy;
       console.log(
-        `  🗂️  Removed hierarchy info from child item - will establish relationship after creation`
+        `  🗂️  Removed hierarchy info from ${wasRoot ? 'root' : 'child'} item - will establish relationship after creation`
       );
     }
   } else {
@@ -598,15 +613,10 @@ function prepareItemBodyForCreation(
     }
   }
 
-  // Handle content links - remove invalid references that don't exist in target hub
-  const bodyAny = body as Record<string, unknown>;
-  if (bodyAny.component && Array.isArray(bodyAny.component)) {
-    console.log(
-      `  🔗 Found ${bodyAny.component.length} content links - these will need to be updated manually after creation`
-    );
-    // For now, we'll keep the component array but note that the IDs won't be valid in target hub
-    // In a future enhancement, this could be mapped to equivalent content in target hub
-  }
+  // Note: Content references/links are handled by the caller using:
+  // - transformBodyReferences() when reference resolution succeeds
+  // - nullifyReferences() when reference resolution fails or is skipped
+  // This ensures invalid cross-hub content IDs don't cause 403 errors
 
   return body;
 } /**

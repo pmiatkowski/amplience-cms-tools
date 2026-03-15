@@ -1,8 +1,9 @@
 active_task: handle-content-references-sync
 created_at: 2026-03-12T00:00:00Z
-updated_at: 2026-03-12T12:00:00Z
-status: draft
+updated_at: 2026-03-15T12:00:00Z
+status: planned
 task_path: .temp/tasks/handle-content-references-sync
 prd: .temp/tasks/handle-content-references-sync/prd.md
 plan: .temp/tasks/handle-content-references-sync/plan.md
 context: .temp/tasks/handle-content-references-sync/context.md
+plan_format: B+D

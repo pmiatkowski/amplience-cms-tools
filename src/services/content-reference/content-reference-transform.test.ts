@@ -102,7 +102,7 @@ describe('transformBodyReferences', () => {
 
     const result = transformBodyReferences(body, options) as TestBody;
 
-    expect((result.image as TestBody).id).toBe('');
+    expect(result.image).toBeNull();
     expect(result.title).toBe('Test');
   });
 
@@ -196,12 +196,12 @@ describe('transformBodyReferences', () => {
 
     const result = transformBodyReferences(body, options) as TestBody;
 
-    expect((result.image as TestBody).id).toBe('');
+    expect(result.image).toBeNull();
   });
 });
 
 describe('nullifyReferences', () => {
-  it('should set all reference IDs to null', () => {
+  it('should remove all references (set to null)', () => {
     const body = {
       title: 'Test',
       ref1: createContentReference('id-1', 'https://schema.example.com/type1.json'),
@@ -210,23 +210,19 @@ describe('nullifyReferences', () => {
 
     const result = nullifyReferences(body) as TestBody;
 
-    expect((result.ref1 as TestBody).id).toBe('');
-    expect((result.ref2 as TestBody).id).toBe('');
+    expect(result.ref1).toBeNull();
+    expect(result.ref2).toBeNull();
     expect(result.title).toBe('Test');
   });
 
-  it('should preserve reference structure', () => {
+  it('should remove reference completely', () => {
     const body = {
       ref: createContentReference('id-1', 'https://schema.example.com/type.json'),
     };
 
     const result = nullifyReferences(body) as TestBody;
 
-    expect((result.ref as TestBody).id).toBe('');
-    expect((result.ref as TestBody).contentType).toBe('https://schema.example.com/type.json');
-    expect(((result.ref as TestBody)._meta as TestBody).schema).toBe(
-      'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference'
-    );
+    expect(result.ref).toBeNull();
   });
 
   it('should handle empty body', () => {
@@ -430,7 +426,7 @@ describe('deepTransform', () => {
 });
 
 describe('transformReference', () => {
-  it('should nullify reference in phase 1', () => {
+  it('should return null in phase 1 (remove reference)', () => {
     const ref = {
       id: 'source-1',
       contentType: 'https://schema.example.com/type.json',
@@ -447,9 +443,7 @@ describe('transformReference', () => {
 
     const result = transformReference(ref, options);
 
-    expect(result).not.toBeNull();
-    expect(result!.id).toBe('');
-    expect(result!.contentType).toBe('https://schema.example.com/type.json');
+    expect(result).toBeNull();
   });
 
   it('should resolve reference in phase 2', () => {
@@ -498,7 +492,7 @@ describe('transformReference', () => {
     expect(result!.id).toBe('unmapped');
   });
 
-  it('should nullify unmapped reference when configured', () => {
+  it('should return null for unmapped reference when configured', () => {
     const ref = {
       id: 'unmapped',
       contentType: 'https://schema.example.com/type.json',
@@ -515,8 +509,7 @@ describe('transformReference', () => {
 
     const result = transformReference(ref, options);
 
-    expect(result).not.toBeNull();
-    expect(result!.id).toBe('');
+    expect(result).toBeNull();
   });
 });
 
@@ -608,8 +601,8 @@ describe('prepareBodyForPhase1Creation', () => {
 
     const result = prepareBodyForPhase1Creation(sourceItem, circularGroupIds) as TestBody;
 
-    // Circular reference should be nullified
-    expect((result.circularRef as TestBody).id).toBe('');
+    // Circular reference should be removed (null)
+    expect(result.circularRef).toBeNull();
     // Normal reference should be preserved
     expect((result.normalRef as TestBody).id).toBe('item-3');
     expect(result.title).toBe('Test');
@@ -750,7 +743,7 @@ describe('edge cases', () => {
     const items = result.items as TestBody[];
 
     expect((items[0] as TestBody).id).toBe('target-1');
-    expect((items[1] as TestBody).id).toBe('');
+    expect(items[1]).toBeNull();
   });
 
   it('should handle empty arrays', () => {

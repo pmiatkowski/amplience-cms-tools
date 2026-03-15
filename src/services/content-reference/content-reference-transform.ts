@@ -63,12 +63,9 @@ export function deepTransform(
     const transformResult = transformer(detectedRef);
 
     if (transformResult === null) {
-      // Return the reference with empty string ID (Amplience requires string, not null)
-      // This effectively "empties" the reference while maintaining schema compliance
-      return {
-        ...record,
-        id: '',
-      };
+      // Return null to completely remove the reference
+      // This prevents Amplience from trying to resolve an empty/invalid reference
+      return null;
     }
 
     // Return the reference with transformed ID
@@ -280,12 +277,9 @@ export function transformReference(
   const { phase, sourceToTargetIdMap, preserveUnmapped } = options;
 
   if (phase === 1) {
-    // Phase 1: Nullify - use empty string to satisfy Amplience schema (id must be string)
-    return {
-      id: '',
-      contentType: ref.contentType,
-      _meta: { ...ref._meta },
-    };
+    // Phase 1: Return null to completely remove the reference
+    // This prevents Amplience from trying to resolve an empty/invalid reference
+    return null;
   }
 
   // Phase 2: Resolve
@@ -307,12 +301,9 @@ export function transformReference(
     };
   }
 
-  // Nullify unmapped - use empty string to satisfy Amplience schema (id must be string)
-  return {
-    id: '',
-    contentType: ref.contentType,
-    _meta: { ...ref._meta },
-  };
+  // Nullify unmapped - return null to completely remove the reference
+  // This prevents Amplience from trying to resolve an empty/invalid reference
+  return null;
 }
 
 /**

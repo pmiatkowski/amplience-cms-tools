@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.6.1...v1.7.0) (2026-03-15)
+
+
+### Features
+
+* full hierarchy copy ([#21](https://github.com/pmiatkowski/amplience-cms-tools/issues/21)) ([b692137](https://github.com/pmiatkowski/amplience-cms-tools/commit/b692137d2392d343fd8325668cda7ac547827d6a))
+
 ## [1.6.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.6.0...v1.6.1) (2026-01-30)
 
 

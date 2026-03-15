@@ -3,6 +3,7 @@ import { AmplienceService } from '../amplience-service';
 import {
   scanContentItem,
   transformBodyReferences,
+  matchSourceToTarget,
   type BodyTransformOptions,
   type ReferenceResolutionResult,
 } from '../content-reference';
@@ -142,11 +143,137 @@ export type SyncHierarchyResult = {
 };
 
 /**
+ * Discover and recreate referenced content items that are outside the hierarchy
+ *
+ * This function scans all items being created for content references,
+ * then fetches and recreates any referenced items that don't exist in the target hub.
+ *
+ * @param plan - The sync plan containing items to create
+ * @param sourceService - Service for the source hub
+ * @param targetService - Service for the target hub
+ * @param targetRepositoryId - Target repository ID
+ * @param sourceToTargetIdMap - Map to populate with source→target ID mappings
+ * @returns Object with counts of discovered and created referenced items
+ */
+async function discoverAndRecreateExternalReferences(
+  plan: Amplience.SyncPlan,
+  sourceService: AmplienceService,
+  targetService: AmplienceService,
+  targetRepositoryId: string,
+  sourceToTargetIdMap: Map<string, string>
+): Promise<{ discovered: number; created: number; errors: string[] }> {
+  const errors: string[] = [];
+  let discovered = 0;
+  let created = 0;
+
+  // Collect all unique referenced item IDs from items being created
+  const allReferencedIds = new Set<string>();
+  const hierarchyItemIds = new Set(plan.itemsToCreate.map(item => item.sourceItem.id));
+
+  for (const item of plan.itemsToCreate) {
+    const scanResult = scanContentItem(item.sourceItem);
+    for (const refId of scanResult.referencedItemIds) {
+      // Only track references that are NOT part of the hierarchy being synced
+      if (!hierarchyItemIds.has(refId)) {
+        allReferencedIds.add(refId);
+      }
+    }
+  }
+
+  if (allReferencedIds.size === 0) {
+    return { discovered: 0, created: 0, errors: [] };
+  }
+
+  discovered = allReferencedIds.size;
+  console.log(`\n🔗 Discovered ${discovered} external content references to process...`);
+
+  // Fetch all target items to check for existing matches
+  const targetItems = await targetService.getAllContentItems(targetRepositoryId, () => {}, {});
+  const targetItemsByDeliveryKey = new Map<string, Amplience.ContentItem>();
+  const targetItemsById = new Map<string, Amplience.ContentItem>();
+
+  for (const item of targetItems) {
+    if (item.body._meta?.deliveryKey) {
+      targetItemsByDeliveryKey.set(item.body._meta.deliveryKey, item);
+    }
+    targetItemsById.set(item.id, item);
+  }
+
+  // Process each referenced item
+  const referencedProgress = createProgressBar(allReferencedIds.size, 'Processing references');
+  referencedProgress.start(allReferencedIds.size, 0);
+
+  for (const refId of allReferencedIds) {
+    try {
+      // Skip if we already have a mapping (e.g., from a previous operation)
+      if (sourceToTargetIdMap.has(refId)) {
+        referencedProgress.increment();
+        continue;
+      }
+
+      // Fetch the referenced item from source
+      const sourceItem = await sourceService.getContentItemWithDetails(refId);
+      if (!sourceItem) {
+        errors.push(`Referenced item ${refId} not found in source hub`);
+        referencedProgress.increment();
+        continue;
+      }
+
+      // Check if it already exists in target (by delivery key first, then by label+schema)
+      const matchResult = matchSourceToTarget(sourceItem, targetItems);
+
+      if (matchResult.status === 'matched' && matchResult.targetItem) {
+        // Item already exists in target - record the mapping
+        sourceToTargetIdMap.set(refId, matchResult.targetItem.id);
+        console.log(`  ✓ Reference already exists: ${sourceItem.label}`);
+      } else {
+        // Item doesn't exist - need to create it
+        const createRequest: Amplience.CreateContentItemRequest = {
+          body: sourceItem.body,
+          label: sourceItem.label,
+          ...(sourceItem.locale && { locale: sourceItem.locale }),
+        };
+
+        const result = await targetService.createContentItem(targetRepositoryId, createRequest);
+
+        if (result.success && result.updatedItem) {
+          sourceToTargetIdMap.set(refId, result.updatedItem.id);
+          created++;
+
+          // Assign delivery key if present
+          if (sourceItem.body._meta?.deliveryKey) {
+            await targetService.assignDeliveryKey(
+              result.updatedItem.id,
+              sourceItem.body._meta.deliveryKey
+            );
+          }
+
+          console.log(`  ✅ Created referenced item: ${sourceItem.label}`);
+        } else {
+          errors.push(`Failed to create referenced item ${sourceItem.label}: ${result.error || 'Unknown error'}`);
+          console.log(`  ❌ Failed to create referenced item: ${sourceItem.label} - ${result.error || 'Unknown error'}`);
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Error processing reference ${refId}: ${errorMessage}`);
+      console.log(`  ❌ Error processing reference ${refId}: ${errorMessage}`);
+    }
+
+    referencedProgress.increment();
+  }
+
+  referencedProgress.stop();
+
+  return { discovered, created, errors };
+}
+
+/**
  * Execute the synchronization plan
  */
 async function executeSyncPlan(
   plan: Amplience.SyncPlan,
-  _sourceService: AmplienceService,
+  sourceService: AmplienceService,
   targetService: AmplienceService,
   targetRepositoryId: string,
   localeStrategy: LocaleStrategy,
@@ -169,6 +296,28 @@ async function executeSyncPlan(
     targetId: string;
     sourceItem: Amplience.ContentItem;
   }> = [];
+
+  // Step: Discover and recreate external content references
+  if (resolveReferences && plan.itemsToCreate.length > 0) {
+    const refResult = await discoverAndRecreateExternalReferences(
+      plan,
+      sourceService,
+      targetService,
+      targetRepositoryId,
+      sourceToTargetIdMap
+    );
+
+    if (refResult.discovered > 0) {
+      console.log(`\n📊 External References Summary:`);
+      console.log(`  Discovered: ${refResult.discovered}`);
+      console.log(`  Created: ${refResult.created}`);
+      console.log(`  Already existed: ${refResult.discovered - refResult.created - refResult.errors.length}`);
+      if (refResult.errors.length > 0) {
+        console.log(`  ⚠️ Errors: ${refResult.errors.length}`);
+        refResult.errors.forEach(err => console.log(`    - ${err}`));
+      }
+    }
+  }
 
   // Execute removals first
   if (plan.itemsToRemove.length > 0) {
@@ -267,14 +416,23 @@ async function executeSyncPlan(
         if (resolveReferences) {
           const scanResult = scanContentItem(item.sourceItem);
           if (scanResult.references.length > 0) {
-            // Check if any referenced items are also being created in this sync
+            // Check if any referenced items have a mapping in sourceToTargetIdMap
+            // This includes both hierarchy items being created AND external references
+            const referencedIdsWithMapping = scanResult.referencedItemIds.filter(id =>
+              sourceToTargetIdMap.has(id)
+            );
+
+            // Check if any referenced items are also being created in this sync (for phase 2)
             const referencedIdsBeingCreated = scanResult.referencedItemIds.filter(id =>
               plan.itemsToCreate.some(createItem => createItem.sourceItem.id === id)
             );
 
             if (referencedIdsBeingCreated.length > 0) {
               hasReferencesToCreatedItems = true;
-              // Phase 1: Transform body to nullify references to items being created
+            }
+
+            // Transform ALL references that have a mapping (external + hierarchy items)
+            if (referencedIdsWithMapping.length > 0) {
               const transformOptions: BodyTransformOptions = {
                 phase: 1,
                 sourceToTargetIdMap,

@@ -234,9 +234,7 @@ export function isContentReference(obj: unknown): obj is ContentReferenceObject 
   // Using includes() to handle potential variations in schema URI format
   const schemaStr = schema as string;
 
-  return (
-    schemaStr.includes('content-reference') || schemaStr.includes('content-link')
-  );
+  return schemaStr.includes('content-reference') || schemaStr.includes('content-link');
 }
 
 /**

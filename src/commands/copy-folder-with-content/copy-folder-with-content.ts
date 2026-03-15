@@ -346,7 +346,10 @@ export async function runCopyFolderWithContent(): Promise<void> {
           itemsWithFolders,
           target.repository.id,
           folderMapping,
-          contentProgressBar
+          contentProgressBar,
+          undefined, // targetLocale - not supported in this command
+          true, // resolveReferences - always enable for cross-hub operations
+          source.repository.id // sourceRepositoryId - required for reference resolution
         );
 
         contentProgressBar.stop();

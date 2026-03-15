@@ -52,26 +52,36 @@ prevents accidental type mismatches and ensures data integrity.
    - Displays matched and missing hierarchies
    - Generates detailed missing hierarchies report
 
-4. **Configuration**
+4. **Content Reference Resolution**
+   - Discovers all content references (`content-reference`, `content-link`) in hierarchy items
+   - Matches references to target hub items (delivery key priority, then schema+label)
+   - Creates missing referenced items recursively
+   - Handles circular references with two-phase creation
+   - See [Content Reference Resolution](./content-reference-resolution.md) for details
+
+5. **Configuration**
    - Update content mode (structure only vs. full content sync)
    - Locale strategy (keep, remove, or replace)
    - Publish after sync option
    - Dry-run mode
 
-5. **Summary & Confirmation**
+6. **Summary & Confirmation**
    - Review all selected hierarchies
    - Review matched vs. missing counts
+   - Review reference resolution preview
    - Confirm configuration settings
    - Final confirmation prompt
 
-6. **Execution**
+7. **Execution**
    - Sequential synchronization of each matched hierarchy
+   - Two-phase creation for items with circular references
    - Progress tracking (overall and per-hierarchy)
    - Error handling (continues on individual failures)
 
-7. **Results Display**
+8. **Results Display**
    - Success/failure counts
    - Detailed per-hierarchy results
+   - Reference resolution report
    - Missing hierarchies reminder
 
 ## Configuration Options

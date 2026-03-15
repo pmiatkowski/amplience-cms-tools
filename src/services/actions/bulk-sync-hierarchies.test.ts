@@ -550,6 +550,88 @@ describe('bulkSyncHierarchies', () => {
     });
   });
 
+  describe('Reference Resolution', () => {
+    it('should pass resolveReferences to individual sync operations (default: true)', async () => {
+      const matchedPairs = [createMatchedPair('nav-main', 'Main Navigation')];
+
+      await bulkSyncHierarchies({
+        ...baseOptions,
+        matchedPairs,
+      });
+
+      expect(syncHierarchyMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resolveReferences: true,
+        })
+      );
+    });
+
+    it('should pass resolveReferences=false when explicitly disabled', async () => {
+      const matchedPairs = [createMatchedPair('nav-main', 'Main Navigation')];
+
+      await bulkSyncHierarchies({
+        ...baseOptions,
+        matchedPairs,
+        resolveReferences: false,
+      });
+
+      expect(syncHierarchyMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resolveReferences: false,
+        })
+      );
+    });
+
+    it('should include referenceResolution in results when available', async () => {
+      const matchedPairs = [createMatchedPair('nav-main', 'Main Navigation')];
+
+      const mockReferenceResolution = {
+        totalDiscovered: 5,
+        matchedCount: 3,
+        toCreateCount: 2,
+        circularGroups: [] as string[][],
+        externalReferences: [] as string[],
+        unresolvedReferences: [] as string[],
+      };
+
+      syncHierarchyMock.mockResolvedValueOnce({
+        success: true,
+        itemsCreated: 2,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+        referenceResolution: mockReferenceResolution,
+      });
+
+      const result = await bulkSyncHierarchies({
+        ...baseOptions,
+        matchedPairs,
+        resolveReferences: true,
+      });
+
+      expect(result.results[0].referenceResolution).toEqual(mockReferenceResolution);
+    });
+
+    it('should handle sync operations without referenceResolution', async () => {
+      const matchedPairs = [createMatchedPair('nav-main', 'Main Navigation')];
+
+      syncHierarchyMock.mockResolvedValueOnce({
+        success: true,
+        itemsCreated: 2,
+        itemsRemoved: 0,
+        itemsUpdated: 0,
+        // No referenceResolution property
+      });
+
+      const result = await bulkSyncHierarchies({
+        ...baseOptions,
+        matchedPairs,
+        resolveReferences: false,
+      });
+
+      expect(result.results[0].referenceResolution).toBeUndefined();
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty matched pairs array', async () => {
       const result = await bulkSyncHierarchies({

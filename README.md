@@ -15,6 +15,9 @@ prompts, advanced filtering, and detailed reporting.
   and business logic (actions)
 - **Advanced Filtering**: Filter content items by schema ID, status, publication
   state, and delivery key patterns
+- **Content Reference Resolution**: Automatic handling of content references and
+  links across hubs with recursive discovery, circular reference support, and
+  target matching
 - **Safe Operations**: Built-in dry-run mode with explicit confirmation for live
   execution
 - **Detailed Reporting**: Generate comprehensive Markdown reports for all
@@ -559,6 +562,8 @@ For issues, feature requests, or questions:
 
 - [Amplience Documentation](https://amplience.com/docs)
 - [Amplience DC-CLI Documentation](https://github.com/amplience/dc-cli)
+- [Content Reference Resolution](docs/content-reference-resolution.md) -
+  Automatic handling of content references across hubs
 - Individual command documentation in the `docs/` folder
 
 ## 📄 License

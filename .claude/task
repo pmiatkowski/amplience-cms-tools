@@ -1,0 +1,206 @@
+/task-create I need to extend functionality of src\commands\bulk-sync-hierarchies and src\commands\recreate-content-items
+
+Those commands are capable of recreating full hierarchy, but there is an issue with specific case when recreated content item, root item or child node - has 'content reference' items defined.
+
+<EXAMPLE>
+SCHEMA EXAMPLE
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://amplience-extensions.some-domain.com/all",
+    "title": "Title",
+    "description": "Description",
+    "allOf": [
+        {
+            "$ref": "http://bigcontent.io/cms/schema/v1/core#/definitions/content"
+        }
+    ],
+    "type": "object",
+    "properties": {
+        "propWithContentLink": {
+            "title": "This extension contains contnent link to another content item - defined by the schema id",
+            "allOf": [
+                {
+                    "$ref": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-link"
+                },
+                {
+                    "properties": {
+                        "contentType": {
+                            "enum": [
+                                "https://amplience-extensions.some-domain.com/all",
+                                "https://some-domain.com/content/schema/highlighted-text",
+                                "https://some-domain.com/content/schema/quote-module"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        "contentReference": {
+            "title": "Content reference",
+            "allOf": [
+                {
+                    "$ref": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference"
+                },
+                {
+                    "properties": {
+                        "contentType": {
+                            "enum": [
+                                "https://amplience-extensions.some-domain.com/all",
+                                "https://some-domain.com/content/schema/highlighted-text",
+                                "https://some-domain.com/content/schema/quote-module"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        "inlineContentLink": {
+            "title": "Inline content link",
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "https://some-domain.com/content/schema/highlighted-text"
+                }
+            ]
+        },
+        "inlineContentLink2": {
+            "title": "Two inline content links",
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "https://some-domain.com/content/schema/highlighted-text"
+                },
+                {
+                    "$ref": "https://some-domain.com/content/schema/quote-module"
+                }
+            ]
+        },
+        "listContainingContentReferences": {
+            "title": "List with content references items",
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 10,
+            "items": {
+                "allOf": [
+                    {
+                        "$ref": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference"
+                    },
+                    {
+                        "properties": {
+                            "contentType": {
+                                "enum": [
+                                    "https://amplience-extensions.some-domain.com/all",
+                                    "https://some-domain.com/content/schema/highlighted-text",
+                                    "https://some-domain.com/content/schema/quote-module"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "propertyOrder": []
+}
+
+
+CONTENT OUTPUT
+
+{
+        "_meta": {
+            "name": "Linked content output",
+            "schema": "https://amplience-extensions.some-domain.com/all"
+        },
+        "inlineContentLink": {
+            "_meta": {
+                "schema": "https://some-domain.com/content/schema/highlighted-text"
+            },
+            "horizontalAlignment": "center",
+            "spacing": {
+                "paddings": true,
+                "marginBottom": "medium"
+            },
+            "theme": {
+                "id": "light-grey",
+                "contrast": "light"
+            },
+            "text": "abc"
+        },
+        "inlineContentLink2": {
+            "_meta": {
+                "schema": "https://some-domain.com/content/schema/quote-module"
+            },
+            "horizontalAlignment": "center",
+            "quoteAlignment": "left",
+            "quoteGiverAlignment": "left",
+            "spacing": {
+                "paddings": true
+            },
+            "theme": {
+                "id": "light-grey",
+                "contrast": "light"
+            },
+            "text": "Other"
+        },
+        "listContainingContentReferences": [
+            {
+                "id": "fe66a14b-c983-41ed-ba9f-8e9d11849f5a",
+                "contentType": "https://some-domain.com/content/schema/highlighted-text",
+                "_meta": {
+                    "schema": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference"
+                }
+            },
+            {
+                "id": "d47cc65d-29d5-4856-a90f-ea13c438a0ec",
+                "contentType": "https://some-domain.com/content/schema/quote-module",
+                "_meta": {
+                    "schema": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference"
+                }
+            }
+        ],
+        "contentReference": {
+            "id": "516eea21-4b30-4f92-99ee-dddc082df126",
+            "contentType": "https://some-domain.com/content/schema/highlighted-text",
+            "_meta": {
+                "schema": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference"
+            }
+        },
+        "propWithContentLink": {
+            "id": "82ad35df-28c9-4620-af58-bc12aaf0358f",
+            "contentType": "https://some-domain.com/content/schema/highlighted-text",
+            "_meta": {
+                "schema": "http://bigcontent.io/cms/schema/v1/core#/definitions/content-link"
+            }
+        }
+    }
+</EXAMPLE>
+
+Content reference does not show up directly in the content item but it contains id which needs to be retrieved again.
+
+----------
+
+Current implementation does not support that. Recreating content items from one Amplience HUB into Another Hub with references (id's) pointing to items in the SOURCE hub cause ERRORS (FORBIDDEN) and content item does not get recreated.
+
+Additionaly - content reference can be nested on any level of the content item, including other properties, arrays etc..
+
+---------
+
+Idea to handle this scenario:
+Recreate content items in the target repository and use references of the content items created in the target repository.
+
+How:
+@src/services/amplience-service.ts has a method to list all content items in the repository.
+1. Before any copy is made, first we need to discover all non-archived content items in the repository.
+2. Then we need to gather recurseviley all content references ids inside all content items of a hierarchy that needs to be recreated - root and child nodes needs to be recurseviley traversed and searched for content reference items.
+3. Temporary registery/mapping needs to be created in order to handle found content references.
+4. Found content reference items from the mapping needs to be scanned (by id) with the list of all content items. They also need to be recurseviley searched for any content references.
+5. Any finddings needs to be added again to the registery/mapping. Repeat steps 4 & 5 until all references got found.
+Important - some content items might have references to the items that has been already found. There should be a mechanism that will prevent circular search .
+6. In the target repository we need to get list of all existing and non archived content items.
+7. We need to compare our registry with items in the target repository by schema id, by name/label... deliveryKey?
+8. We need to create another registry which will contain content items found that match source content items and content items that needs to be recreated.
+9. The step with recreated items needs to happen from the item that has no content ref or from the last item at the very bottom of the mapping/registry.
+10. Once all content items got recreated, they need to be updated with proper referenced items that got new ids in the target repository. We also need to run separatley updating deliveryKey for content items that require it.
+11. All structure should be recreated in the target repository with valid content reference bindings.
+12. Publish status should match the one from source item so if an item has not been published in the source hub, then it should not be published. If it was published in the source hub, it also should be published in the target hub
+

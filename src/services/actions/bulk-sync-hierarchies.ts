@@ -2,6 +2,7 @@ import { createProgressBar } from '~/utils';
 import { HierarchyService } from '../hierarchy-service';
 import { syncHierarchy, type LocaleStrategy } from './sync-hierarchy';
 import type { AmplienceService } from '../amplience-service';
+import type { ReferenceResolutionResult } from '../content-reference';
 
 /**
  * Execute bulk hierarchy synchronization action
@@ -19,6 +20,7 @@ export async function bulkSyncHierarchies(
     localeStrategy,
     publishAfterSync,
     isDryRun,
+    resolveReferences = true,
   } = options;
 
   // Initialize result tracking
@@ -70,6 +72,7 @@ export async function bulkSyncHierarchies(
           localeStrategy,
           publishAfterSync,
           isDryRun,
+          resolveReferences,
         });
 
         // Track success
@@ -80,6 +83,9 @@ export async function bulkSyncHierarchies(
           success: true,
           itemsCreated: syncResult.itemsCreated,
           itemsRemoved: syncResult.itemsRemoved,
+          ...(syncResult.referenceResolution && {
+            referenceResolution: syncResult.referenceResolution,
+          }),
         });
       } catch (error) {
         // Track failure but continue with remaining hierarchies
@@ -118,6 +124,8 @@ export type BulkSyncHierarchiesOptions = {
   localeStrategy: LocaleStrategy;
   publishAfterSync: boolean;
   isDryRun: boolean;
+  /** Whether to resolve content references in item bodies (default: true) */
+  resolveReferences?: boolean;
 };
 
 /**
@@ -134,6 +142,8 @@ export type BulkSyncResult = {
     error?: string;
     itemsCreated?: number;
     itemsRemoved?: number;
+    /** Reference resolution result if resolveReferences was enabled */
+    referenceResolution?: ReferenceResolutionResult;
   }>;
 };
 

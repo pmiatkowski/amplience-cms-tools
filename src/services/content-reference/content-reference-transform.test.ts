@@ -102,7 +102,7 @@ describe('transformBodyReferences', () => {
 
     const result = transformBodyReferences(body, options) as TestBody;
 
-    expect((result.image as TestBody).id).toBeNull();
+    expect((result.image as TestBody).id).toBe('');
     expect(result.title).toBe('Test');
   });
 
@@ -196,7 +196,7 @@ describe('transformBodyReferences', () => {
 
     const result = transformBodyReferences(body, options) as TestBody;
 
-    expect((result.image as TestBody).id).toBeNull();
+    expect((result.image as TestBody).id).toBe('');
   });
 });
 
@@ -210,8 +210,8 @@ describe('nullifyReferences', () => {
 
     const result = nullifyReferences(body) as TestBody;
 
-    expect((result.ref1 as TestBody).id).toBeNull();
-    expect((result.ref2 as TestBody).id).toBeNull();
+    expect((result.ref1 as TestBody).id).toBe('');
+    expect((result.ref2 as TestBody).id).toBe('');
     expect(result.title).toBe('Test');
   });
 
@@ -222,7 +222,7 @@ describe('nullifyReferences', () => {
 
     const result = nullifyReferences(body) as TestBody;
 
-    expect((result.ref as TestBody).id).toBeNull();
+    expect((result.ref as TestBody).id).toBe('');
     expect((result.ref as TestBody).contentType).toBe('https://schema.example.com/type.json');
     expect(((result.ref as TestBody)._meta as TestBody).schema).toBe(
       'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference'
@@ -448,7 +448,7 @@ describe('transformReference', () => {
     const result = transformReference(ref, options);
 
     expect(result).not.toBeNull();
-    expect(result!.id).toBeNull();
+    expect(result!.id).toBe('');
     expect(result!.contentType).toBe('https://schema.example.com/type.json');
   });
 
@@ -516,7 +516,7 @@ describe('transformReference', () => {
     const result = transformReference(ref, options);
 
     expect(result).not.toBeNull();
-    expect(result!.id).toBeNull();
+    expect(result!.id).toBe('');
   });
 });
 
@@ -609,7 +609,7 @@ describe('prepareBodyForPhase1Creation', () => {
     const result = prepareBodyForPhase1Creation(sourceItem, circularGroupIds) as TestBody;
 
     // Circular reference should be nullified
-    expect((result.circularRef as TestBody).id).toBeNull();
+    expect((result.circularRef as TestBody).id).toBe('');
     // Normal reference should be preserved
     expect((result.normalRef as TestBody).id).toBe('item-3');
     expect(result.title).toBe('Test');
@@ -750,7 +750,7 @@ describe('edge cases', () => {
     const items = result.items as TestBody[];
 
     expect((items[0] as TestBody).id).toBe('target-1');
-    expect((items[1] as TestBody).id).toBeNull();
+    expect((items[1] as TestBody).id).toBe('');
   });
 
   it('should handle empty arrays', () => {

@@ -18,11 +18,12 @@ Add context to the active task from files, URLs, or auto-discovery.
 ## Auto-Discovery (when `discover` is specified or chosen)
 
 Scan the repository for:
+
 - Coding patterns and conventions (component structure, naming, file layout)
 - Reusable utilities, hooks, helpers relevant to the task
 - Existing implementations of similar features
 - Tech stack (read `package.json`, config files, etc.)
-- Quality commands: check `package.json` scripts, `Makefile`, `CLAUDE.md`, `.claude/settings.json` for lint/test/build commands. Record these — executors will need them.
+- Quality commands: check `package.json` scripts, `Makefile`, `CLAUDE.md`, `.claude/settings.json` for lint/test/build commands. Record these — task-executors will need them.
 
 ## Updating PRD
 

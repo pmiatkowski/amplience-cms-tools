@@ -1,5 +1,11 @@
 import { createProgressBar } from '~/utils';
 import { AmplienceService } from '../amplience-service';
+import {
+  scanContentItem,
+  transformBodyReferences,
+  type BodyTransformOptions,
+  type ReferenceResolutionResult,
+} from '../content-reference';
 import { HierarchyService } from '../hierarchy-service';
 import {
   archivePreparedItem,
@@ -44,6 +50,7 @@ export async function syncHierarchy(options: SyncHierarchyOptions): Promise<Sync
     localeStrategy,
     publishAfterSync,
     isDryRun,
+    resolveReferences = true,
   } = options;
 
   try {
@@ -85,7 +92,8 @@ export async function syncHierarchy(options: SyncHierarchyOptions): Promise<Sync
       targetService,
       targetRepositoryId,
       localeStrategy,
-      publishAfterSync
+      publishAfterSync,
+      resolveReferences
     );
 
     console.log('\n✅ Hierarchy synchronization completed successfully!');
@@ -119,6 +127,8 @@ export type SyncHierarchyOptions = {
   localeStrategy: LocaleStrategy;
   publishAfterSync: boolean;
   isDryRun: boolean;
+  /** Whether to resolve content references in item bodies (default: true) */
+  resolveReferences?: boolean;
 };
 
 
@@ -131,6 +141,8 @@ export type SyncHierarchyResult = {
   itemsRemoved: number;
   itemsUpdated: number;
   error?: string;
+  /** Reference resolution result if resolveReferences was enabled */
+  referenceResolution?: ReferenceResolutionResult;
 };
 
 /**
@@ -142,7 +154,8 @@ async function executeSyncPlan(
   targetService: AmplienceService,
   targetRepositoryId: string,
   localeStrategy: LocaleStrategy,
-  publishAfterSync: boolean
+  publishAfterSync: boolean,
+  resolveReferences: boolean = true
 ): Promise<SyncHierarchyResult> {
   let successCount = 0;
   let failureCount = 0;
@@ -154,6 +167,12 @@ async function executeSyncPlan(
 
   // Track IDs of successfully created items for publishing
   const createdItemIds: string[] = [];
+
+  // Track items that need reference resolution update (phase 2)
+  const itemsNeedingReferenceUpdate: Array<{
+    targetId: string;
+    sourceItem: Amplience.ContentItem;
+  }> = [];
 
   // Execute removals first
   if (plan.itemsToRemove.length > 0) {
@@ -245,7 +264,33 @@ async function executeSyncPlan(
     for (const item of sortedItems) {
       try {
         // Transform delivery key based on locale strategy
-        const transformedBody = transformDeliveryKey(item.sourceItem.body, localeStrategy);
+        let transformedBody = transformDeliveryKey(item.sourceItem.body, localeStrategy);
+
+        // Scan for content references if resolution is enabled
+        let hasReferencesToCreatedItems = false;
+        if (resolveReferences) {
+          const scanResult = scanContentItem(item.sourceItem);
+          if (scanResult.references.length > 0) {
+            // Check if any referenced items are also being created in this sync
+            const referencedIdsBeingCreated = scanResult.referencedItemIds.filter(id =>
+              plan.itemsToCreate.some(createItem => createItem.sourceItem.id === id)
+            );
+
+            if (referencedIdsBeingCreated.length > 0) {
+              hasReferencesToCreatedItems = true;
+              // Phase 1: Transform body to nullify references to items being created
+              const transformOptions: BodyTransformOptions = {
+                phase: 1,
+                sourceToTargetIdMap,
+                preserveUnmapped: true, // Keep existing references that aren't being synced
+              };
+              transformedBody = transformBodyReferences(
+                transformedBody as Record<string, unknown>,
+                transformOptions
+              ) as Amplience.Body;
+            }
+          }
+        }
 
         // Determine the correct target parent ID
         let actualTargetParentId: string | null = null;
@@ -300,6 +345,14 @@ async function executeSyncPlan(
 
           // Track created item for publishing
           createdItemIds.push(result.updatedItem.id);
+
+          // Track items that need phase 2 reference update
+          if (hasReferencesToCreatedItems) {
+            itemsNeedingReferenceUpdate.push({
+              targetId: result.updatedItem.id,
+              sourceItem: item.sourceItem,
+            });
+          }
 
           successCount++;
           itemsCreated++;

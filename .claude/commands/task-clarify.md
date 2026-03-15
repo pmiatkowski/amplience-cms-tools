@@ -49,6 +49,24 @@ After each answer, note it internally. Do NOT recap after every question — onl
 ## After Session Ends
 
 When the user says "update PRD" (or equivalent):
-1. Update `.temp/tasks/<name>/prd.md` incorporating all answers.
-2. Update `updated_at` in `state.yml`.
-3. Tell the user what changed and suggest `/task-add-context` or `/task-plan` next.
+1. Rewrite `.temp/tasks/<n>/prd.md` incorporating all clarification answers directly into the relevant sections — update requirements, resolve ambiguities, fill gaps in place. Do not add change annotations, diff markers, or "previously X, now Y" notes. The document should read as if it was always written this way.
+2. **Populate the Decision Matrix** (Section 9 in PRD):
+   - For each question asked, add a row: `| D{N} | {Question topic} | {Options presented} | {User's choice} | {Why this choice} | {Date} |`
+   - Number decisions sequentially: D1, D2, D3...
+3. **Extract constraints to Section 10**:
+   - Add any invariants (constraints that must always hold) discovered
+   - For each decision, add derived constraints: `From D{N}: {constraint that follows}`
+4. **Update state.yml constraints**:
+   ```yaml
+   constraints:
+     invariants:
+       - "First invariant from discussion"
+       - "Second invariant"
+     decisions:
+       - id: D1
+         constraint: "Constraint derived from D1"
+       - id: D2
+         constraint: "Constraint derived from D2"
+   ```
+5. Update `updated_at` in `state.yml`.
+6. Tell the user what changed and suggest `/task-add-context` or `/task-plan` next.

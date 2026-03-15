@@ -46,7 +46,19 @@ Create a new task. Usage: `/task-create <task-name> <brief description>`
 ## 8. Open Questions
 [Questions that must be answered before implementation can start]
 
-## 9. Additional Context
+## 9. Decisions
+| ID | Question | Options | Chosen | Rationale | Date |
+|----|----------|---------|--------|-----------|------|
+[Populated by /task-clarify — records all decisions made during clarification]
+
+## 10. Constraints
+### Invariants (Must Never Change)
+- [Constraints that must always hold — from project requirements or architecture]
+
+### Derived from Decisions
+- From D[n]: [Constraint that follows from a decision]
+
+## 11. Additional Context
 [Reserved — populated by /task-add-context]
 ```
 
@@ -61,4 +73,7 @@ task_path: .temp/tasks/<task-name>
 prd: .temp/tasks/<task-name>/prd.md
 plan: .temp/tasks/<task-name>/plan.md
 context: .temp/tasks/<task-name>/context.md
+constraints:
+  invariants: []  # Constraints that must always hold
+  decisions: []   # Constraints derived from decisions made in clarification
 ```

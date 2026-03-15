@@ -170,8 +170,20 @@ async function discoverAndRecreateExternalReferences(
   const allReferencedIds = new Set<string>();
   const hierarchyItemIds = new Set(plan.itemsToCreate.map(item => item.sourceItem.id));
 
+  // Debug: Log what we're scanning
+  console.log(`\n🔍 Scanning ${plan.itemsToCreate.length} items for content references...`);
+
   for (const item of plan.itemsToCreate) {
     const scanResult = scanContentItem(item.sourceItem);
+
+    // Debug: Log references found in each item
+    if (scanResult.references.length > 0) {
+      console.log(`  📄 ${item.sourceItem.label}: Found ${scanResult.references.length} references`);
+      scanResult.references.forEach(ref => {
+        console.log(`    - ${ref.sourceId} (${ref.referenceSchemaType}) at ${ref.path}`);
+      });
+    }
+
     for (const refId of scanResult.referencedItemIds) {
       // Only track references that are NOT part of the hierarchy being synced
       if (!hierarchyItemIds.has(refId)) {
@@ -181,6 +193,7 @@ async function discoverAndRecreateExternalReferences(
   }
 
   if (allReferencedIds.size === 0) {
+    console.log(`  ℹ️ No external content references found`);
     return { discovered: 0, created: 0, errors: [] };
   }
 
@@ -222,6 +235,9 @@ async function discoverAndRecreateExternalReferences(
       // Check if it already exists in target (by delivery key first, then by label+schema)
       const matchResult = matchSourceToTarget(sourceItem, targetItems);
 
+      // Debug: Log matching result
+      console.log(`  🔗 Checking ${sourceItem.label} (${refId}): ${matchResult.status}`);
+
       if (matchResult.status === 'matched' && matchResult.targetItem) {
         // Item already exists in target - record the mapping
         sourceToTargetIdMap.set(refId, matchResult.targetItem.id);
@@ -250,8 +266,12 @@ async function discoverAndRecreateExternalReferences(
 
           console.log(`  ✅ Created referenced item: ${sourceItem.label}`);
         } else {
-          errors.push(`Failed to create referenced item ${sourceItem.label}: ${result.error || 'Unknown error'}`);
-          console.log(`  ❌ Failed to create referenced item: ${sourceItem.label} - ${result.error || 'Unknown error'}`);
+          errors.push(
+            `Failed to create referenced item ${sourceItem.label}: ${result.error || 'Unknown error'}`
+          );
+          console.log(
+            `  ❌ Failed to create referenced item: ${sourceItem.label} - ${result.error || 'Unknown error'}`
+          );
         }
       }
     } catch (error) {
@@ -311,7 +331,9 @@ async function executeSyncPlan(
       console.log(`\n📊 External References Summary:`);
       console.log(`  Discovered: ${refResult.discovered}`);
       console.log(`  Created: ${refResult.created}`);
-      console.log(`  Already existed: ${refResult.discovered - refResult.created - refResult.errors.length}`);
+      console.log(
+        `  Already existed: ${refResult.discovered - refResult.created - refResult.errors.length}`
+      );
       if (refResult.errors.length > 0) {
         console.log(`  ⚠️ Errors: ${refResult.errors.length}`);
         refResult.errors.forEach(err => console.log(`    - ${err}`));
@@ -427,12 +449,25 @@ async function executeSyncPlan(
               plan.itemsToCreate.some(createItem => createItem.sourceItem.id === id)
             );
 
+            // Debug: Log mapping status
+            const referencedIdsWithoutMapping = scanResult.referencedItemIds.filter(
+              id => !sourceToTargetIdMap.has(id)
+            );
+            if (referencedIdsWithoutMapping.length > 0) {
+              console.log(
+                `  ⚠️ ${item.sourceItem.label}: ${referencedIdsWithoutMapping.length} references without mapping: ${referencedIdsWithoutMapping.join(', ')}`
+              );
+            }
+
             if (referencedIdsBeingCreated.length > 0) {
               hasReferencesToCreatedItems = true;
             }
 
             // Transform ALL references that have a mapping (external + hierarchy items)
             if (referencedIdsWithMapping.length > 0) {
+              console.log(
+                `  🔄 ${item.sourceItem.label}: Transforming ${referencedIdsWithMapping.length} mapped references`
+              );
               const transformOptions: BodyTransformOptions = {
                 phase: 1,
                 sourceToTargetIdMap,

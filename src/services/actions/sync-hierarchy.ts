@@ -178,7 +178,9 @@ async function discoverAndRecreateExternalReferences(
 
     // Debug: Log references found in each item
     if (scanResult.references.length > 0) {
-      console.log(`  📄 ${item.sourceItem.label}: Found ${scanResult.references.length} references`);
+      console.log(
+        `  📄 ${item.sourceItem.label}: Found ${scanResult.references.length} references`
+      );
       scanResult.references.forEach(ref => {
         console.log(`    - ${ref.sourceId} (${ref.referenceSchemaType}) at ${ref.path}`);
       });
@@ -194,6 +196,7 @@ async function discoverAndRecreateExternalReferences(
 
   if (allReferencedIds.size === 0) {
     console.log(`  ℹ️ No external content references found`);
+
     return { discovered: 0, created: 0, errors: [] };
   }
 

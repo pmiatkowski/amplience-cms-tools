@@ -126,6 +126,77 @@ export async function recreateContentItems(
     shouldNullifyReferences = true;
   }
 
+  // Create discovered references that weren't matched in target
+  // These are content items referenced by the main items but don't exist in target hub
+  if (referenceResolutionResult && sourceToTargetIdMap.size > 0) {
+    // Find items that were discovered but don't have a target ID (not matched)
+    const unmatchedEntries = [...referenceResolutionResult.registry.entries.entries()].filter(
+      ([sourceId, entry]) =>
+        // Item was discovered (has sourceItem) but doesn't have a target ID
+        entry.sourceItem && !entry.targetId && !itemIds.includes(sourceId)
+    );
+
+    if (unmatchedEntries.length > 0) {
+      console.log(
+        `\n🔗 Phase 0: Creating ${unmatchedEntries.length} referenced items not in target...`
+      );
+
+      for (const [sourceId, entry] of unmatchedEntries) {
+        if (!entry.sourceItem) continue;
+
+        try {
+          console.log(`  📋 Creating referenced item: ${entry.sourceItem.label} (${sourceId})`);
+
+          // Prepare body for creation (remove hierarchy info for standalone items)
+          const baseBody = prepareItemBodyForCreation(entry.sourceItem);
+
+          // Transform any references in this item too
+          let itemBody: Record<string, unknown>;
+          if (sourceToTargetIdMap.size > 0) {
+            const transformOptions: BodyTransformOptions = {
+              phase: 2,
+              sourceToTargetIdMap,
+              preserveUnmapped: false,
+            };
+            itemBody = transformBodyReferences(baseBody, transformOptions);
+          } else {
+            itemBody = baseBody;
+          }
+
+          // Create the referenced item
+          const newItem = await createContentItemInTarget(targetService, targetRepositoryId, {
+            body: itemBody,
+            label: entry.sourceItem.label,
+            folderId: undefined, // Referenced items go to repository root
+            locale: entry.sourceItem.locale,
+          });
+
+          if (newItem) {
+            // Update the mapping
+            sourceToTargetIdMap.set(sourceId, newItem.id);
+            console.log(`  ✅ Created: ${entry.sourceItem.label} → ${newItem.id}`);
+
+            // Assign delivery key if present
+            if (entry.sourceItem.body._meta?.deliveryKey) {
+              await assignDeliveryKey(targetService, newItem.id, entry.sourceItem.body._meta.deliveryKey);
+              console.log(`  ✓ Assigned delivery key: ${entry.sourceItem.body._meta.deliveryKey}`);
+            }
+
+            // Track for publishing if source was published
+            if (shouldPublishItem(entry.sourceItem)) {
+              itemsToPublish.push({ itemId: newItem.id, sourceItem: entry.sourceItem });
+            }
+          } else {
+            console.warn(`  ⚠️  Failed to create referenced item: ${entry.sourceItem.label}`);
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.warn(`  ❌ Error creating referenced item ${sourceId}: ${errorMessage}`);
+        }
+      }
+    }
+  }
+
   // Phase 1: Create all content items without hierarchy relationships
   console.log(`\n🏗️  Phase 1: Creating ${itemIds.length} content items...`);
 

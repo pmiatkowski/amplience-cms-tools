@@ -65,5 +65,11 @@ define content hierarchies.
 - Hierarchy relationships are properly established in the content item metadata
   during creation
 - Optional bulk publishing of newly created items is performed if enabled
+- Content references (`content-reference` and `content-link` properties) are
+  automatically resolved during cross-hub synchronization:
+  - References are matched to target items by delivery key or schema+label
+  - Missing referenced items are created recursively
+  - Circular references are handled with two-phase creation
+  - See [Content Reference Resolution](./content-reference-resolution.md) for details
 - Progress tracking and detailed reporting provide visibility into the
   synchronization process with success/failure counts and error details

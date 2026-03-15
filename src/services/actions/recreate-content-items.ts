@@ -188,11 +188,12 @@ export async function recreateContentItems(
           newItemBody = transformBodyReferences(baseBody, transformOptions);
           console.log(`  🔄 Transformed body (phase 1 - circular refs nullified)`);
         } else {
-          // Resolve references directly
+          // Resolve references directly - nullify any unmapped references
+          // to prevent 403 errors from invalid cross-hub content IDs
           const transformOptions: BodyTransformOptions = {
             phase: 2,
             sourceToTargetIdMap,
-            preserveUnmapped: true, // Preserve unmapped for non-circular items
+            preserveUnmapped: false, // Nullify unmapped refs to prevent 403 errors
           };
           newItemBody = transformBodyReferences(baseBody, transformOptions);
           console.log(`  🔄 Transformed body with resolved references`);

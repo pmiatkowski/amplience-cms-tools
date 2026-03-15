@@ -5,7 +5,6 @@
  * content references (content-reference and content-link) within content item bodies.
  */
 import { AmplienceService } from '../amplience-service';
-import { CONTENT_REFERENCE_SCHEMAS } from './types';
 import type { DetectedReference, ReferenceScanResult, ReferenceDiscoveryOptions } from './types';
 
 /**
@@ -89,10 +88,9 @@ function scanObjectForReferences(
       contentType: ref.contentType,
       path: currentPath,
       isArrayElement: /\[\d+\]$/.test(currentPath),
-      referenceSchemaType:
-        schema === CONTENT_REFERENCE_SCHEMAS.CONTENT_REFERENCE
-          ? 'content-reference'
-          : 'content-link',
+      referenceSchemaType: schema.includes('content-reference')
+        ? 'content-reference'
+        : 'content-link',
     });
 
     return; // Don't recurse into reference objects
@@ -233,11 +231,11 @@ export function isContentReference(obj: unknown): obj is ContentReferenceObject 
   }
 
   // Check if schema contains content-reference or content-link
+  // Using includes() to handle potential variations in schema URI format
   const schemaStr = schema as string;
 
   return (
-    schemaStr === CONTENT_REFERENCE_SCHEMAS.CONTENT_REFERENCE ||
-    schemaStr === CONTENT_REFERENCE_SCHEMAS.CONTENT_LINK
+    schemaStr.includes('content-reference') || schemaStr.includes('content-link')
   );
 }
 

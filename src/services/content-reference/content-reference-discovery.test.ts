@@ -107,6 +107,27 @@ describe('isContentReference', () => {
     };
     expect(isContentReference(obj)).toBe(false);
   });
+
+  it('should match schema variations using includes', () => {
+    // Test that schema matching uses includes() to handle variations
+    const ref1 = {
+      id: 'uuid-123',
+      contentType: 'https://schema.example.com/test',
+      _meta: {
+        schema: 'https://some-other-prefix/content-reference/something',
+      },
+    };
+    expect(isContentReference(ref1)).toBe(true);
+
+    const ref2 = {
+      id: 'uuid-456',
+      contentType: 'https://schema.example.com/test',
+      _meta: {
+        schema: 'prefix-content-link-suffix',
+      },
+    };
+    expect(isContentReference(ref2)).toBe(true);
+  });
 });
 
 describe('scanBodyForReferences', () => {

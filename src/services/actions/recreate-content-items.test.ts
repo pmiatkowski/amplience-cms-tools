@@ -483,5 +483,98 @@ describe('recreateContentItems', () => {
       expect(result.itemsCreated).toBe(1);
       expect(result.failed).toBe(1);
     });
+
+    it('should cap publish concurrency to configured limit', async () => {
+      process.env.PUBLISH_CONCURRENCY = '5';
+      const itemsWithFolders = Array.from({ length: 8 }, (_, index) => ({
+        itemId: `source-item-${index + 1}`,
+        sourceFolderId: 'source-folder-1',
+      }));
+
+      vi.mocked(sourceService.getContentItemWithDetails).mockImplementation(async itemId =>
+        createMockSourceItem(String(itemId), `Item ${itemId}`)
+      );
+
+      vi.mocked(targetService.createContentItem).mockImplementation(async (_repoId, payload) => {
+        const label = (payload as Amplience.CreateContentItemRequest).label || 'Item';
+
+        return {
+          success: true,
+          updatedItem: createMockTargetItem(`target-${label}`, label),
+        };
+      });
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      vi.mocked(targetService.publishContentItem).mockImplementation(async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise(resolve => setTimeout(resolve, 20));
+        inFlight -= 1;
+
+        return { success: true };
+      });
+
+      const result = await recreateContentItems(
+        sourceService,
+        targetService,
+        itemsWithFolders,
+        baseParams.targetRepositoryId,
+        baseParams.folderMapping,
+        undefined,
+        undefined,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      expect(targetService.publishContentItem).toHaveBeenCalledTimes(8);
+      expect(maxInFlight).toBeLessThanOrEqual(5);
+
+      delete process.env.PUBLISH_CONCURRENCY;
+    });
+
+    it('should report failed publishes in publishing summary', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const itemsWithFolders = [
+        { itemId: 'source-item-1', sourceFolderId: 'source-folder-1' },
+        { itemId: 'source-item-2', sourceFolderId: 'source-folder-1' },
+      ];
+
+      vi.mocked(sourceService.getContentItemWithDetails)
+        .mockResolvedValueOnce(createMockSourceItem('source-item-1', 'Item 1'))
+        .mockResolvedValueOnce(createMockSourceItem('source-item-2', 'Item 2'));
+
+      vi.mocked(targetService.createContentItem)
+        .mockResolvedValueOnce({
+          success: true,
+          updatedItem: createMockTargetItem('target-1', 'Item 1'),
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          updatedItem: createMockTargetItem('target-2', 'Item 2'),
+        });
+
+      vi.mocked(targetService.publishContentItem)
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false, error: 'API Error: 429 Too Many Requests' });
+
+      await recreateContentItems(
+        sourceService,
+        targetService,
+        itemsWithFolders,
+        baseParams.targetRepositoryId,
+        baseParams.folderMapping,
+        undefined,
+        undefined,
+        false
+      );
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Publishing completed: 1 successful, 1 failed')
+      );
+
+      consoleLogSpy.mockRestore();
+    });
   });
 });

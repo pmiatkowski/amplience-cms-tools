@@ -38,6 +38,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.RETRY_JITTER_FACTOR = '0';
     // Reset timers before each test
     vi.useFakeTimers();
     // Mock console.warn to suppress log output during tests
@@ -92,7 +93,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       // Assert
       expect(result).toBeDefined();
       expect(mockFetch).toHaveBeenCalledTimes(3); // auth + failed request + successful retry
-      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Rate limit hit'));
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('hit rate limit'));
     });
 
     it('should retry multiple times until success', async () => {
@@ -147,7 +148,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
   });
 
   describe('Scenario 2: Max Retries Exceeded', () => {
-    it('should throw error after exceeding default max retries (3)', async () => {
+    it('should throw error after exceeding default max retries (7)', async () => {
       // Arrange
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -155,7 +156,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       });
 
       // Mock all requests to return 429
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         mockFetch.mockResolvedValueOnce({
           ok: false,
           status: 429,
@@ -171,12 +172,12 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       );
 
       // Fast-forward through all retry attempts
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         await vi.advanceTimersByTimeAsync(1000);
       }
 
       await expectation;
-      expect(mockFetch).toHaveBeenCalledTimes(5); // auth + 4 attempts (initial + 3 retries)
+      expect(mockFetch).toHaveBeenCalledTimes(9); // auth + 8 attempts (initial + 7 retries)
     });
 
     it('should respect custom RETRIES_COUNT environment variable', async () => {
@@ -224,7 +225,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
         json: () => Promise.resolve(mockAuthResponse),
       });
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         mockFetch.mockResolvedValueOnce({
           ok: false,
           status: 429,
@@ -241,7 +242,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
         })
       );
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         await vi.advanceTimersByTimeAsync(1000);
       }
 
@@ -372,22 +373,22 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       // Act
       const requestPromise = service.getRepositories();
 
-      // First retry: 2 * (2^1) = 4 seconds
-      await vi.advanceTimersByTimeAsync(4000);
+      // First retry: 2 * (2^0) = 2 seconds
+      await vi.advanceTimersByTimeAsync(2000);
 
-      // Second retry: 2 * (2^2) = 8 seconds
-      await vi.advanceTimersByTimeAsync(8000);
+      // Second retry: 2 * (2^1) = 4 seconds
+      await vi.advanceTimersByTimeAsync(4000);
 
       await requestPromise;
 
       // Assert
       expect(mockFetch).toHaveBeenCalledTimes(4);
       expect(console.warn).toHaveBeenCalledTimes(2);
-      expect(console.warn).toHaveBeenNthCalledWith(1, expect.stringContaining('4 seconds'));
-      expect(console.warn).toHaveBeenNthCalledWith(2, expect.stringContaining('8 seconds'));
+      expect(console.warn).toHaveBeenNthCalledWith(1, expect.stringContaining('2 seconds'));
+      expect(console.warn).toHaveBeenNthCalledWith(2, expect.stringContaining('4 seconds'));
     });
 
-    it('should use default backoff time of 60 seconds when not configured', async () => {
+    it('should use default backoff time of 15 seconds when not configured', async () => {
       // Arrange - explicitly remove env var
       delete process.env.RETRY_AWAIT_TIME;
 
@@ -414,13 +415,13 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       // Act
       const requestPromise = service.getRepositories();
 
-      // Default: 60 * (2^1) = 120 seconds for first retry
-      await vi.advanceTimersByTimeAsync(120000);
+      // Default: 15 * (2^0) = 15 seconds for first retry
+      await vi.advanceTimersByTimeAsync(15000);
 
       await requestPromise;
 
       // Assert
-      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('120 seconds'));
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('15 seconds'));
     });
   });
 
@@ -438,8 +439,8 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
         json: () => Promise.resolve(mockAuthResponse),
       });
 
-      // Mock 4 failures (should exhaust default 3 retries)
-      for (let i = 0; i < 4; i++) {
+      // Mock 8 failures (should exhaust default 7 retries)
+      for (let i = 0; i < 8; i++) {
         mockFetch.mockResolvedValueOnce({
           ok: false,
           status: 429,
@@ -452,20 +453,20 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       // Act
       const expectation = expect(service.getRepositories()).rejects.toThrow();
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         await vi.advanceTimersByTimeAsync(1000);
       }
 
       // Assert
       await expectation;
-      expect(mockFetch).toHaveBeenCalledTimes(5); // auth + 4 attempts (default 3 retries)
+      expect(mockFetch).toHaveBeenCalledTimes(9); // auth + 8 attempts (default 7 retries)
     });
 
     it('should handle invalid RETRIES_COUNT gracefully', async () => {
       // Arrange
       process.env.RETRIES_COUNT = 'invalid-number';
 
-      // Should fall back to default (3)
+      // Should fall back to default (7)
       service = new AmplienceService(mockOAuthConfig);
 
       mockFetch.mockResolvedValueOnce({
@@ -473,7 +474,7 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
         json: () => Promise.resolve(mockAuthResponse),
       });
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         mockFetch.mockResolvedValueOnce({
           ok: false,
           status: 429,
@@ -486,13 +487,13 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       // Act
       const expectation = expect(service.getRepositories()).rejects.toThrow();
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         await vi.advanceTimersByTimeAsync(1000);
       }
 
       // Assert
       await expectation;
-      expect(mockFetch).toHaveBeenCalledTimes(5); // Falls back to default 3
+      expect(mockFetch).toHaveBeenCalledTimes(9); // Falls back to default 7
     });
 
     it('should handle invalid RETRY_AWAIT_TIME gracefully', async () => {
@@ -524,13 +525,75 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
       // Act
       const requestPromise = service.getRepositories();
 
-      // Should fall back to default 60 seconds * 2^1 = 120 seconds
-      await vi.advanceTimersByTimeAsync(120000);
+      // Should fall back to default 15 seconds * 2^0 = 15 seconds
+      await vi.advanceTimersByTimeAsync(15000);
 
       await requestPromise;
 
       // Assert
-      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('120 seconds'));
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('15 seconds'));
+    });
+  });
+
+  describe('Transient 5xx Retry Handling', () => {
+    it('should retry and succeed after a 504 response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockAuthResponse),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 504,
+        statusText: 'Gateway Timeout',
+        headers: new Headers(),
+        text: () => Promise.resolve('Gateway timeout'),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockSuccessResponse),
+        headers: new Headers({ 'Content-Type': 'application/json' }),
+      });
+
+      const requestPromise = service.getRepositories();
+      await vi.advanceTimersByTimeAsync(15000);
+      const result = await requestPromise;
+
+      expect(result).toBeDefined();
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('transient error 504'));
+    });
+
+    it('should retry publish request after a 429 response and then succeed', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockAuthResponse),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new Headers({ 'Retry-After': '1' }),
+        text: () => Promise.resolve('Rate limit exceeded'),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        headers: new Headers(),
+        text: () => Promise.resolve(''),
+      });
+
+      const requestPromise = service.publishContentItem('test-item-id');
+      await vi.advanceTimersByTimeAsync(1000);
+      const result = await requestPromise;
+
+      expect(result.success).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(3); // auth + failed publish + successful retry
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('/publish'));
     });
   });
 

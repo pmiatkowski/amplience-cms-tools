@@ -1,9 +1,26 @@
 import cliProgress from 'cli-progress';
 import { AmplienceService } from '../amplience-service';
+import {
+  nullifyReferences,
+  resolveContentReferences,
+  transformBodyReferences,
+  type ReferenceResolutionResult,
+  type BodyTransformOptions,
+} from '../content-reference';
 
 /**
  * Core logic for recreating content items from source to target hub
  * Note: This action assumes hierarchy analysis has already been done by the caller
+ *
+ * @param sourceService - Service for the source hub
+ * @param targetService - Service for the target hub
+ * @param itemsWithFolders - Items to recreate with their folder assignments
+ * @param targetRepositoryId - Target repository ID
+ * @param folderMapping - Map of source folder ID to target folder ID
+ * @param progressBar - Optional progress bar for UI updates
+ * @param targetLocale - Optional target locale override
+ * @param resolveReferences - Whether to resolve content references (default: true for cross-hub)
+ * @param sourceRepositoryId - Source repository ID (required when resolveReferences is true)
  */
 export async function recreateContentItems(
   sourceService: AmplienceService,
@@ -12,8 +29,10 @@ export async function recreateContentItems(
   targetRepositoryId: string,
   folderMapping: Map<string, string>, // Map of source folder ID → target folder ID
   progressBar?: cliProgress.SingleBar,
-  targetLocale?: string | null | undefined // New parameter for target locale
-): Promise<void> {
+  targetLocale?: string | null | undefined, // New parameter for target locale
+  resolveReferences: boolean = true, // Enable reference resolution by default
+  sourceRepositoryId?: string // Required when resolveReferences is true
+): Promise<RecreateResult> {
   const itemIds = itemsWithFolders.map(item => item.itemId);
   console.log(`\n🔄 Starting recreation of ${itemIds.length} content items...`);
 
@@ -50,6 +69,137 @@ export async function recreateContentItems(
   }> = [];
   const itemsToPublish: Array<{ itemId: string; sourceItem: Amplience.ContentItemWithDetails }> =
     [];
+
+  // Reference resolution state
+  let referenceResolutionResult: ReferenceResolutionResult | undefined;
+  let sourceToTargetIdMap = new Map<string, string>();
+  // Track whether we need to nullify references (when resolution is disabled or failed)
+  let shouldNullifyReferences = !resolveReferences;
+
+  // Resolve content references if enabled
+  if (resolveReferences && sourceRepositoryId) {
+    console.log(`\n🔗 Resolving content references...`);
+
+    try {
+      const resolverResult = await resolveContentReferences({
+        sourceService,
+        targetService,
+        sourceRepositoryId,
+        targetRepositoryId,
+        initialItemIds: itemIds,
+        onProgress: (phase, current, total) => {
+          console.log(`  📊 ${phase}: ${current}/${total}`);
+        },
+      });
+
+      if (resolverResult.success) {
+        referenceResolutionResult = resolverResult.resolution;
+        sourceToTargetIdMap = resolverResult.registry.sourceToTargetIdMap;
+        shouldNullifyReferences = false; // Resolution succeeded, no need to nullify
+
+        console.log(`  ✓ Discovered ${referenceResolutionResult.totalDiscovered} items`);
+        console.log(
+          `  ✓ Matched ${referenceResolutionResult.matchedCount} existing items in target`
+        );
+        console.log(`  ✓ Need to create ${referenceResolutionResult.toCreateCount} new items`);
+
+        if (referenceResolutionResult.circularGroups.length > 0) {
+          console.log(
+            `  ⚠️  Found ${referenceResolutionResult.circularGroups.length} circular reference groups`
+          );
+        }
+      } else {
+        console.warn(`  ⚠️  Reference resolution failed: ${resolverResult.error}`);
+        console.log(`  📋 References will be nullified to prevent 403 errors...`);
+        shouldNullifyReferences = true;
+      }
+    } catch (refError) {
+      console.warn(`  ⚠️  Reference resolution error:`, refError);
+      console.log(`  📋 References will be nullified to prevent 403 errors...`);
+      shouldNullifyReferences = true;
+    }
+  } else if (resolveReferences && !sourceRepositoryId) {
+    console.log(
+      `  ⚠️  Reference resolution requested but sourceRepositoryId not provided, skipping...`
+    );
+    console.log(`  📋 References will be nullified to prevent 403 errors...`);
+    shouldNullifyReferences = true;
+  }
+
+  // Create discovered references that weren't matched in target
+  // These are content items referenced by the main items but don't exist in target hub
+  if (referenceResolutionResult && sourceToTargetIdMap.size > 0) {
+    // Find items that were discovered but don't have a target ID (not matched)
+    const unmatchedEntries = [...referenceResolutionResult.registry.entries.entries()].filter(
+      ([sourceId, entry]) =>
+        // Item was discovered (has sourceItem) but doesn't have a target ID
+        entry.sourceItem && !entry.targetId && !itemIds.includes(sourceId)
+    );
+
+    if (unmatchedEntries.length > 0) {
+      console.log(
+        `\n🔗 Phase 0: Creating ${unmatchedEntries.length} referenced items not in target...`
+      );
+
+      for (const [sourceId, entry] of unmatchedEntries) {
+        if (!entry.sourceItem) continue;
+
+        try {
+          console.log(`  📋 Creating referenced item: ${entry.sourceItem.label} (${sourceId})`);
+
+          // Prepare body for creation (remove hierarchy info for standalone items)
+          const baseBody = prepareItemBodyForCreation(entry.sourceItem);
+
+          // Transform any references in this item too
+          let itemBody: Record<string, unknown>;
+          if (sourceToTargetIdMap.size > 0) {
+            const transformOptions: BodyTransformOptions = {
+              phase: 2,
+              sourceToTargetIdMap,
+              preserveUnmapped: false,
+            };
+            itemBody = transformBodyReferences(baseBody, transformOptions);
+          } else {
+            itemBody = baseBody;
+          }
+
+          // Create the referenced item
+          const newItem = await createContentItemInTarget(targetService, targetRepositoryId, {
+            body: itemBody,
+            label: entry.sourceItem.label,
+            folderId: undefined, // Referenced items go to repository root
+            locale: entry.sourceItem.locale,
+          });
+
+          if (newItem) {
+            // Update the mapping
+            sourceToTargetIdMap.set(sourceId, newItem.id);
+            console.log(`  ✅ Created: ${entry.sourceItem.label} → ${newItem.id}`);
+
+            // Assign delivery key if present
+            if (entry.sourceItem.body._meta?.deliveryKey) {
+              await assignDeliveryKey(
+                targetService,
+                newItem.id,
+                entry.sourceItem.body._meta.deliveryKey
+              );
+              console.log(`  ✓ Assigned delivery key: ${entry.sourceItem.body._meta.deliveryKey}`);
+            }
+
+            // Track for publishing if source was published
+            if (shouldPublishItem(entry.sourceItem)) {
+              itemsToPublish.push({ itemId: newItem.id, sourceItem: entry.sourceItem });
+            }
+          } else {
+            console.warn(`  ⚠️  Failed to create referenced item: ${entry.sourceItem.label}`);
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.warn(`  ❌ Error creating referenced item ${sourceId}: ${errorMessage}`);
+        }
+      }
+    }
+  }
 
   // Phase 1: Create all content items without hierarchy relationships
   console.log(`\n🏗️  Phase 1: Creating ${itemIds.length} content items...`);
@@ -92,7 +242,46 @@ export async function recreateContentItems(
       }
 
       // Step 3: Prepare item body for creation
-      const newItemBody = prepareItemBodyForCreation(sourceItem);
+      // If reference resolution was performed, transform the body to resolve references
+      let newItemBody: Record<string, unknown>;
+      if (resolveReferences && sourceToTargetIdMap.size > 0) {
+        // First prepare the base body
+        const baseBody = prepareItemBodyForCreation(sourceItem);
+
+        // Determine if this item is in a circular group
+        const isInCircularGroup = referenceResolutionResult?.circularGroups.some(group =>
+          group.includes(itemId)
+        );
+
+        if (isInCircularGroup) {
+          // Phase 1: Nullify circular references
+          const transformOptions: BodyTransformOptions = {
+            phase: 1,
+            sourceToTargetIdMap,
+            preserveUnmapped: false,
+          };
+          newItemBody = transformBodyReferences(baseBody, transformOptions);
+          console.log(`  🔄 Transformed body (phase 1 - circular refs nullified)`);
+        } else {
+          // Resolve references directly - nullify any unmapped references
+          // to prevent 403 errors from invalid cross-hub content IDs
+          const transformOptions: BodyTransformOptions = {
+            phase: 2,
+            sourceToTargetIdMap,
+            preserveUnmapped: false, // Nullify unmapped refs to prevent 403 errors
+          };
+          newItemBody = transformBodyReferences(baseBody, transformOptions);
+          console.log(`  🔄 Transformed body with resolved references`);
+        }
+      } else if (shouldNullifyReferences) {
+        // Reference resolution was not performed or failed - nullify all references
+        // to prevent 403 Forbidden errors from invalid cross-hub content IDs
+        const baseBody = prepareItemBodyForCreation(sourceItem);
+        newItemBody = nullifyReferences(baseBody);
+        console.log(`  ⚠️  Nullified content references (resolution was skipped or failed)`);
+      } else {
+        newItemBody = prepareItemBodyForCreation(sourceItem);
+      }
 
       // Step 4: Create content item in target
       const newItem = await createContentItemInTarget(targetService, targetRepositoryId, {
@@ -342,9 +531,72 @@ export async function recreateContentItems(
     }
   }
 
+  // Phase 3: Update items with circular references (if reference resolution was performed)
+  let itemsUpdated = 0;
+  if (
+    resolveReferences &&
+    referenceResolutionResult &&
+    referenceResolutionResult.circularGroups.length > 0
+  ) {
+    console.log(`\n🔄 Phase 3: Resolving circular references...`);
+
+    // Collect all item IDs in circular groups
+    const circularGroupIds = new Set(referenceResolutionResult.circularGroups.flat());
+
+    for (const itemId of circularGroupIds) {
+      const result = results.find(r => r.id === itemId && r.success && r.newId);
+      if (!result || !result.newId || !result.sourceItem) {
+        continue;
+      }
+
+      try {
+        console.log(`  🔄 Updating ${result.newId} with resolved references...`);
+
+        // Fetch the current item to get its version
+        const currentItem = await targetService.getContentItemWithDetails(result.newId);
+        if (!currentItem) {
+          console.warn(`    ⚠️ Could not fetch item ${result.newId} for update`);
+          continue;
+        }
+
+        // Prepare the body with resolved references
+        const baseBody = prepareItemBodyForCreation(result.sourceItem);
+        const transformOptions: BodyTransformOptions = {
+          phase: 2,
+          sourceToTargetIdMap,
+          preserveUnmapped: true,
+        };
+        const resolvedBody = transformBodyReferences(baseBody, transformOptions);
+
+        // Update the item
+        const updateRequest: Amplience.UpdateContentItemRequest = {
+          body: resolvedBody,
+          label: result.sourceItem.label,
+          version: currentItem.version,
+          ...(currentItem.folderId && { folderId: currentItem.folderId }),
+          ...(currentItem.locale && { locale: currentItem.locale }),
+        };
+
+        const updateResult = await targetService.updateContentItem(result.newId, updateRequest);
+
+        if (updateResult.success) {
+          console.log(`    ✓ Resolved circular references for ${result.newId}`);
+          itemsUpdated++;
+        } else {
+          console.warn(`    ⚠️ Failed to update ${result.newId}: ${updateResult.error}`);
+        }
+      } catch (updateError) {
+        console.warn(`    ⚠️ Error updating ${result.newId}:`, updateError);
+      }
+    }
+  }
+
   // Final report
   console.log('\n📊 Recreation Summary:');
   console.log(`✅ Successfully recreated: ${successCount} items (including hierarchy children)`);
+  if (itemsUpdated > 0) {
+    console.log(`🔄 Updated with resolved references: ${itemsUpdated} items`);
+  }
   console.log(`❌ Failed: ${failureCount} items`);
 
   if (failureCount > 0) {
@@ -356,7 +608,26 @@ export async function recreateContentItems(
     console.log('\n✅ Successfully recreated items:');
     results.filter(r => r.success).forEach(r => console.log(`  - ${r.id} → ${r.newId}`));
   }
+
+  return {
+    success: failureCount === 0,
+    itemsCreated: successCount,
+    itemsUpdated,
+    failed: failureCount,
+    referenceResolution: referenceResolutionResult,
+  };
 }
+
+/**
+ * Result of the recreate content items operation
+ */
+export type RecreateResult = {
+  success: boolean;
+  itemsCreated: number;
+  itemsUpdated: number;
+  failed: number;
+  referenceResolution?: ReferenceResolutionResult | undefined;
+};
 
 /**
  * Fetch full content item details including hierarchy children
@@ -400,13 +671,14 @@ function prepareItemBodyForCreation(
 
     // Remove read-only fields that should not be included during content creation
     // For hierarchy, we'll handle relationships separately after all items are created
-    if (body._meta?.hierarchy?.root) {
-      body._meta.hierarchy = { root: true, parentId: null }; // Ensure root hierarchy is preserved
-    } else if (body._meta?.hierarchy) {
-      // For child items, remove hierarchy during creation - we'll establish relationships later
+    // IMPORTANT: We must remove ALL hierarchy metadata during creation - the Amplience API
+    // returns 403 Forbidden if we try to create items with _meta.hierarchy already set.
+    // Hierarchy relationships must be established after creation using the hierarchy API.
+    if (body._meta?.hierarchy) {
+      const wasRoot = body._meta.hierarchy.root;
       delete body._meta.hierarchy;
       console.log(
-        `  🗂️  Removed hierarchy info from child item - will establish relationship after creation`
+        `  🗂️  Removed hierarchy info from ${wasRoot ? 'root' : 'child'} item - will establish relationship after creation`
       );
     }
   } else {
@@ -417,15 +689,10 @@ function prepareItemBodyForCreation(
     }
   }
 
-  // Handle content links - remove invalid references that don't exist in target hub
-  const bodyAny = body as Record<string, unknown>;
-  if (bodyAny.component && Array.isArray(bodyAny.component)) {
-    console.log(
-      `  🔗 Found ${bodyAny.component.length} content links - these will need to be updated manually after creation`
-    );
-    // For now, we'll keep the component array but note that the IDs won't be valid in target hub
-    // In a future enhancement, this could be mapped to equivalent content in target hub
-  }
+  // Note: Content references/links are handled by the caller using:
+  // - transformBodyReferences() when reference resolution succeeds
+  // - nullifyReferences() when reference resolution fails or is skipped
+  // This ensures invalid cross-hub content IDs don't cause 403 errors
 
   return body;
 } /**

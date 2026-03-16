@@ -186,7 +186,9 @@ export async function runRecreateContentItems(): Promise<void> {
       target.repository.id,
       folderMapping,
       undefined, // No progress bar - action provides its own detailed logging
-      targetLocale
+      targetLocale,
+      true, // resolveReferences - always enable for cross-hub operations
+      source.repository.id // sourceRepositoryId - required for reference resolution
     );
 
     console.log('\n✅ Content item recreation completed!');

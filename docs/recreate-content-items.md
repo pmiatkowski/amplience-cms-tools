@@ -76,13 +76,28 @@ The recreation process follows a comprehensive step-by-step workflow:
   children
 - Preserves hierarchy relationships in the target location
 
-### 6. Execution and Verification
+### 6. Content Reference Resolution
+
+When recreating items across hubs, content references (`content-reference` and
+`content-link` properties) are automatically resolved:
+
+- **Automatic Discovery**: All references in item bodies are discovered recursively
+- **Target Matching**: References are matched to target hub items by delivery key or schema+label
+- **Recursive Creation**: Missing referenced items are created automatically
+- **Circular Handling**: Circular references are resolved using two-phase creation
+- **External Flagging**: References outside the source repository are flagged for manual handling
+
+See [Content Reference Resolution](./content-reference-resolution.md) for details.
+
+### 7. Execution and Verification
 
 - Displays a comprehensive recreation summary before execution
+- Shows reference resolution preview (matched, to create, external)
 - Processes items with progress tracking
 - Handles folder mapping between source and target locations
 - Provides detailed success/failure reporting
 
 The system intelligently handles complex scenarios including cross-hub
-migration, folder structure preservation, and automatic hierarchy descendant
-inclusion to ensure complete and accurate content recreation.
+migration, folder structure preservation, automatic hierarchy descendant
+inclusion, and complete content reference resolution to ensure accurate and
+functional content recreation.

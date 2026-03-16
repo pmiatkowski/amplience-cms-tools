@@ -3,46 +3,88 @@ export class AmplienceService {
   private _tokenExpiry: number = 0;
   private _hubConfig: Amplience.HubConfig;
   private readonly _maxRetries: number;
-  private readonly _defaultRetryAwaitTime: number;
+  private readonly _baseRetryDelayMs: number;
+  private readonly _maxRetryDelayMs: number;
+  private readonly _requestTimeoutMs: number;
+  private readonly _retryJitterFactor: number;
 
   public constructor(hubConfig: Amplience.HubConfig) {
     this._hubConfig = hubConfig;
-    // Read retry configuration from environment variables
-    const retriesCount = parseInt(process.env.RETRIES_COUNT || '3', 10);
-    const retryAwaitTime = parseInt(process.env.RETRY_AWAIT_TIME || '60', 10);
+    const retriesCount = parseInt(process.env.RETRIES_COUNT || '7', 10);
+    const retryAwaitTime = parseInt(process.env.RETRY_AWAIT_TIME || '15', 10);
+    const maxRetryAwaitTime = parseInt(process.env.RETRY_MAX_AWAIT_TIME || '300', 10);
+    const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT || '60', 10);
+    const retryJitterFactor = parseFloat(process.env.RETRY_JITTER_FACTOR || '0.2');
 
-    // Handle invalid values by falling back to defaults
-    this._maxRetries = isNaN(retriesCount) || retriesCount < 0 ? 3 : retriesCount;
-    this._defaultRetryAwaitTime =
-      (isNaN(retryAwaitTime) || retryAwaitTime < 0 ? 60 : retryAwaitTime) * 1000; // Convert to milliseconds
+    this._maxRetries = isNaN(retriesCount) || retriesCount < 0 ? 7 : retriesCount;
+    this._baseRetryDelayMs =
+      (isNaN(retryAwaitTime) || retryAwaitTime <= 0 ? 15 : retryAwaitTime) * 1000;
+    this._maxRetryDelayMs =
+      (isNaN(maxRetryAwaitTime) || maxRetryAwaitTime <= 0 ? 300 : maxRetryAwaitTime) * 1000;
+    this._requestTimeoutMs =
+      (isNaN(requestTimeout) || requestTimeout <= 0 ? 60 : requestTimeout) * 1000;
+    this._retryJitterFactor =
+      isNaN(retryJitterFactor) || retryJitterFactor < 0 ? 0.2 : retryJitterFactor;
   }
 
-  // Private method for calculating retry delay based on response and attempt number
-  private _calculateRetryDelay(response: Response, attempt: number): number {
-    const retryAfterHeader = response.headers.get('Retry-After');
+  // Private method for calculating retry delay based on response and retry attempt number
+  private _calculateRetryDelay(response: Response | null, retryAttempt: number): number {
+    if (response) {
+      const retryAfterHeader = response.headers.get('Retry-After');
 
-    if (retryAfterHeader) {
-      // Check if it's a number (seconds) or a date
-      const secondsToWait = parseInt(retryAfterHeader, 10);
-      if (!isNaN(secondsToWait)) {
-        return secondsToWait * 1000; // Convert seconds to milliseconds
-      }
+      if (retryAfterHeader) {
+        // Check if it's a number (seconds) or a date
+        const secondsToWait = parseInt(retryAfterHeader, 10);
+        if (!isNaN(secondsToWait)) {
+          return secondsToWait * 1000; // Convert seconds to milliseconds
+        }
 
-      // Try to parse as HTTP date
-      const retryDate = new Date(retryAfterHeader);
-      if (!isNaN(retryDate.getTime())) {
-        return Math.max(0, retryDate.getTime() - Date.now());
+        // Try to parse as HTTP date
+        const retryDate = new Date(retryAfterHeader);
+        if (!isNaN(retryDate.getTime())) {
+          return Math.max(0, retryDate.getTime() - Date.now());
+        }
       }
     }
 
-    // Use exponential backoff if no Retry-After header
-    // Formula: RETRY_AWAIT_TIME * (2 ^ attempt)
-    return this._defaultRetryAwaitTime * Math.pow(2, attempt);
+    // Use capped exponential backoff with jitter when Retry-After header is unavailable.
+    const attemptIndex = Math.max(0, retryAttempt - 1);
+    const backoff = Math.min(
+      this._maxRetryDelayMs,
+      this._baseRetryDelayMs * Math.pow(2, attemptIndex)
+    );
+    const jitterMax = Math.round(backoff * this._retryJitterFactor);
+    const jitter = jitterMax > 0 ? Math.floor(Math.random() * (jitterMax + 1)) : 0;
+
+    return Math.min(this._maxRetryDelayMs, backoff + jitter);
   }
 
   // Helper method to wait for specified milliseconds
   private async _wait(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private _isRetryableStatus(status: number): boolean {
+    return status === 429 || status === 502 || status === 503 || status === 504;
+  }
+
+  private _isRetryableError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    if (error.name === 'AbortError') {
+      return true;
+    }
+
+    return error instanceof TypeError;
+  }
+
+  private _createTimeoutSignal(): AbortSignal {
+    const timeoutController = new AbortController();
+    setTimeout(() => timeoutController.abort(), this._requestTimeoutMs);
+
+    return timeoutController.signal;
   }
 
   // Private method for making authenticated requests
@@ -64,52 +106,92 @@ export class AmplienceService {
 
     let lastError: Error | null = null;
 
+    const method = options.method?.toUpperCase() || 'GET';
+
     // Retry loop
     for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
       try {
-        const response = await fetch(url, { ...options, headers });
+        const response = await fetch(url, {
+          ...options,
+          headers,
+          signal: this._createTimeoutSignal(),
+        });
 
-        // Handle rate limiting (429)
-        if (response.status === 429) {
+        if (this._isRetryableStatus(response.status)) {
           if (attempt < this._maxRetries) {
             const delayMs = this._calculateRetryDelay(response, attempt + 1);
             const delaySec = Math.round(delayMs / 1000);
+            const reason =
+              response.status === 429 ? 'rate limit' : `transient error ${response.status}`;
             console.warn(
-              `Rate limit hit. Waiting ${delaySec} seconds before retry ${attempt + 1}/${this._maxRetries}...`
+              `${method} ${url} hit ${reason}. Waiting ${delaySec} seconds before retry ${attempt + 1}/${this._maxRetries}...`
             );
             await this._wait(delayMs);
-            continue; // Retry the request
+            continue;
           } else {
-            // All retries exhausted
             const errorBody = await response.text();
             throw new Error(
-              `API Error: 429 Too Many Requests - Failed after ${this._maxRetries} retries. ${errorBody}`
+              `API Error: ${response.status} ${response.statusText} - Failed after ${this._maxRetries} retries. ${errorBody}`
             );
           }
         }
 
-        // Handle other non-OK responses
         if (!response.ok) {
           const errorBody = await response.text();
           throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody}`);
         }
 
-        // Success - return the response
-        if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+        if (
+          response.status === 204 ||
+          response.status === 205 ||
+          response.headers.get('Content-Length') === '0'
+        ) {
           return undefined as T;
         }
 
-        return response.json() as T;
+        const contentType = response.headers.get('Content-Type')?.toLowerCase() || '';
+
+        if (contentType.includes('json')) {
+          return response.json() as T;
+        }
+
+        // Some upstream responses omit or misreport content-type while still returning JSON.
+        try {
+          return (await response.json()) as T;
+        } catch {
+          const bodyText = await response.text();
+          if (!bodyText.trim()) {
+            return undefined as T;
+          }
+
+          return JSON.parse(bodyText) as T;
+        }
       } catch (error) {
-        // If it's not a 429 error, rethrow immediately
-        if (error instanceof Error && !error.message.includes('Rate limit')) {
+        if (attempt < this._maxRetries && this._isRetryableError(error)) {
+          const delayMs = this._calculateRetryDelay(null, attempt + 1);
+          const delaySec = Math.round(delayMs / 1000);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.warn(
+            `${method} ${url} failed with retryable network error (${errorMessage}). Waiting ${delaySec} seconds before retry ${attempt + 1}/${this._maxRetries}...`
+          );
+          await this._wait(delayMs);
+          continue;
+        }
+
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error(
+            `Request timed out after ${Math.round(this._requestTimeoutMs / 1000)} seconds: ${method} ${url}`
+          );
+        }
+
+        if (error instanceof Error) {
           throw error;
         }
+
         lastError = error as Error;
       }
     }
 
-    // This should not be reached, but just in case
     throw lastError || new Error('Request failed after retries');
   }
 
@@ -319,25 +401,10 @@ export class AmplienceService {
     const url = `https://api.amplience.net/v2/content/content-items/${contentItemId}/publish`;
 
     try {
-      // For publish requests, we need to handle 202 Accepted as success manually
-      // since the _request helper throws on non-2xx status codes, but 202 is valid for publish
-      if (!this._accessToken || Date.now() >= this._tokenExpiry) {
-        await this._getAccessToken();
-      }
-
-      const response = await fetch(url, {
+      await this._request<void>(url, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this._accessToken}`,
-          'Content-Type': 'application/json',
-        },
         body: '{}',
       });
-
-      if (response.status >= 400) {
-        const errorBody = await response.text();
-        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody}`);
-      }
 
       return { success: true };
     } catch (error: unknown) {

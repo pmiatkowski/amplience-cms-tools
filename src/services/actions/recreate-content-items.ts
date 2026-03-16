@@ -498,24 +498,37 @@ export async function recreateContentItems(
   // Step 8: Batch publish all items that were marked for publishing
   if (itemsToPublish.length > 0) {
     console.log(`\n📤 Publishing ${itemsToPublish.length} content items...`);
+    const configuredConcurrency = parseInt(process.env.PUBLISH_CONCURRENCY || '5', 10);
+    const publishConcurrency =
+      isNaN(configuredConcurrency) || configuredConcurrency <= 0 ? 5 : configuredConcurrency;
+    console.log(`  ⚙️  Using publish concurrency: ${publishConcurrency}`);
 
-    const publishPromises = itemsToPublish.map(async ({ itemId, sourceItem }) => {
-      try {
-        await publishTargetItem(targetService, itemId);
-        console.log(
-          `  ✓ Published: ${itemId} (source was ${sourceItem.status} with ${sourceItem.publishingStatus})`
-        );
+    const publishResults: Array<{ itemId: string; success: boolean; error?: string }> = [];
+    const queue = [...itemsToPublish];
+    const workerCount = Math.min(publishConcurrency, queue.length);
 
-        return { itemId, success: true };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`  ❌ Failed to publish ${itemId}: ${errorMessage}`);
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current) {
+          return;
+        }
 
-        return { itemId, success: false, error: errorMessage };
+        try {
+          await publishTargetItem(targetService, current.itemId);
+          console.log(
+            `  ✓ Published: ${current.itemId} (source was ${current.sourceItem.status} with ${current.sourceItem.publishingStatus})`
+          );
+          publishResults.push({ itemId: current.itemId, success: true });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`  ❌ Failed to publish ${current.itemId}: ${errorMessage}`);
+          publishResults.push({ itemId: current.itemId, success: false, error: errorMessage });
+        }
       }
     });
 
-    const publishResults = await Promise.all(publishPromises);
+    await Promise.all(workers);
     const publishedCount = publishResults.filter(r => r.success).length;
     const publishFailedCount = publishResults.filter(r => !r.success).length;
 
@@ -880,22 +893,16 @@ function shouldPublishItem(item: Amplience.ContentItemWithDetails): boolean {
  * Publish a content item in the target hub
  */
 async function publishTargetItem(service: AmplienceService, itemId: string): Promise<void> {
-  try {
-    console.log(`  📤 Publishing content item: ${itemId}`);
+  console.log(`  📤 Publishing content item: ${itemId}`);
 
-    const result = await service.publishContentItem(itemId);
+  const result = await service.publishContentItem(itemId);
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to publish content item');
-    }
-
-    console.log(`  ✓ Successfully published content item`);
-  } catch (error) {
-    console.error(`  ❌ Error publishing content item:`, error);
-    // Don't throw the error - we want to continue with other operations
-    // Just log it as a warning since the content item was created successfully
+  if (!result.success) {
     console.log(`  ⚠️  Content item was created but could not be published`);
+    throw new Error(result.error || 'Failed to publish content item');
   }
+
+  console.log(`  ✓ Successfully published content item`);
 }
 
 /**

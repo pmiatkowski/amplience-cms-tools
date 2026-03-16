@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.7.0...v1.7.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* retry backoff ([#23](https://github.com/pmiatkowski/amplience-cms-tools/issues/23)) ([e86a08c](https://github.com/pmiatkowski/amplience-cms-tools/commit/e86a08ce925d19d1e69e3454c67d470b2a0f22b8))
+
 # [1.7.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.6.1...v1.7.0) (2026-03-15)
 
 

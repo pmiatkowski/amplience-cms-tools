@@ -18,7 +18,8 @@ prompts, advanced filtering, and detailed reporting.
 - **Content Reference Resolution**: Automatic handling of content references and
   links across hubs with recursive discovery, circular reference support, and
   target matching
-- **Safe Operations**: Built-in dry-run mode with explicit confirmation for live
+- **Safe Operations**: Built-in dry-run mode, repository content-type and
+  hub-wide delivery-key preflight, and explicit confirmation before live
   execution
 - **Detailed Reporting**: Generate comprehensive Markdown reports for all
   operations
@@ -82,6 +83,7 @@ AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
 AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
+AMP_HUB_DEV_PROTECTED=0
 
 # Production Environment (OAuth)
 AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
@@ -89,6 +91,7 @@ AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
 AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
+AMP_HUB_PROD_PROTECTED=1
 ```
 
 #### Personal Access Token (PAT) Configuration
@@ -113,6 +116,13 @@ AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
 
 **Important:** When `PAT_TOKEN` is set, it applies to **all** configured hubs.
 The token must have permissions for all hubs you want to manage.
+
+At startup, the tool validates `PAT_TOKEN` against the first configured hub
+before checking for updates or showing the command menu. The application stops
+with a clear error when the token is invalid, lacks access to that hub, or
+cannot be validated because of an API or network failure. Because the same PAT
+is shared by every hub, startup makes one validation request; access to other
+hubs is still checked when a command uses them.
 
 #### Mixed Configuration
 
@@ -169,6 +179,26 @@ AMP_HUB_<HUBNAME>_EXT_URL=https://your-hub.amplience.net
 ```
 
 - The URL must be a valid HTTPS URL
+
+#### Protected Hub Configuration
+
+Each hub can optionally require an additional typed confirmation before live
+remote writes:
+
+```env
+AMP_HUB_DEV_PROTECTED=0
+AMP_HUB_PROD_PROTECTED=1
+```
+
+Only `0` and `1` are valid. A missing or blank value defaults to `0`; invalid
+values stop hub configuration from loading. When protection is `1`, the user
+must type the exact, case-sensitive hub name before a live write. Operations
+targeting one repository also require its exact repository name. Hub-level and
+multi-repository operations require only the hub name.
+
+For cross-hub commands, protection applies to the location being changed,
+normally the target. Read-only commands and dry runs do not show this extra
+confirmation. Existing operation confirmation prompts still apply.
 
 ### Configuration Features
 
@@ -234,12 +264,12 @@ The CLI tool provides 16 specialized commands for different bulk operations:
 
 ### 1. VSE Management
 
-**Command**: VSE Management
-**Documentation**: [vse-management.md](docs/vse-management.md)
+**Command**: VSE Management **Documentation**:
+[vse-management.md](docs/vse-management.md)
 
-Provides operations for managing Visual Studio Edition (VSE) visualization settings
-across multiple content types. **Bulk Update Visualizations** operation enables
-efficient updates to visualization configurations with support for:
+Provides operations for managing Visual Studio Edition (VSE) visualization
+settings across multiple content types. **Bulk Update Visualizations** operation
+enables efficient updates to visualization configurations with support for:
 
 - Content type selection via API regex filtering or JSON file
 - Visualization configuration from JSON file with hub-specific URL replacement
@@ -257,8 +287,8 @@ support for hierarchical structures and complex filtering options.
 
 ### 3. Cleanup Folder
 
-**Command**: Cleanup Folder
-**Documentation**: [cleanup-folder.md](docs/cleanup-folder.md)
+**Command**: Cleanup Folder **Documentation**:
+[cleanup-folder.md](docs/cleanup-folder.md)
 
 Moves all content items from a folder to a designated deleted folder, archives
 them, and removes empty folder structures systematically.
@@ -269,12 +299,13 @@ them, and removes empty folder structures systematically.
 **Documentation**: [copy-folder-with-content.md](docs/copy-folder-with-content.md)
 
 Duplicates a complete folder structure and its content from source to
-destination, supporting cross-hub content migration and duplication.
+destination, supporting cross-hub content migration and duplication. Required
+content types are validated before confirmation or target folder creation.
 
 ### 5. List Folder Tree Structure
 
-**Command**: List folder tree structure
-**Documentation**: [list-folder-tree.md](docs/list-folder-tree.md)
+**Command**: List folder tree structure **Documentation**:
+[list-folder-tree.md](docs/list-folder-tree.md)
 
 Visualizes repository folder hierarchy in multiple formats (tree, table, JSON)
 with detailed statistics and navigation options.
@@ -285,12 +316,13 @@ with detailed statistics and navigation options.
 **Documentation**: [recreate-content-items.md](docs/recreate-content-items.md)
 
 Recreates content items across different hubs, repositories, and folders with
-comprehensive filtering, hierarchy handling, and locale management.
+comprehensive filtering, hierarchy handling, locale management, and target
+repository content-type validation before creation.
 
 ### 7. Recreate Folder Structure
 
-**Command**: Recreate Folder Structure
-**Documentation**: [recreate-folder-structure.md](docs/recreate-folder-structure.md)
+**Command**: Recreate Folder Structure **Documentation**:
+[recreate-folder-structure.md](docs/recreate-folder-structure.md)
 
 Replicates folder hierarchies from source to target locations without content,
 perfect for environment setup and structural consistency.
@@ -306,8 +338,8 @@ synchronization.
 
 ### 9. Archive Content Type Schemas
 
-**Command**: Archive Content Type Schemas
-**Documentation**: [archive-content-type-schemas.md](docs/archive-content-type-schemas.md)
+**Command**: Archive Content Type Schemas **Documentation**:
+[archive-content-type-schemas.md](docs/archive-content-type-schemas.md)
 
 Archives content type schemas and their dependencies (content types and content
 items) in the correct dependency order to maintain data integrity and prevent
@@ -323,8 +355,8 @@ validation and repository assignments.
 
 ### 11. Sync Content Type Properties
 
-**Command**: Sync Content Type Properties
-**Documentation**: [sync-content-type-properties.md](docs/sync-content-type-properties.md)
+**Command**: Sync Content Type Properties **Documentation**:
+[sync-content-type-properties.md](docs/sync-content-type-properties.md)
 
 Synchronizes content types with their schemas on a target hub, ensuring content
 types reflect the latest schema versions with flexible filtering options.
@@ -340,8 +372,8 @@ parent-child relationships and handling locale strategies for delivery keys.
 
 ### 13. Bulk Sync Hierarchies
 
-**Command**: Bulk Sync Hierarchies
-**Documentation**: [bulk-sync-hierarchies.md](docs/bulk-sync-hierarchies.md)
+**Command**: Bulk Sync Hierarchies **Documentation**:
+[bulk-sync-hierarchies.md](docs/bulk-sync-hierarchies.md)
 
 Synchronize multiple content item hierarchies from source to target
 hub/repository in a single operation. Features multi-select interface, automatic
@@ -358,8 +390,8 @@ prefix/suffix patterns and optional publishing workflow.
 
 ### 15. Manage Extensions
 
-**Command**: Manage Extensions
-**Documentation**: [export-extensions.md](docs/export-extensions.md) |
+**Command**: Manage Extensions **Documentation**:
+[export-extensions.md](docs/export-extensions.md) |
 [import-extensions.md](docs/import-extensions.md)
 
 Provides a submenu for extension management operations with two capabilities:
@@ -380,8 +412,8 @@ Future enhancements will add delete capabilities.
 
 ### 16. User Command Sets
 
-**Command**: User Sets
-**Documentation**: [user-command-sets.md](docs/user-command-sets.md)
+**Command**: User Sets **Documentation**:
+[user-command-sets.md](docs/user-command-sets.md)
 
 Create and execute predefined sequences of CLI commands, allowing users to
 bundle commonly used operations into reusable sets. Features include:

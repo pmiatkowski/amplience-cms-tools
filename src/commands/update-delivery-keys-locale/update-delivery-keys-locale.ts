@@ -5,6 +5,7 @@ import {
   promptForFilters,
   promptForConfirmation,
   promptForLocale,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { AmplienceService } from '~/services/amplience-service';
 import { filterContentItems } from '~/services/filter-service';
@@ -63,6 +64,8 @@ export async function runUpdateDeliveryKeysLocale(): Promise<void> {
 
     return;
   }
+
+  await promptForProtectedEnvironment(selectedHub, selectedRepo);
 
   // 12. Update items with progress bar
   const bar = createProgressBar(filtered.length, 'Updating delivery keys');

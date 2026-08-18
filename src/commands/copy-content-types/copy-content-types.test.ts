@@ -147,6 +147,7 @@ describe('runCopyContentTypes', () => {
     vi.mocked(ContentTypeService).mockImplementation(
       () => mockContentTypeService as unknown as ContentTypeService
     );
+    vi.mocked(prompts.promptForProtectedEnvironment).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -160,6 +161,7 @@ describe('runCopyContentTypes', () => {
     vi.mocked(prompts.promptForSchemaIdFilter).mockClear();
     vi.mocked(prompts.promptForValidateSchemas).mockClear();
     vi.mocked(prompts.promptForConfirmation).mockClear();
+    vi.mocked(prompts.promptForProtectedEnvironment).mockClear();
     vi.mocked(commandPrompts.promptForContentTypesToSync).mockClear();
     vi.mocked(commandPrompts.promptForRepositoryStrategy).mockClear();
     vi.mocked(commandPrompts.promptForRepositoryMapping).mockClear();
@@ -625,6 +627,10 @@ describe('runCopyContentTypes', () => {
       await runCopyContentTypes();
 
       // Assert
+      expect(prompts.promptForProtectedEnvironment).toHaveBeenCalledWith(mockTargetHub);
+      expect(
+        vi.mocked(prompts.promptForProtectedEnvironment).mock.invocationCallOrder[0]
+      ).toBeLessThan(mockTargetService.createContentType.mock.invocationCallOrder[0]);
       expect(mockTargetService.createContentType).toHaveBeenCalledWith(mockTargetHub.hubId, {
         contentTypeUri: mockContentType.contentTypeUri,
         settings: mockContentType.settings,

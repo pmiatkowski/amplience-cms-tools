@@ -6,6 +6,7 @@ import {
   promptForContentItem,
   promptForDryRun,
   promptForConfirmation,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { syncHierarchy } from '~/services/actions/sync-hierarchy';
 import { AmplienceService } from '~/services/amplience-service';
@@ -504,6 +505,11 @@ describe('runSyncHierarchy command', () => {
 
       await runSyncHierarchy();
 
+      expect(promptForProtectedEnvironment).toHaveBeenCalledOnce();
+      expect(promptForProtectedEnvironment).toHaveBeenCalledWith(targetHub, repo);
+      expect(vi.mocked(promptForProtectedEnvironment).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(syncHierarchy).mock.invocationCallOrder[0]
+      );
       expect(syncHierarchy).toHaveBeenCalledWith(
         expect.objectContaining({
           updateContent: false,
@@ -598,6 +604,7 @@ describe('runSyncHierarchy command', () => {
 
       await runSyncHierarchy();
 
+      expect(promptForProtectedEnvironment).not.toHaveBeenCalled();
       expect(syncHierarchy).toHaveBeenCalledWith(
         expect.objectContaining({
           isDryRun: true,

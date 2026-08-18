@@ -263,7 +263,8 @@ async function discoverAndRecreateExternalReferences(
           if (sourceItem.body._meta?.deliveryKey) {
             await targetService.assignDeliveryKey(
               result.updatedItem.id,
-              sourceItem.body._meta.deliveryKey
+              sourceItem.body._meta.deliveryKey,
+              result.updatedItem.version
             );
           }
 

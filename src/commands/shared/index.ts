@@ -15,3 +15,4 @@ export {
   type SourceLocation,
   type TargetLocation,
 } from './location-selection';
+export { displayContentTypePreflightResult } from './content-type-preflight';

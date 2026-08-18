@@ -1,15 +1,23 @@
 import { getHubConfigs } from '~/app-config';
+import { promptForProtectedEnvironment } from '~/prompts';
 import {
   listNestedSubfolders,
   type FolderTreeNode,
 } from '~/services/actions/list-nested-subfolders';
+import { preflightContentItemRecreation } from '~/services/actions/preflight-content-item-recreation';
 import { recreateContentItems } from '~/services/actions/recreate-content-items';
 import { recreateFolderStructure } from '~/services/actions/recreate-folder-structure';
-import { countTotalFolders, createProgressBar, getAllSubfolderIds } from '~/utils';
+import {
+  countTotalFolders,
+  createPhaseProgressBar,
+  createProgressBar,
+  getAllSubfolderIds,
+} from '~/utils';
 import {
   analyzeHierarchyStructure,
   confirmOperation,
   createFolderMapping,
+  displayContentTypePreflightResult,
   selectSourceLocation,
   selectTargetLocation,
   sortContentForRecreation,
@@ -110,26 +118,32 @@ export async function runCopyFolderWithContent(): Promise<void> {
           'Processing subfolders'
         );
 
-        for (let i = 0; i < allSubfolderIds.length; i++) {
-          const subfolderId = allSubfolderIds[i];
-          try {
-            const subfolderItems = await source.service.getAllContentItems(
-              source.repository.id,
-              () => {}, // no-op callback for individual folder progress
-              { folderId: subfolderId }
-            );
+        try {
+          for (let i = 0; i < allSubfolderIds.length; i++) {
+            const subfolderId = allSubfolderIds[i];
+            try {
+              const subfolderItems = await source.service.getAllContentItems(
+                source.repository.id,
+                () => {}, // no-op callback for individual folder progress
+                { folderId: subfolderId }
+              );
 
-            // Add subfolder items with their source folder ID
-            subfolderItems.forEach((item: Amplience.ContentItem) => {
-              allContentItemsWithFolders.push({ item, sourceFolderId: subfolderId });
-            });
-          } catch (error) {
-            console.warn(`⚠️  Failed to fetch items from subfolder ${subfolderId}:`, error);
+              // Add subfolder items with their source folder ID
+              subfolderItems.forEach((item: Amplience.ContentItem) => {
+                allContentItemsWithFolders.push({ item, sourceFolderId: subfolderId });
+              });
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              throw new Error(
+                `Failed to fetch items from source subfolder ${subfolderId}: ${errorMessage}`
+              );
+            } finally {
+              subfolderProgressBar.update(i + 1);
+            }
           }
-          subfolderProgressBar.update(i + 1);
+        } finally {
+          subfolderProgressBar.stop();
         }
-
-        subfolderProgressBar.stop();
       }
 
       console.log(`✓ Found ${allContentItemsWithFolders.length} content items total`);
@@ -167,20 +181,32 @@ export async function runCopyFolderWithContent(): Promise<void> {
       // Fetch full details for new items
       const newItemsProgressBar = createProgressBar(newItemIds.length, 'Fetching hierarchy items');
       const newItems: Amplience.ContentItem[] = [];
+      const unavailableHierarchyItemIds: string[] = [];
 
       for (const itemId of newItemIds) {
         try {
           const itemDetails = await source.service.getContentItemWithDetails(itemId);
           if (itemDetails) {
             newItems.push(itemDetails);
+          } else {
+            unavailableHierarchyItemIds.push(itemId);
           }
-        } catch (error) {
-          console.warn(`⚠️  Failed to fetch hierarchy item ${itemId}:`, error);
+        } catch {
+          unavailableHierarchyItemIds.push(itemId);
         }
         newItemsProgressBar.increment();
       }
 
       newItemsProgressBar.stop();
+
+      if (unavailableHierarchyItemIds.length > 0) {
+        console.error(
+          `❌ Failed to load hierarchy descendants: ${unavailableHierarchyItemIds.join(', ')}`
+        );
+        console.error('❌ No target changes were made.');
+
+        return;
+      }
 
       // Add new hierarchy items to the processing list
       // For hierarchy items, we'll use the root item's folder as the source folder
@@ -212,6 +238,33 @@ export async function runCopyFolderWithContent(): Promise<void> {
       };
     });
 
+    // === CONTENT TYPE PREFLIGHT ===
+    console.log('\n🔍 Validating target repository content types...');
+    const preflightProgress = createPhaseProgressBar();
+    let preflight: Awaited<ReturnType<typeof preflightContentItemRecreation>>;
+
+    try {
+      preflight = await preflightContentItemRecreation({
+        sourceService: source.service,
+        targetService: target.service,
+        sourceRepositoryId: source.repository.id,
+        targetRepositoryId: target.repository.id,
+        initialItemIds: sortedItemsWithFolders.map(({ item }) => item.id),
+        onProgress: preflightProgress.update,
+      });
+    } finally {
+      preflightProgress.stop();
+    }
+    displayContentTypePreflightResult(preflight, target.repository.name);
+
+    if (preflight.status === 'blocked') {
+      return;
+    }
+
+    const totalItemsToCreate =
+      preflight.referenceSummary?.itemsToCreate ?? sortedItemsWithFolders.length;
+    const referencedItemsToCreate = Math.max(0, totalItemsToCreate - sortedItemsWithFolders.length);
+
     // === CONFIRMATION ===
     const operationSummary: OperationSummary = {
       sourceHub: source.hub.name,
@@ -224,7 +277,9 @@ export async function runCopyFolderWithContent(): Promise<void> {
       Subfolders: countTotalFolders(folderStructure),
       'Content items (originally)': allContentItems.length,
       'Hierarchy descendants discovered': hierarchyAnalysis.hierarchyChildrenFound,
-      'Total items to copy': sortedItemsWithFolders.length,
+      'Folder and hierarchy items': sortedItemsWithFolders.length,
+      'Referenced items to create': referencedItemsToCreate,
+      'Total items to create': totalItemsToCreate,
     };
 
     const confirmed = await confirmOperation(
@@ -238,6 +293,8 @@ export async function runCopyFolderWithContent(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(target.hub, target.repository);
 
     // === EXECUTION ===
     console.log('\n🚀 Starting folder and content copy operation...');
@@ -322,9 +379,20 @@ export async function runCopyFolderWithContent(): Promise<void> {
           console.log(`    - ${error.folderName}: ${error.error}`);
         });
       }
+
+      if (structureResult.failedFolders > 0) {
+        const folderLabel = structureResult.failedFolders === 1 ? 'folder' : 'folders';
+        console.error(
+          `❌ Folder structure recreation failed for ${structureResult.failedFolders} ${folderLabel}. ` +
+            'Content recreation was not started.'
+        );
+
+        return;
+      }
     }
 
     // Step 3: Recreate content items
+    let recreatedItemCount = 0;
     if (sortedItemsWithFolders.length > 0) {
       console.log('\n📄 Recreating content items (with hierarchy)...');
 
@@ -340,7 +408,7 @@ export async function runCopyFolderWithContent(): Promise<void> {
           sourceFolderId,
         }));
 
-        await recreateContentItems(
+        const recreationResult = await recreateContentItems(
           source.service,
           target.service,
           itemsWithFolders,
@@ -349,11 +417,27 @@ export async function runCopyFolderWithContent(): Promise<void> {
           contentProgressBar,
           undefined, // targetLocale - not supported in this command
           true, // resolveReferences - always enable for cross-hub operations
-          source.repository.id // sourceRepositoryId - required for reference resolution
+          source.repository.id, // sourceRepositoryId - required for reference resolution
+          preflight
         );
 
         contentProgressBar.stop();
-        console.log(`✅ Content item recreation completed!`);
+        if (!recreationResult.success) {
+          const publishFailureSummary =
+            recreationResult.publishFailed > 0
+              ? `, ${recreationResult.publishFailed} publish failed`
+              : '';
+          console.error(
+            `❌ Content item recreation completed with failures: ` +
+              `${recreationResult.itemsCreated} created, ${recreationResult.failed} failed` +
+              `${publishFailureSummary}.`
+          );
+
+          return;
+        }
+
+        recreatedItemCount = recreationResult.itemsCreated;
+        console.log(`✅ Content item recreation completed: ${recreatedItemCount} items created.`);
       } catch (error) {
         contentProgressBar.stop();
         console.error(`❌ Content item recreation failed:`, error);
@@ -364,7 +448,9 @@ export async function runCopyFolderWithContent(): Promise<void> {
 
     console.log('\n🎉 Folder copy operation completed successfully!');
     console.log(
-      `📁 Copied folder "${source.folder!.name}" with ${sortedItemsWithFolders.length} items (including ${hierarchyAnalysis.hierarchyChildrenFound} hierarchy descendants) to target hub.`
+      `📁 Copied folder "${source.folder!.name}" and recreated ${recreatedItemCount} items ` +
+        `(including ${hierarchyAnalysis.hierarchyChildrenFound} hierarchy descendants and ` +
+        `${referencedItemsToCreate} recursively referenced items) in the target hub.`
     );
   } catch (error) {
     console.error('❌ Unexpected error during folder copy operation:', error);

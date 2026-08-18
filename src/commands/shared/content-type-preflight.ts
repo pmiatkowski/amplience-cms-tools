@@ -29,7 +29,7 @@ export function displayContentTypePreflightResult(
     return;
   }
 
-  console.error('\n❌ Content type preflight blocked the operation.');
+  console.error('\n❌ Preflight blocked the operation.');
 
   switch (result.reason) {
     case 'reference-discovery-failed':
@@ -68,6 +68,54 @@ export function displayContentTypePreflightResult(
         for (const item of result.validation.itemsWithoutSchema) {
           console.error(`  - ${item.label} (${item.id})`);
         }
+      }
+      break;
+    case 'delivery-key-conflicts':
+      console.error(
+        'Delivery keys must be unique across the target hub. Resolve these conflicts before continuing:'
+      );
+      for (const conflict of result.validation.conflicts) {
+        console.error(`  - ${conflict.deliveryKey}`);
+        for (const sourceItem of conflict.sourceItems) {
+          console.error(`    Source: ${sourceItem.label} (${sourceItem.id})`);
+        }
+        if (conflict.sourceItems.length > 1) {
+          console.error('    Conflict: this key is used by multiple source items.');
+        }
+        if (conflict.targetItem) {
+          const repository = conflict.targetItem.contentRepositoryId
+            ? `, repository ${conflict.targetItem.contentRepositoryId}`
+            : '';
+          console.error(
+            `    Existing target: ${conflict.targetItem.label} (${conflict.targetItem.id}${repository})`
+          );
+        }
+      }
+      break;
+    case 'delivery-key-lookup-failed':
+      if (result.validation.stage === 'direct-lookup') {
+        console.error(
+          `Direct target-hub lookup failed for delivery key "${result.validation.deliveryKey}": ${result.validation.error}`
+        );
+      } else if (result.validation.stage === 'repository-inventory') {
+        const repositoryContext =
+          result.validation.repositoryLabel && result.validation.repositoryId
+            ? `${result.validation.repositoryLabel} (${result.validation.repositoryId})`
+            : result.validation.repositoryLabel || result.validation.repositoryId;
+
+        if (repositoryContext) {
+          console.error(
+            `Complete target-hub delivery-key inventory failed while scanning ${repositoryContext}: ${result.validation.error}`
+          );
+        } else {
+          console.error(
+            `Target-hub repositories could not be listed for complete delivery-key inventory: ${result.validation.error}`
+          );
+        }
+      } else {
+        console.error(
+          `Could not verify delivery key "${result.validation.deliveryKey}" across the target hub: ${result.validation.error}`
+        );
       }
       break;
   }

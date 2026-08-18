@@ -18,8 +18,9 @@ prompts, advanced filtering, and detailed reporting.
 - **Content Reference Resolution**: Automatic handling of content references and
   links across hubs with recursive discovery, circular reference support, and
   target matching
-- **Safe Operations**: Built-in dry-run mode, repository content-type preflight,
-  and explicit confirmation before live execution
+- **Safe Operations**: Built-in dry-run mode, repository content-type and
+  hub-wide delivery-key preflight, and explicit confirmation before live
+  execution
 - **Detailed Reporting**: Generate comprehensive Markdown reports for all
   operations
 - **Interactive CLI**: User-friendly prompts and progress indicators

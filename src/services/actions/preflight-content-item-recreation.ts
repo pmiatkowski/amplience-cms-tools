@@ -10,6 +10,10 @@ import {
   type ContentTypeAssignmentValidationResult,
   type ContentTypeValidationCandidate,
 } from './validate-content-type-assignments';
+import {
+  validateDeliveryKeyConflicts,
+  type DeliveryKeyConflictValidationResult,
+} from './validate-delivery-key-conflicts';
 
 type ValidAssignmentResult = Extract<ContentTypeAssignmentValidationResult, { status: 'valid' }>;
 type InvalidAssignmentResult = Extract<
@@ -18,6 +22,14 @@ type InvalidAssignmentResult = Extract<
 >;
 type AssignmentLookupFailure = Extract<
   ContentTypeAssignmentValidationResult,
+  { status: 'lookup-failed' }
+>;
+type DeliveryKeyConflictResult = Extract<
+  DeliveryKeyConflictValidationResult,
+  { status: 'conflict' }
+>;
+type DeliveryKeyLookupFailure = Extract<
+  DeliveryKeyConflictValidationResult,
   { status: 'lookup-failed' }
 >;
 
@@ -53,6 +65,16 @@ export type ContentItemRecreationPreflightBlocked =
       status: 'blocked';
       reason: 'content-type-lookup-failed';
       validation: AssignmentLookupFailure;
+    })
+  | (PreflightContext & {
+      status: 'blocked';
+      reason: 'delivery-key-conflicts';
+      validation: DeliveryKeyConflictResult;
+    })
+  | (PreflightContext & {
+      status: 'blocked';
+      reason: 'delivery-key-lookup-failed';
+      validation: DeliveryKeyLookupFailure;
     });
 
 export type ContentItemRecreationPreflightOptions = {
@@ -251,6 +273,37 @@ export async function preflightContentItemRecreation({
       reason: 'content-type-validation-failed',
       ...context,
       validation,
+    };
+  }
+
+  const deliveryKeyValidation = await validateDeliveryKeyConflicts({
+    targetService,
+    items: candidates,
+    ...(onProgress
+      ? {
+          onProgress: (current: number, total: number): void =>
+            onProgress('delivery-key-validation', current, total),
+          onInventoryProgress: (current: number, total: number): void =>
+            onProgress('delivery-key-inventory', current, total),
+        }
+      : {}),
+  });
+
+  if (deliveryKeyValidation.status === 'lookup-failed') {
+    return {
+      status: 'blocked',
+      reason: 'delivery-key-lookup-failed',
+      ...context,
+      validation: deliveryKeyValidation,
+    };
+  }
+
+  if (deliveryKeyValidation.status === 'conflict') {
+    return {
+      status: 'blocked',
+      reason: 'delivery-key-conflicts',
+      ...context,
+      validation: deliveryKeyValidation,
     };
   }
 

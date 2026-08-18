@@ -75,9 +75,9 @@ opt-in flag is required. This ensures correctness by default.
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  5. CREATE ITEMS (Two-Phase for Circular)                    │
-│     • Phase 1: Create with nullified references              │
-│     • Build source→target ID mapping                         │
-│     • Phase 2: Update with resolved references               │
+│     • Create all candidates in dependency order              │
+│     • Add each created ID to the source→target mapping       │
+│     • Nullify then update references only for circular items │
 └────────────────────────────┬────────────────────────────────┘
                              │
                              ▼
@@ -136,6 +136,12 @@ Items are matched using priority order:
 
 ## Circular Reference Handling
 
+For non-circular dependencies, all creation candidates, including selected,
+folder, and hierarchy items, follow the dependency graph's topological order.
+Each successful creation immediately extends `sourceToTargetIdMap`, so later
+item bodies are created with target-hub IDs. Unmapped external references are
+nullified rather than submitted with source-hub IDs.
+
 Circular references (A → B → A) are handled automatically using two-phase
 creation:
 
@@ -183,7 +189,7 @@ assignments are grouped by URI with affected-item counts, labels, and IDs:
   - External references: 2
   - Circular reference groups: 1
 
-❌ Content type preflight blocked the operation.
+❌ Preflight blocked the operation.
 Please assign these content types to "Newsroom" before continuing:
   - https://schema.example.com/article (2 items)
     - News Article (article-1)
@@ -197,6 +203,31 @@ coverage. Setting `contentTypeValidation.abortOnReferenceDiscoveryFailure` to
 unresolved references. Target matching or dependency-planning failures, missing
 assignments, unknown schemas, and assignment lookup errors still block
 execution.
+
+Delivery-key validation starts with Amplience's official
+`GET /hubs/{hubId}/delivery-keys/content-item` lookup for each candidate
+delivery key. This quickly identifies existing owners. If any candidate owner is
+unresolved directly, preflight performs one complete fallback inventory: it
+paginates all target-hub repositories returned to the configured credential,
+then fetches full-body `ACTIVE` and `ARCHIVED` items separately from every
+repository and compares delivery keys.
+
+The inventory is fail-closed. A repository listing or page failure, or any
+repository's `ACTIVE` or `ARCHIVED` page failure, blocks before confirmation and
+target mutation. The output identifies the failed stage and repository when
+available, and no partial inventory is accepted. This covers all repositories
+returned to the configured credential; it does not claim visibility beyond the
+credential's API ACLs.
+
+Duplicate source keys and any owner found by direct lookup or inventory block.
+The output includes the key, affected source labels and IDs, and the existing
+owner's label, ID, and repository. Existing owners are never overwritten,
+deleted, or silently reused. This deliberately catches content left by a partial
+run before a retry can create a duplicate.
+
+During fallback, progress is reported once per repository after both status
+scans finish. A completed validation reports one final delivery-key completion;
+it does not print one console line per key.
 
 During execution, unmatched referenced items are created in dependency order.
 Hierarchy roots retain their `_meta.hierarchy.root` marker, while child parent
@@ -324,6 +355,52 @@ item has no schema metadata, or repository assignments could not be loaded.
 2. Assign every listed content type to the target repository
 3. Verify credentials can read repository content-type assignments
 4. Re-run the command; no target changes were made by the blocked attempt
+
+### "Delivery keys must be unique across the target hub"
+
+**Cause:** Multiple creation candidates use the same delivery key, or an item in
+any repository in the target hub already owns that key. Existing owners may be
+artifacts of an earlier partial run.
+
+**Solution:**
+
+1. Review the source items and existing target owner printed for each key
+2. Decide whether to remove the partial target content or change the source key
+3. Re-run the command; the blocked attempt made no target changes
+
+### "Delivery-key inventory failed"
+
+**Cause:** At least one candidate owner was unresolved by direct lookup, and the
+fallback could not completely list and paginate the target repositories or read
+one repository's full-body `ACTIVE` or `ARCHIVED` pages. A partial inventory
+cannot prove that a key is available.
+
+**Solution:**
+
+1. Review the failed inventory stage and repository shown in the output
+2. Verify the configured credential can list every intended repository and read
+   both active and archived items
+3. Fix the reported API or access failure and retry; the blocked attempt made no
+   target changes
+
+### `403 Authorization required` from direct delivery-key lookup
+
+**Cause:** In observed Amplience behavior, the direct delivery-key endpoint can
+return `403 Authorization required` when it cannot resolve an owner, including
+for an unused key. A possible `404` is also unresolved. Neither response by
+itself proves that the configured credential is invalid.
+
+The command therefore runs the complete fallback inventory instead of treating
+the response as an immediate authorization failure or assuming the key is
+available. Other direct lookup failures remain blocking.
+
+**Solution:**
+
+1. Let the fallback inventory complete before deciding whether the key is free
+2. If inventory fails, use its stage and repository details to correct API
+   access or retry the failed request
+3. Treat a separately reported direct-lookup failure as blocking and resolve
+   that error before retrying
 
 ### "Reference discovery failed"
 

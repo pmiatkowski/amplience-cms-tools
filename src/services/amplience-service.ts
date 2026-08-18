@@ -246,10 +246,24 @@ export class AmplienceService {
   }
 
   public async getRepositories(): Promise<Amplience.ContentRepository[]> {
-    const url = `https://api.amplience.net/v2/content/hubs/${this._hubConfig.hubId}/content-repositories?size=100`;
-    const response = await this._request<Amplience.HalContentRepositoryResponse>(url);
+    let page = 0;
+    let totalPages = 1;
+    let repositories: Amplience.ContentRepository[] = [];
 
-    return response._embedded['content-repositories'];
+    do {
+      const searchParams = new URLSearchParams({
+        page: page.toString(),
+        size: '100',
+      });
+      const url = `https://api.amplience.net/v2/content/hubs/${this._hubConfig.hubId}/content-repositories?${searchParams.toString()}`;
+      const response = await this._request<Amplience.HalContentRepositoryResponse>(url);
+
+      repositories = repositories.concat(response._embedded['content-repositories']);
+      totalPages = response.page.totalPages;
+      page++;
+    } while (page < totalPages);
+
+    return repositories;
   }
 
   /**
@@ -1184,35 +1198,27 @@ export class AmplienceService {
   }
 
   /**
-   * Get a content item by its delivery key
+   * Get the hub content item that owns a delivery key.
+   *
+   * A null result means the direct endpoint could not resolve an owner. It must not be
+   * interpreted on its own as proof that the delivery key is available.
    */
   public async getContentItemByDeliveryKey(
-    repoId: string,
     deliveryKey: string
-  ): Promise<Amplience.ContentItem | null> {
+  ): Promise<Amplience.ContentItemWithDetails | null> {
+    const url = new URL(
+      `https://api.amplience.net/v2/content/hubs/${this._hubConfig.hubId}/delivery-keys/content-item`
+    );
+    url.searchParams.set('key', deliveryKey);
+
     try {
-      const url = `https://api.amplience.net/v2/content/content-repositories/${repoId}/content-items`;
-      const queryParams = new URLSearchParams({
-        folderId: '',
-        projection: 'basic',
-        status: 'ACTIVE,ARCHIVED',
-        size: '1',
-      });
-
-      // Use the deliveryKey as a filter - this will need to be done via search
-      const response = await this._request<Amplience.HalContentItemResponse>(
-        `${url}?${queryParams}`
-      );
-
-      // Filter by delivery key client-side since API doesn't support direct filtering
-      const items = response._embedded['content-items'] || [];
-      const matchingItem = items.find(item => item.body._meta?.deliveryKey === deliveryKey);
-
-      return matchingItem || null;
+      return await this._request<Amplience.ContentItemWithDetails>(url.toString());
     } catch (error) {
-      console.error(`Error fetching content item by delivery key ${deliveryKey}:`, error);
+      if (error instanceof Error && /^API Error: (?:403|404)\b/.test(error.message)) {
+        return null;
+      }
 
-      return null;
+      throw error;
     }
   }
 

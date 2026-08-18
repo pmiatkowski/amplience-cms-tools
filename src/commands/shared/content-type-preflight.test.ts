@@ -138,6 +138,144 @@ describe('displayContentTypePreflightResult', () => {
     );
   });
 
+  it('prints delivery keys, source items, and existing hub owners', () => {
+    const result: ContentItemRecreationPreflightResult = {
+      status: 'blocked',
+      reason: 'delivery-key-conflicts',
+      ...context,
+      validation: {
+        status: 'conflict',
+        checkedDeliveryKeys: ['duplicate/key', 'existing/key'],
+        conflicts: [
+          {
+            deliveryKey: 'duplicate/key',
+            sourceItems: [
+              { id: 'item-1', label: 'First source' },
+              { id: 'item-2', label: 'Second source' },
+            ],
+          },
+          {
+            deliveryKey: 'existing/key',
+            sourceItems: [{ id: 'item-3', label: 'Third source' }],
+            targetItem: {
+              id: 'target-item',
+              label: 'Existing target',
+              contentRepositoryId: 'other-repository',
+            },
+          },
+        ],
+      },
+    };
+
+    displayContentTypePreflightResult(result, 'Newsroom');
+
+    const output = errorSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('Delivery keys must be unique across the target hub');
+    expect(output).toContain('duplicate/key');
+    expect(output).toContain('First source (item-1)');
+    expect(output).toContain('Second source (item-2)');
+    expect(output).toContain('multiple source items');
+    expect(output).toContain('existing/key');
+    expect(output).toContain('Third source (item-3)');
+    expect(output).toContain(
+      'Existing target: Existing target (target-item, repository other-repository)'
+    );
+    expect(output).toContain('No target changes were made.');
+  });
+
+  it('identifies direct target-hub delivery-key lookup failures', () => {
+    const result: ContentItemRecreationPreflightResult = {
+      status: 'blocked',
+      reason: 'delivery-key-lookup-failed',
+      ...context,
+      validation: {
+        status: 'lookup-failed',
+        stage: 'direct-lookup',
+        checkedDeliveryKeys: [],
+        deliveryKey: 'restricted/key',
+        error: 'API Error: 401 Unauthorized',
+      },
+    };
+
+    displayContentTypePreflightResult(result, 'Newsroom');
+
+    const output = errorSpy.mock.calls.flat().join('\n');
+    expect(output).toContain(
+      'Direct target-hub lookup failed for delivery key "restricted/key": API Error: 401 Unauthorized'
+    );
+    expect(output).toContain('No target changes were made.');
+  });
+
+  it('identifies the repository where complete delivery-key inventory failed', () => {
+    const result: ContentItemRecreationPreflightResult = {
+      status: 'blocked',
+      reason: 'delivery-key-lookup-failed',
+      ...context,
+      validation: {
+        status: 'lookup-failed',
+        stage: 'repository-inventory',
+        checkedDeliveryKeys: [],
+        deliveryKey: 'unresolved/key',
+        repositoryId: 'archive-repo',
+        repositoryLabel: 'Archive Repository',
+        error: 'API Error: 500 ARCHIVED fetch failed',
+      },
+    };
+
+    displayContentTypePreflightResult(result, 'Newsroom');
+
+    const output = errorSpy.mock.calls.flat().join('\n');
+    expect(output).toContain(
+      'Complete target-hub delivery-key inventory failed while scanning Archive Repository (archive-repo): API Error: 500 ARCHIVED fetch failed'
+    );
+    expect(output).toContain('No target changes were made.');
+  });
+
+  it('identifies target-hub repository listing failures before inventory', () => {
+    const result: ContentItemRecreationPreflightResult = {
+      status: 'blocked',
+      reason: 'delivery-key-lookup-failed',
+      ...context,
+      validation: {
+        status: 'lookup-failed',
+        stage: 'repository-inventory',
+        checkedDeliveryKeys: [],
+        deliveryKey: 'unresolved/key',
+        error: 'API Error: 500 Repository listing failed',
+      },
+    };
+
+    displayContentTypePreflightResult(result, 'Newsroom');
+
+    const output = errorSpy.mock.calls.flat().join('\n');
+    expect(output).toContain(
+      'Target-hub repositories could not be listed for complete delivery-key inventory: API Error: 500 Repository listing failed'
+    );
+    expect(output).toContain('No target changes were made.');
+  });
+
+  it('retains the generic fallback for legacy delivery-key lookup failures', () => {
+    const result: ContentItemRecreationPreflightResult = {
+      status: 'blocked',
+      reason: 'delivery-key-lookup-failed',
+      ...context,
+      validation: {
+        status: 'lookup-failed',
+        checkedDeliveryKeys: [],
+        deliveryKey: 'restricted/key',
+        error: 'API Error: 403 Forbidden',
+      },
+    };
+
+    displayContentTypePreflightResult(result, 'Newsroom');
+
+    const output = errorSpy.mock.calls.flat().join('\n');
+    expect(output).toContain(
+      'Could not verify delivery key "restricted/key" across the target hub: API Error: 403 Forbidden'
+    );
+    expect(output).toContain('No target changes were made.');
+  });
+
   it('reports unavailable source items separately', () => {
     const result: ContentItemRecreationPreflightResult = {
       status: 'blocked',

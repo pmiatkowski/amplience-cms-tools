@@ -6,6 +6,7 @@ import type { ResolverResult } from '../content-reference';
 import type { ContentItemRecreationPreflightReady } from './preflight-content-item-recreation';
 
 type ViMock = ReturnType<typeof vi.fn>;
+const realTransformBodyReferences = contentReferenceModule.transformBodyReferences;
 
 // Mock dependencies
 vi.mock('~/utils', () => ({
@@ -382,6 +383,229 @@ describe('recreateContentItems', () => {
 
       const request = vi.mocked(targetService.createContentItem).mock.calls[0][1];
       expect(request.body._meta?.hierarchy).toBeUndefined();
+    });
+
+    it('creates initial items in prepared dependency order and maps each dependency for the root', async () => {
+      const rootId = '2c24339f-60e6-45c5-a248-355713821caa';
+      const componentIds = [
+        'cf4efb7a-71a7-4f08-87a1-f90cdbfaaf63',
+        '59a0da7c-3737-4667-b90b-8ac906a490c8',
+        '2c4660b0-a0ed-444f-bde8-3d28a3b5f260',
+      ];
+      const targetIds = ['target-component-one', 'target-component-two', 'target-component-three'];
+      const components = componentIds.map((componentId, index) =>
+        createMockSourceItem(componentId, `Component ${index + 1}`, {
+          publishingStatus: 'UNPUBLISHED',
+        })
+      );
+      const root = createMockSourceItem(rootId, 'Hierarchy root', {
+        hierarchy: { root: true },
+        publishingStatus: 'UNPUBLISHED',
+      });
+      root.body.component = componentIds.map(componentId => ({
+        id: componentId,
+        contentType: 'https://schema.example.com/component',
+        _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link' },
+      }));
+
+      const itemsWithFolders = [root, ...components].map(item => ({
+        itemId: item.id,
+        sourceFolderId: `source-folder-${item.id}`,
+      }));
+      const folderMapping = new Map(
+        itemsWithFolders.map(item => [item.sourceFolderId, `target-${item.sourceFolderId}`])
+      );
+      const initialItemIds = itemsWithFolders.map(item => item.itemId);
+      const registry = {
+        entries: new Map(),
+        sourceToTargetIdMap: new Map<string, string>(),
+        unresolvedIds: new Set(initialItemIds),
+        externalReferenceIds: new Set<string>(),
+      };
+      const referenceResolution: ResolverResult = {
+        success: true,
+        resolution: {
+          totalDiscovered: initialItemIds.length,
+          matchedCount: 0,
+          toCreateCount: initialItemIds.length,
+          unresolvedCount: initialItemIds.length,
+          externalCount: 0,
+          circularGroups: [],
+          registry,
+          creationOrder: [...componentIds, rootId],
+        },
+        registry,
+      };
+      readyPreflight = {
+        ...createReadyPreflight(referenceResolution, { initialItemIds }),
+        sourceItems: new Map([root, ...components].map(item => [item.id, item])),
+      };
+      transformBodyReferencesMock.mockImplementation(realTransformBodyReferences);
+
+      const targetIdBySourceId = new Map([
+        ...componentIds.map((componentId, index) => [componentId, targetIds[index]] as const),
+        [rootId, 'target-hierarchy-root'] as const,
+      ]);
+      const sourceIdByLabel = new Map([root, ...components].map(item => [item.label, item.id]));
+      const createdItems = new Map<string, Amplience.ContentItemWithDetails>();
+      vi.mocked(targetService.createContentItem).mockImplementation(async (_repoId, request) => {
+        const sourceId = sourceIdByLabel.get(request.label)!;
+        const targetId = targetIdBySourceId.get(sourceId)!;
+        const createdItem = {
+          ...createMockTargetItem(targetId, request.label),
+          body: request.body,
+          folderId: request.folderId,
+          locale: request.locale,
+        } as Amplience.ContentItemWithDetails;
+        createdItems.set(targetId, createdItem);
+
+        return { success: true, updatedItem: createdItem };
+      });
+      vi.mocked(targetService.getContentItemWithDetails).mockImplementation(async targetId => {
+        return createdItems.get(targetId) || null;
+      });
+
+      await recreateContentItems(
+        sourceService,
+        targetService,
+        itemsWithFolders,
+        baseParams.targetRepositoryId,
+        folderMapping,
+        undefined,
+        undefined,
+        true,
+        baseParams.sourceRepositoryId,
+        readyPreflight
+      );
+
+      const createCalls = vi.mocked(targetService.createContentItem).mock.calls;
+      const labels = createCalls.map(([, request]) => request.label);
+      expect.soft(labels).toEqual(['Component 1', 'Component 2', 'Component 3', 'Hierarchy root']);
+
+      const rootRequest = createCalls.find(([, request]) => request.label === 'Hierarchy root')![1];
+      const rootLinks = rootRequest.body.component as Array<{ id: string }>;
+      expect.soft(rootRequest.body._meta?.hierarchy).toEqual({ root: true });
+      expect.soft(rootLinks.map(link => link.id)).toEqual(targetIds);
+    });
+
+    it('nullifies circular initial references with an empty map then updates with all target IDs', async () => {
+      const firstId = 'circular-source-one';
+      const secondId = 'circular-source-two';
+      const firstItem = createMockSourceItem(firstId, 'Circular one', {
+        publishingStatus: 'UNPUBLISHED',
+      });
+      const secondItem = createMockSourceItem(secondId, 'Circular two', {
+        publishingStatus: 'UNPUBLISHED',
+      });
+      firstItem.body.component = [
+        {
+          id: secondId,
+          contentType: 'https://schema.example.com/component',
+          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link' },
+        },
+      ];
+      secondItem.body.component = [
+        {
+          id: firstId,
+          contentType: 'https://schema.example.com/component',
+          _meta: { schema: 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link' },
+        },
+      ];
+
+      const itemsWithFolders = [firstItem, secondItem].map(item => ({
+        itemId: item.id,
+        sourceFolderId: `source-folder-${item.id}`,
+      }));
+      const initialItemIds = itemsWithFolders.map(item => item.itemId);
+      const registry = {
+        entries: new Map(),
+        sourceToTargetIdMap: new Map<string, string>(),
+        unresolvedIds: new Set(initialItemIds),
+        externalReferenceIds: new Set<string>(),
+      };
+      const referenceResolution: ResolverResult = {
+        success: true,
+        resolution: {
+          totalDiscovered: initialItemIds.length,
+          matchedCount: 0,
+          toCreateCount: initialItemIds.length,
+          unresolvedCount: initialItemIds.length,
+          externalCount: 0,
+          circularGroups: [[firstId, secondId]],
+          registry,
+          creationOrder: [firstId, secondId],
+        },
+        registry,
+      };
+      readyPreflight = {
+        ...createReadyPreflight(referenceResolution, { initialItemIds }),
+        sourceItems: new Map([
+          [firstId, firstItem],
+          [secondId, secondItem],
+        ]),
+      };
+      transformBodyReferencesMock.mockImplementation(realTransformBodyReferences);
+
+      const targetIdBySourceId = new Map([
+        [firstId, 'circular-target-one'],
+        [secondId, 'circular-target-two'],
+      ]);
+      const sourceIdByLabel = new Map([
+        [firstItem.label, firstId],
+        [secondItem.label, secondId],
+      ]);
+      const creationBodies = new Map<string, Record<string, unknown>>();
+      const createdItems = new Map<string, Amplience.ContentItemWithDetails>();
+      vi.mocked(targetService.createContentItem).mockImplementation(async (_repoId, request) => {
+        const sourceId = sourceIdByLabel.get(request.label)!;
+        const targetId = targetIdBySourceId.get(sourceId)!;
+        creationBodies.set(sourceId, request.body);
+        const createdItem = {
+          ...createMockTargetItem(targetId, request.label),
+          body: request.body,
+          folderId: request.folderId,
+          locale: request.locale,
+        } as Amplience.ContentItemWithDetails;
+        createdItems.set(targetId, createdItem);
+
+        return { success: true, updatedItem: createdItem };
+      });
+      vi.mocked(targetService.getContentItemWithDetails).mockImplementation(async targetId => {
+        return createdItems.get(targetId) || null;
+      });
+
+      const result = await recreateContentItems(
+        sourceService,
+        targetService,
+        itemsWithFolders,
+        baseParams.targetRepositoryId,
+        new Map(
+          itemsWithFolders.map(item => [item.sourceFolderId, `target-${item.sourceFolderId}`])
+        ),
+        undefined,
+        undefined,
+        true,
+        baseParams.sourceRepositoryId,
+        readyPreflight
+      );
+
+      expect.soft(creationBodies.get(firstId)?.component).toEqual([null]);
+      expect.soft(creationBodies.get(secondId)?.component).toEqual([null]);
+
+      const updateBodies = new Map(
+        vi
+          .mocked(targetService.updateContentItem)
+          .mock.calls.map(([targetId, request]) => [targetId, request.body])
+      );
+      const firstUpdatedLinks = updateBodies.get('circular-target-one')?.component as Array<{
+        id: string;
+      }>;
+      const secondUpdatedLinks = updateBodies.get('circular-target-two')?.component as Array<{
+        id: string;
+      }>;
+      expect.soft(firstUpdatedLinks.map(link => link.id)).toEqual(['circular-target-two']);
+      expect.soft(secondUpdatedLinks.map(link => link.id)).toEqual(['circular-target-one']);
+      expect(result.itemsUpdated).toBe(2);
     });
 
     it('creates referenced items in dependency order', async () => {

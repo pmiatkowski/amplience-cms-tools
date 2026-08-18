@@ -157,6 +157,15 @@ export async function recreateContentItems(
     shouldNullifyReferences = true;
   }
 
+  const requestedItemIds = new Set(itemIds);
+  const orderedItemIds = referenceResolutionResult
+    ? referenceResolutionResult.creationOrder.filter(itemId => requestedItemIds.has(itemId))
+    : [];
+  const orderedItemIdSet = new Set(orderedItemIds);
+  const executionItemIds = referenceResolutionResult
+    ? [...orderedItemIds, ...itemIds.filter(itemId => !orderedItemIdSet.has(itemId))]
+    : itemIds;
+
   // Repair matched referenced items left incomplete by an earlier partial run.
   if (referenceResolutionResult) {
     const matchedReferencedEntries = [...referenceResolutionResult.registry.entries].filter(
@@ -375,7 +384,7 @@ export async function recreateContentItems(
   // Phase 1: Create all content items without hierarchy relationships
   console.log(`\n🏗️  Phase 1: Creating ${itemIds.length} content items...`);
 
-  for (const itemId of itemIds) {
+  for (const itemId of executionItemIds) {
     try {
       console.log(`\n📋 Processing item: ${itemId}`);
 
@@ -412,7 +421,7 @@ export async function recreateContentItems(
       // Step 3: Prepare item body for creation
       // If reference resolution was performed, transform the body to resolve references
       let newItemBody: Record<string, unknown>;
-      if (resolveReferences && sourceToTargetIdMap.size > 0) {
+      if (resolveReferences && referenceResolutionResult) {
         // First prepare the base body
         const baseBody = prepareItemBodyForCreation(sourceItem);
 
@@ -464,6 +473,8 @@ export async function recreateContentItems(
       }
 
       console.log(`  ✓ Created: ${newItem.id}`);
+
+      sourceToTargetIdMap.set(itemId, newItem.id);
 
       // Step 5: Handle delivery key if present
       if (sourceItem.body._meta?.deliveryKey && !newItem.body._meta?.deliveryKey) {

@@ -3,6 +3,7 @@ import { AmplienceService } from '../amplience-service';
 import * as contentReferenceModule from '../content-reference';
 import { preflightContentItemRecreation } from './preflight-content-item-recreation';
 import * as validationModule from './validate-content-type-assignments';
+import * as deliveryKeyValidationModule from './validate-delivery-key-conflicts';
 import type {
   ReferenceRegistry,
   ReferenceRegistryEntry,
@@ -87,12 +88,19 @@ describe('preflightContentItemRecreation', () => {
     targetRepositoryId: 'target-repo',
     requiredContentTypeUris: ['https://schema.example.com/initial-1'],
   };
+  const validDeliveryKeyResult: deliveryKeyValidationModule.DeliveryKeyConflictValidationResult = {
+    status: 'valid',
+    checkedDeliveryKeys: [],
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(contentReferenceModule, 'resolveContentReferences');
     vi.spyOn(validationModule, 'validateContentTypeAssignments').mockResolvedValue(
       validAssignmentResult
+    );
+    vi.spyOn(deliveryKeyValidationModule, 'validateDeliveryKeyConflicts').mockResolvedValue(
+      validDeliveryKeyResult
     );
   });
 
@@ -133,6 +141,14 @@ describe('preflightContentItemRecreation', () => {
       'initial-2',
       'reference-new',
     ]);
+    const deliveryKeyValidationCall = vi.mocked(
+      deliveryKeyValidationModule.validateDeliveryKeyConflicts
+    ).mock.calls[0][0];
+    expect(deliveryKeyValidationCall.items.map(item => item.id)).toEqual([
+      'initial-1',
+      'initial-2',
+      'reference-new',
+    ]);
     expect(result).toEqual({
       status: 'ready',
       sourceRepositoryId: 'source-repo',
@@ -153,6 +169,112 @@ describe('preflightContentItemRecreation', () => {
         ['reference-new', unmatchedReference],
       ]),
       warnings: [],
+    });
+  });
+
+  it('maps delivery-key inventory and final validation progress to distinct phases', async () => {
+    const initialItem = createItem('initial-1', 'Initial one');
+    const onProgress = vi.fn();
+    vi.mocked(contentReferenceModule.resolveContentReferences).mockResolvedValue(
+      createResolverResult({ entries: [['initial-1', createEntry(initialItem)]] })
+    );
+
+    await preflightContentItemRecreation({
+      sourceService,
+      targetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['initial-1'],
+      onProgress,
+    });
+
+    const deliveryKeyValidationCall = vi.mocked(
+      deliveryKeyValidationModule.validateDeliveryKeyConflicts
+    ).mock.calls[0][0];
+    expect(deliveryKeyValidationCall.onInventoryProgress).toEqual(expect.any(Function));
+    expect(deliveryKeyValidationCall.onProgress).toEqual(expect.any(Function));
+
+    deliveryKeyValidationCall.onInventoryProgress?.(2, 4);
+    deliveryKeyValidationCall.onProgress?.(3, 3);
+
+    expect(onProgress.mock.calls).toEqual([
+      ['delivery-key-inventory', 2, 4],
+      ['delivery-key-validation', 3, 3],
+    ]);
+  });
+
+  it('blocks when a creation candidate delivery key already has a hub owner', async () => {
+    const initialItem = createItem('initial-1', 'Initial one');
+    vi.mocked(contentReferenceModule.resolveContentReferences).mockResolvedValue(
+      createResolverResult({ entries: [['initial-1', createEntry(initialItem)]] })
+    );
+    const conflictValidation: deliveryKeyValidationModule.DeliveryKeyConflictValidationResult = {
+      status: 'conflict',
+      checkedDeliveryKeys: ['en/news/article'],
+      conflicts: [
+        {
+          deliveryKey: 'en/news/article',
+          sourceItems: [{ id: 'initial-1', label: 'Initial one' }],
+          targetItem: {
+            id: 'target-item',
+            label: 'Existing article',
+            contentRepositoryId: 'other-target-repo',
+          },
+        },
+      ],
+    };
+    vi.mocked(deliveryKeyValidationModule.validateDeliveryKeyConflicts).mockResolvedValue(
+      conflictValidation
+    );
+
+    const result = await preflightContentItemRecreation({
+      sourceService,
+      targetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['initial-1'],
+    });
+
+    expect(result).toEqual({
+      status: 'blocked',
+      reason: 'delivery-key-conflicts',
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['initial-1'],
+      validation: conflictValidation,
+    });
+  });
+
+  it('blocks delivery-key lookup failures distinctly', async () => {
+    const initialItem = createItem('initial-1', 'Initial one');
+    vi.mocked(contentReferenceModule.resolveContentReferences).mockResolvedValue(
+      createResolverResult({ entries: [['initial-1', createEntry(initialItem)]] })
+    );
+    const lookupFailure: deliveryKeyValidationModule.DeliveryKeyConflictValidationResult = {
+      status: 'lookup-failed',
+      checkedDeliveryKeys: [],
+      deliveryKey: 'en/news/article',
+      error: 'API Error: 403 Forbidden',
+    };
+    vi.mocked(deliveryKeyValidationModule.validateDeliveryKeyConflicts).mockResolvedValue(
+      lookupFailure
+    );
+
+    const result = await preflightContentItemRecreation({
+      sourceService,
+      targetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['initial-1'],
+    });
+
+    expect(result).toEqual({
+      status: 'blocked',
+      reason: 'delivery-key-lookup-failed',
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['initial-1'],
+      validation: lookupFailure,
     });
   });
 

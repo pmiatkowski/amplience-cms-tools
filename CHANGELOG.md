@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.7.1...v1.8.0) (2026-08-18)
+
+
+### Features
+
+* additional features and checks and fixes ([#24](https://github.com/pmiatkowski/amplience-cms-tools/issues/24)) ([1d4367e](https://github.com/pmiatkowski/amplience-cms-tools/commit/1d4367e2ecd5c19f2159a8284da33b21a5867c59))
+
 ## [1.7.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.7.0...v1.7.1) (2026-03-16)
 
 

@@ -5,6 +5,7 @@ import {
   promptForCleanupFilters,
   promptForItemsToClean,
   promptForConfirmation,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import {
   archiveContentItem,
@@ -111,6 +112,8 @@ export async function runCleanRepository(): Promise<void> {
 
     return;
   }
+
+  await promptForProtectedEnvironment(selectedHub, selectedRepo);
 
   // 12. Execute cleanup process
   console.log('\nStarting cleanup process...');

@@ -5,6 +5,7 @@ import {
   promptForContentItem,
   promptForDryRun,
   promptForConfirmation,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { syncHierarchy } from '~/services/actions/sync-hierarchy';
 import { AmplienceService } from '~/services/amplience-service';
@@ -144,6 +145,10 @@ export async function runSyncHierarchy(): Promise<void> {
       targetRootItem.id,
       targetResult.allItems
     );
+
+    if (!isDryRun) {
+      await promptForProtectedEnvironment(targetHub, targetRepo);
+    }
 
     // Execute the synchronization action
     await syncHierarchy({

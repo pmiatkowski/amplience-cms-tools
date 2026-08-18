@@ -1,5 +1,10 @@
 import { getHubConfigs } from '~/app-config';
-import { promptForHub, promptForConfirmation, promptForDryRun } from '~/prompts';
+import {
+  promptForHub,
+  promptForConfirmation,
+  promptForDryRun,
+  promptForProtectedEnvironment,
+} from '~/prompts';
 import { bulkUpdateContentTypeVisualizations } from '~/services/actions';
 import { AmplienceService } from '~/services/amplience-service';
 import {
@@ -155,6 +160,10 @@ export async function runBulkUpdateVisualizations(): Promise<void> {
       console.log('\n❌ Operation cancelled by user.\n');
 
       return;
+    }
+
+    if (!isDryRun) {
+      await promptForProtectedEnvironment(hub);
     }
 
     // 11. Execute bulk update with progress tracking

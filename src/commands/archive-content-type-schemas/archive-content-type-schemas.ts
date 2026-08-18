@@ -4,6 +4,7 @@ import {
   promptForConfirmation,
   promptForSchemaIdFilter,
   promptForIncludeArchived,
+  promptForProtectedEnvironment,
   promptForSchemasToArchive,
   promptForDryRun,
 } from '~/prompts';
@@ -119,6 +120,10 @@ export async function runArchiveContentTypeSchemas(): Promise<void> {
       console.log('❌ Operation cancelled by user.');
 
       return;
+    }
+
+    if (!isDryRun) {
+      await promptForProtectedEnvironment(selectedHub);
     }
 
     // Step 8: Execute the archive action

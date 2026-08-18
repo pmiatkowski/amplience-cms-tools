@@ -2,6 +2,7 @@ import { getHubConfigs } from '~/app-config';
 import {
   promptForHub,
   promptForConfirmation,
+  promptForProtectedEnvironment,
   promptForSchemaIdFilter,
   promptForContentTypeStatus,
   type ContentTypeStatusFilter,
@@ -176,6 +177,8 @@ export const syncContentTypeProperties = async (
         return result;
       }
     }
+
+    await promptForProtectedEnvironment(targetHub);
 
     // 7. Sync each content type
     console.log(`\n🚀 Synchronizing ${filteredContentTypes.length} content types...`);

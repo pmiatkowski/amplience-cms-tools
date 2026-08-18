@@ -1,4 +1,5 @@
 import { getHubConfigs } from '~/app-config';
+import { promptForProtectedEnvironment } from '~/prompts';
 import {
   listNestedSubfolders,
   type FolderTreeNode,
@@ -282,6 +283,8 @@ export async function runCopyFolderWithContent(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(target.hub, target.repository);
 
     // === EXECUTION ===
     console.log('\n🚀 Starting folder and content copy operation...');

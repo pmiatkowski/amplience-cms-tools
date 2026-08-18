@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getHubConfigs } from '~/app-config';
-import { promptForConfirmation } from '~/prompts';
+import { promptForConfirmation, promptForProtectedEnvironment } from '~/prompts';
 import {
   preflightContentItemRecreation,
   recreateContentItems,
@@ -103,6 +103,7 @@ describe('runRecreateContentItems content type preflight', () => {
     });
     vi.mocked(promptForTargetLocale).mockResolvedValue(null);
     vi.mocked(promptForConfirmation).mockResolvedValue(true);
+    vi.mocked(promptForProtectedEnvironment).mockResolvedValue(undefined);
     vi.mocked(recreateContentItems).mockResolvedValue({
       success: true,
       itemsCreated: 3,
@@ -162,6 +163,11 @@ describe('runRecreateContentItems content type preflight', () => {
 
     expect(displayContentTypePreflightResult).toHaveBeenCalledWith(readyPreflight, 'Newsroom');
     expect(promptForConfirmation).toHaveBeenCalledOnce();
+    expect(promptForProtectedEnvironment).toHaveBeenCalledOnce();
+    expect(promptForProtectedEnvironment).toHaveBeenCalledWith(target.hub, target.repository);
+    expect(vi.mocked(promptForProtectedEnvironment).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(recreateContentItems).mock.invocationCallOrder[0]
+    );
     expect(console.log).toHaveBeenCalledWith('Referenced items to create: 2');
     expect(console.log).toHaveBeenCalledWith('Total items to create: 3');
     expect(recreateContentItems).toHaveBeenCalledWith(

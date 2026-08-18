@@ -9,6 +9,7 @@ import {
   promptForIncludeArchived,
   promptForSchemasToSync,
   promptForDryRun,
+  promptForProtectedEnvironment,
   promptForValidateSchemas,
 } from '~/prompts';
 import { checkDcCliAvailability, createDcCliCommand } from '~/utils';
@@ -388,6 +389,8 @@ export const copyContentTypeSchemas = async (
 
         return result;
       }
+
+      await promptForProtectedEnvironment(targetHub);
 
       // 7. Bulk import schemas
       console.log(`📤 Importing ${schemasToCopy.length} schemas to ${targetHub.name}...`);

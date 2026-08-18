@@ -5,6 +5,7 @@ import {
   promptForRepository,
   promptForDryRun,
   promptForConfirmation,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { bulkSyncHierarchies } from '~/services/actions/bulk-sync-hierarchies';
 import { AmplienceService } from '~/services/amplience-service';
@@ -698,7 +699,7 @@ describe('runBulkSyncHierarchies command', () => {
 
   describe('action execution', () => {
     it('should call bulkSyncHierarchies action with correct options', async () => {
-      const { items } = setupBasicMocks();
+      const { items, repo, targetHub } = setupBasicMocks();
       setupMatchedPairs(items, items);
       vi.mocked(promptForConfirmation)
         .mockResolvedValueOnce(true) // update content
@@ -715,6 +716,11 @@ describe('runBulkSyncHierarchies command', () => {
 
       await runBulkSyncHierarchies();
 
+      expect(promptForProtectedEnvironment).toHaveBeenCalledOnce();
+      expect(promptForProtectedEnvironment).toHaveBeenCalledWith(targetHub, repo);
+      expect(vi.mocked(promptForProtectedEnvironment).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(bulkSyncHierarchies).mock.invocationCallOrder[0]
+      );
       expect(bulkSyncHierarchies).toHaveBeenCalledWith(
         expect.objectContaining({
           updateContent: true,
@@ -743,6 +749,7 @@ describe('runBulkSyncHierarchies command', () => {
 
       await runBulkSyncHierarchies();
 
+      expect(promptForProtectedEnvironment).not.toHaveBeenCalled();
       expect(bulkSyncHierarchies).toHaveBeenCalledWith(
         expect.objectContaining({
           updateContent: false,

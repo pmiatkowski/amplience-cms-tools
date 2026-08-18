@@ -1,8 +1,10 @@
 # Issues
 
 1. When PAT token is incorrect, no error is thrown and the command fails
-   silently. The user should be informed that the PAT token is invalid and the
-   command should not proceed.
+   silently, i.e., showing no results found or similar. The user should be
+   informed that the PAT token is invalid and the command should not proceed.
+   Maybe some kind of preflight check should be added to validate the PAT token
+   before proceeding with the command execution.
 2. When there is a discovery process, its not being displayed as a progress bar
    but as a list of items. This is not user friendly and should be changed to a
    progress bar.

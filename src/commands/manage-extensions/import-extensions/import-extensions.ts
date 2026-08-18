@@ -1,7 +1,7 @@
 import * as path from 'path';
 
 import { getHubConfigs } from '~/app-config';
-import { promptForHub } from '~/prompts';
+import { promptForHub, promptForProtectedEnvironment } from '~/prompts';
 import {
   DcCliExecutionError,
   DirectoryAccessError,
@@ -108,6 +108,8 @@ export async function runImportExtensions(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(hub);
 
     // Execute import action
     console.log('⏳ Starting import...\n');

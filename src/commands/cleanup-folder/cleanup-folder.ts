@@ -4,6 +4,7 @@ import {
   promptForRepository,
   promptForConfirmation,
   promptForFolder,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { cleanupFolder } from '~/services/actions/cleanup-folder';
 import { AmplienceService } from '~/services/amplience-service';
@@ -84,6 +85,8 @@ export async function runCleanupFolderCommand(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(selectedHub, selectedRepo);
 
     // Step 8: Perform the cleanup
     console.log('\n🚀 Starting folder cleanup...');

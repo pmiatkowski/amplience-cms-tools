@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getHubConfigs } from '~/app-config';
+import { promptForProtectedEnvironment } from '~/prompts';
 import { listNestedSubfolders } from '~/services/actions/list-nested-subfolders';
 import {
   preflightContentItemRecreation,
@@ -22,6 +23,7 @@ import {
 import { runCopyFolderWithContent } from './copy-folder-with-content';
 
 vi.mock('~/app-config');
+vi.mock('~/prompts');
 vi.mock('~/services/actions/list-nested-subfolders');
 vi.mock('~/services/actions/preflight-content-item-recreation');
 vi.mock('~/services/actions/recreate-content-items');
@@ -113,6 +115,7 @@ describe('runCopyFolderWithContent content type preflight', () => {
     });
     vi.mocked(sortContentForRecreation).mockImplementation(items => items);
     vi.mocked(confirmOperation).mockResolvedValue(true);
+    vi.mocked(promptForProtectedEnvironment).mockResolvedValue(undefined);
     targetService.createFolder.mockResolvedValue({ success: true, updatedItem: createdFolder });
     vi.mocked(createFolderMapping).mockReturnValue(new Map());
     vi.mocked(recreateFolderStructure).mockResolvedValue({
@@ -189,6 +192,11 @@ describe('runCopyFolderWithContent content type preflight', () => {
       }),
       expect.any(String),
       true
+    );
+    expect(promptForProtectedEnvironment).toHaveBeenCalledOnce();
+    expect(promptForProtectedEnvironment).toHaveBeenCalledWith(target.hub, target.repository);
+    expect(vi.mocked(promptForProtectedEnvironment).mock.invocationCallOrder[0]).toBeLessThan(
+      targetService.createFolder.mock.invocationCallOrder[0]
     );
     expect(targetService.createFolder).toHaveBeenCalledOnce();
     expect(recreateContentItems).toHaveBeenCalledWith(

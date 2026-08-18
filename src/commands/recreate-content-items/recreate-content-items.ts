@@ -1,5 +1,5 @@
 import { getHubConfigs } from '~/app-config';
-import { promptForConfirmation } from '~/prompts';
+import { promptForConfirmation, promptForProtectedEnvironment } from '~/prompts';
 import { preflightContentItemRecreation, recreateContentItems } from '~/services/actions';
 import { analyzeHierarchyStructure } from '../shared/content-operations';
 import { displayContentTypePreflightResult } from '../shared/content-type-preflight';
@@ -123,6 +123,8 @@ export async function runRecreateContentItems(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(target.hub, target.repository);
 
     // Step 6: Execute Recreation
     console.log('\n🚀 Starting content item recreation...');

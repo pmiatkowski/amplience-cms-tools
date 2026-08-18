@@ -83,6 +83,7 @@ AMP_HUB_DEV_CLIENT_SECRET=your_dev_client_secret
 AMP_HUB_DEV_HUB_ID=your_dev_hub_id
 AMP_HUB_DEV_HUB_NAME=DEV
 AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
+AMP_HUB_DEV_PROTECTED=0
 
 # Production Environment (OAuth)
 AMP_HUB_PROD_CLIENT_ID=your_prod_client_id
@@ -90,6 +91,7 @@ AMP_HUB_PROD_CLIENT_SECRET=your_prod_client_secret
 AMP_HUB_PROD_HUB_ID=your_prod_hub_id
 AMP_HUB_PROD_HUB_NAME=PROD
 AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
+AMP_HUB_PROD_PROTECTED=1
 ```
 
 #### Personal Access Token (PAT) Configuration
@@ -170,6 +172,26 @@ AMP_HUB_<HUBNAME>_EXT_URL=https://your-hub.amplience.net
 ```
 
 - The URL must be a valid HTTPS URL
+
+#### Protected Hub Configuration
+
+Each hub can optionally require an additional typed confirmation before live
+remote writes:
+
+```env
+AMP_HUB_DEV_PROTECTED=0
+AMP_HUB_PROD_PROTECTED=1
+```
+
+Only `0` and `1` are valid. A missing or blank value defaults to `0`; invalid
+values stop hub configuration from loading. When protection is `1`, the user
+must type the exact, case-sensitive hub name before a live write. Operations
+targeting one repository also require its exact repository name. Hub-level and
+multi-repository operations require only the hub name.
+
+For cross-hub commands, protection applies to the location being changed,
+normally the target. Read-only commands and dry runs do not show this extra
+confirmation. Existing operation confirmation prompts still apply.
 
 ### Configuration Features
 

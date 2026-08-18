@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { AmplienceApiError } from './amplience-api-error';
 import { AmplienceService } from './amplience-service';
 
 // Mock fetch globally
@@ -331,7 +332,61 @@ describe('AmplienceService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
+    describe('validateAuthentication', () => {
+      it('makes one lightweight authenticated request without OAuth', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          headers: new Headers(),
+        });
+
+        await service.validateAuthentication();
+
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/hubs/test-hub-id-pat/content-repositories?page=0&size=1',
+          expect.any(Object)
+        );
+
+        const requestOptions = mockFetch.mock.calls[0][1];
+        expect(requestOptions.headers).toBeInstanceOf(Headers);
+        expect(requestOptions.headers.get('Authorization')).toBe('Bearer test-pat-token-12345');
+      });
+
+      it('propagates structured authentication failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          text: () => Promise.resolve('Invalid credentials'),
+        });
+
+        await expect(service.validateAuthentication()).rejects.toMatchObject({
+          status: 401,
+          message: 'API Error: 401 Unauthorized - Invalid credentials',
+        });
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+    });
+
     describe('getRepositories', () => {
+      it('exposes the HTTP status for authentication failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          text: () => Promise.resolve('Invalid credentials'),
+        });
+
+        const request = service.getRepositories();
+
+        await expect(request).rejects.toBeInstanceOf(AmplienceApiError);
+        await expect(request).rejects.toMatchObject({
+          status: 401,
+          message: 'API Error: 401 Unauthorized - Invalid credentials',
+        });
+      });
+
       it('aggregates all HAL pages in response order', async () => {
         const firstRepository = {
           id: 'repo-1',

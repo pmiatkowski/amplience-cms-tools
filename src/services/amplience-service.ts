@@ -1,3 +1,5 @@
+import { AmplienceApiError } from './amplience-api-error';
+
 export class AmplienceService {
   private _accessToken: string | null = null;
   private _tokenExpiry: number = 0;
@@ -130,15 +132,17 @@ export class AmplienceService {
             continue;
           } else {
             const errorBody = await response.text();
-            throw new Error(
-              `API Error: ${response.status} ${response.statusText} - Failed after ${this._maxRetries} retries. ${errorBody}`
+            throw new AmplienceApiError(
+              response.status,
+              response.statusText,
+              `Failed after ${this._maxRetries} retries. ${errorBody}`
             );
           }
         }
 
         if (!response.ok) {
           const errorBody = await response.text();
-          throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody}`);
+          throw new AmplienceApiError(response.status, response.statusText, errorBody);
         }
 
         if (
@@ -243,6 +247,16 @@ export class AmplienceService {
         `Could not authenticate with Hub "${this._hubConfig.name}". Please check your .env configuration.`
       );
     }
+  }
+
+  public async validateAuthentication(): Promise<void> {
+    const searchParams = new URLSearchParams({
+      page: '0',
+      size: '1',
+    });
+    const url = `https://api.amplience.net/v2/content/hubs/${this._hubConfig.hubId}/content-repositories?${searchParams.toString()}`;
+
+    await this._request<unknown>(url);
   }
 
   public async getRepositories(): Promise<Amplience.ContentRepository[]> {

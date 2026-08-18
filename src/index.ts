@@ -1,3 +1,4 @@
+import { runPatTokenPreflight } from './app-startup';
 import { runArchiveContentTypeSchemas } from './commands/archive-content-type-schemas';
 import { runBulkSyncHierarchies } from './commands/bulk-sync-hierarchies';
 import { runCleanRepository } from './commands/clean-repository';
@@ -21,6 +22,8 @@ import { getAppVersion } from './utils/version';
 async function main(): Promise<void> {
   try {
     console.log(`Amplience CMS Tools v${getAppVersion()}`);
+
+    await runPatTokenPreflight();
 
     // Check for updates
     const updateCheck = await checkForUpdates();

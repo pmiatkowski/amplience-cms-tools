@@ -117,6 +117,13 @@ AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
 **Important:** When `PAT_TOKEN` is set, it applies to **all** configured hubs.
 The token must have permissions for all hubs you want to manage.
 
+At startup, the tool validates `PAT_TOKEN` against the first configured hub
+before checking for updates or showing the command menu. The application stops
+with a clear error when the token is invalid, lacks access to that hub, or
+cannot be validated because of an API or network failure. Because the same PAT
+is shared by every hub, startup makes one validation request; access to other
+hubs is still checked when a command uses them.
+
 #### Mixed Configuration
 
 You can use different authentication methods across environments. If `PAT_TOKEN`

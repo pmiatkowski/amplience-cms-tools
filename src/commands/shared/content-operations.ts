@@ -22,11 +22,24 @@ export async function analyzeHierarchyStructure(
 
   // Get detailed information for all selected items
   const selectedItemsDetails: Amplience.ContentItemWithDetails[] = [];
+  const unavailableItemIds: string[] = [];
   for (const item of selectedItems) {
-    const details = await service.getContentItemWithDetails(item.id);
-    if (details) {
-      selectedItemsDetails.push(details);
+    try {
+      const details = await service.getContentItemWithDetails(item.id);
+      if (details) {
+        selectedItemsDetails.push(details);
+      } else {
+        unavailableItemIds.push(item.id);
+      }
+    } catch {
+      unavailableItemIds.push(item.id);
     }
+  }
+
+  if (unavailableItemIds.length > 0) {
+    throw new Error(
+      `Failed to load selected content item details: ${unavailableItemIds.join(', ')}`
+    );
   }
 
   // Check if any selected items are hierarchy roots

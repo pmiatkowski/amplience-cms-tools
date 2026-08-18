@@ -820,14 +820,21 @@ export class AmplienceService {
 
   /**
    * Assign delivery key to a content item
+   * @param itemId Content item ID
+   * @param deliveryKey Delivery key to assign
+   * @param version Current content item version required by the PATCH endpoint
    */
-  public async assignDeliveryKey(itemId: string, deliveryKey: string): Promise<boolean> {
+  public async assignDeliveryKey(
+    itemId: string,
+    deliveryKey: string,
+    version: number
+  ): Promise<boolean> {
     try {
       const url = `https://api.amplience.net/v2/content/content-items/${itemId}/delivery-key`;
 
       await this._request(url, {
-        method: 'PUT',
-        body: JSON.stringify({ deliveryKey }),
+        method: 'PATCH',
+        body: JSON.stringify({ deliveryKey, version }),
       });
 
       return true;
@@ -1455,18 +1462,10 @@ export class AmplienceService {
    * @returns Promise resolving to an array of content types
    */
   public async getContentTypes(repositoryId: string): Promise<Amplience.ContentType[]> {
-    try {
-      const url = `https://api.amplience.net/v2/content/content-repositories/${repositoryId}/content-types?size=100`;
-      const response = await this._request<{
-        _embedded: { 'content-types': Amplience.ContentType[] };
-      }>(url);
+    const url = `https://api.amplience.net/v2/content/content-repositories/${repositoryId}`;
+    const repository = await this._request<Amplience.ContentRepository>(url);
 
-      return response._embedded?.['content-types'] || [];
-    } catch (error) {
-      console.error(`Error fetching content types for repository ${repositoryId}:`, error);
-
-      return [];
-    }
+    return repository.contentTypes || [];
   }
 
   /**

@@ -2,11 +2,50 @@ import cliProgress from 'cli-progress';
 import { AmplienceService } from '../amplience-service';
 import {
   nullifyReferences,
-  resolveContentReferences,
   transformBodyReferences,
   type ReferenceResolutionResult,
   type BodyTransformOptions,
 } from '../content-reference';
+import type {
+  ContentItemRecreationPreflightReady,
+  ContentItemRecreationPreflightResult,
+} from './preflight-content-item-recreation';
+
+function assertReadyPreflight(
+  preflight: ContentItemRecreationPreflightResult,
+  sourceRepositoryId: string,
+  targetRepositoryId: string,
+  itemIds: readonly string[]
+): asserts preflight is ContentItemRecreationPreflightReady {
+  if (preflight.status !== 'ready') {
+    throw new Error('A ready content item recreation preflight is required');
+  }
+
+  if (preflight.sourceRepositoryId !== sourceRepositoryId) {
+    throw new Error('Preflight source repository does not match recreation request');
+  }
+
+  if (preflight.targetRepositoryId !== targetRepositoryId) {
+    throw new Error('Preflight target repository does not match recreation request');
+  }
+
+  const requestedItemIds = new Set(itemIds);
+  const preflightItemIds = new Set(preflight.initialItemIds);
+  const itemSetsMatch =
+    requestedItemIds.size === preflightItemIds.size &&
+    [...requestedItemIds].every(itemId => preflightItemIds.has(itemId));
+
+  if (!itemSetsMatch) {
+    throw new Error('Preflight item set does not match recreation request');
+  }
+
+  const missingSourceSnapshots = itemIds.filter(itemId => !preflight.sourceItems.has(itemId));
+  if (missingSourceSnapshots.length > 0) {
+    throw new Error(
+      `Preflight source snapshots are missing requested items: ${missingSourceSnapshots.join(', ')}`
+    );
+  }
+}
 
 /**
  * Core logic for recreating content items from source to target hub
@@ -21,6 +60,7 @@ import {
  * @param targetLocale - Optional target locale override
  * @param resolveReferences - Whether to resolve content references (default: true for cross-hub)
  * @param sourceRepositoryId - Source repository ID (required when resolveReferences is true)
+ * @param preflight - Completed content type and reference discovery preflight
  */
 export async function recreateContentItems(
   sourceService: AmplienceService,
@@ -28,13 +68,16 @@ export async function recreateContentItems(
   itemsWithFolders: Array<{ itemId: string; sourceFolderId: string }>,
   targetRepositoryId: string,
   folderMapping: Map<string, string>, // Map of source folder ID → target folder ID
-  progressBar?: cliProgress.SingleBar,
-  targetLocale?: string | null | undefined, // New parameter for target locale
-  resolveReferences: boolean = true, // Enable reference resolution by default
-  sourceRepositoryId?: string // Required when resolveReferences is true
+  progressBar: cliProgress.SingleBar | undefined,
+  targetLocale: string | null | undefined,
+  resolveReferences: boolean,
+  sourceRepositoryId: string,
+  preflight: ContentItemRecreationPreflightResult
 ): Promise<RecreateResult> {
   const itemIds = itemsWithFolders.map(item => item.itemId);
-  console.log(`\n🔄 Starting recreation of ${itemIds.length} content items...`);
+  assertReadyPreflight(preflight, sourceRepositoryId, targetRepositoryId, itemIds);
+  const expectedItemCount = preflight.referenceSummary?.itemsToCreate ?? itemIds.length;
+  console.log(`\n🔄 Starting recreation of ${expectedItemCount} content items...`);
 
   // Verify both services can access their respective repositories
   console.log(`\n🔍 Verifying service access...`);
@@ -60,12 +103,21 @@ export async function recreateContentItems(
 
   let successCount = 0;
   let failureCount = 0;
+  let referencedSuccessCount = 0;
+  let referencedFailureCount = 0;
   const results: Array<{
     id: string;
     success: boolean;
     error?: string;
     newId?: string;
     sourceItem?: Amplience.ContentItemWithDetails;
+  }> = [];
+  const referencedResults: Array<{
+    id: string;
+    success: boolean;
+    error?: string;
+    newId?: string;
+    sourceItem: Amplience.ContentItemWithDetails;
   }> = [];
   const itemsToPublish: Array<{ itemId: string; sourceItem: Amplience.ContentItemWithDetails }> =
     [];
@@ -75,74 +127,144 @@ export async function recreateContentItems(
   let sourceToTargetIdMap = new Map<string, string>();
   // Track whether we need to nullify references (when resolution is disabled or failed)
   let shouldNullifyReferences = !resolveReferences;
+  const preparedReferenceResolution = preflight.referenceResolution;
 
-  // Resolve content references if enabled
-  if (resolveReferences && sourceRepositoryId) {
-    console.log(`\n🔗 Resolving content references...`);
+  if (resolveReferences && preparedReferenceResolution.success) {
+    referenceResolutionResult = preparedReferenceResolution.resolution;
+    sourceToTargetIdMap = new Map(preparedReferenceResolution.registry.sourceToTargetIdMap);
+    shouldNullifyReferences = false;
 
-    try {
-      const resolverResult = await resolveContentReferences({
-        sourceService,
-        targetService,
-        sourceRepositoryId,
-        targetRepositoryId,
-        initialItemIds: itemIds,
-        onProgress: (phase, current, total) => {
-          console.log(`  📊 ${phase}: ${current}/${total}`);
-        },
-      });
-
-      if (resolverResult.success) {
-        referenceResolutionResult = resolverResult.resolution;
-        sourceToTargetIdMap = resolverResult.registry.sourceToTargetIdMap;
-        shouldNullifyReferences = false; // Resolution succeeded, no need to nullify
-
-        console.log(`  ✓ Discovered ${referenceResolutionResult.totalDiscovered} items`);
-        console.log(
-          `  ✓ Matched ${referenceResolutionResult.matchedCount} existing items in target`
-        );
-        console.log(`  ✓ Need to create ${referenceResolutionResult.toCreateCount} new items`);
-
-        if (referenceResolutionResult.circularGroups.length > 0) {
-          console.log(
-            `  ⚠️  Found ${referenceResolutionResult.circularGroups.length} circular reference groups`
-          );
-        }
-      } else {
-        console.warn(`  ⚠️  Reference resolution failed: ${resolverResult.error}`);
-        console.log(`  📋 References will be nullified to prevent 403 errors...`);
-        shouldNullifyReferences = true;
-      }
-    } catch (refError) {
-      console.warn(`  ⚠️  Reference resolution error:`, refError);
-      console.log(`  📋 References will be nullified to prevent 403 errors...`);
-      shouldNullifyReferences = true;
+    console.log(`\n🔗 Using prepared content reference resolution...`);
+    if (preflight.referenceSummary) {
+      console.log(`  ✓ Discovered ${preflight.referenceSummary.totalDiscovered} items`);
+      console.log(
+        `  ✓ Matched ${preflight.referenceSummary.matchedReferences} referenced items in target`
+      );
+      console.log(`  ✓ Need to create ${preflight.referenceSummary.itemsToCreate} new items`);
     }
-  } else if (resolveReferences && !sourceRepositoryId) {
-    console.log(
-      `  ⚠️  Reference resolution requested but sourceRepositoryId not provided, skipping...`
-    );
+
+    if (referenceResolutionResult.circularGroups.length > 0) {
+      console.log(
+        `  ⚠️  Found ${referenceResolutionResult.circularGroups.length} circular reference groups`
+      );
+    }
+  } else if (resolveReferences) {
+    const errorMessage = preparedReferenceResolution.success
+      ? 'Unknown error'
+      : preparedReferenceResolution.error;
+    console.warn(`  ⚠️  Reference resolution failed: ${errorMessage}`);
     console.log(`  📋 References will be nullified to prevent 403 errors...`);
     shouldNullifyReferences = true;
   }
 
+  // Repair matched referenced items left incomplete by an earlier partial run.
+  if (referenceResolutionResult) {
+    const matchedReferencedEntries = [...referenceResolutionResult.registry.entries].filter(
+      ([sourceId, entry]) =>
+        !itemIds.includes(sourceId) &&
+        Boolean(entry.targetId) &&
+        !referenceResolutionResult.registry.externalReferenceIds.has(sourceId)
+    );
+
+    for (const [sourceId, entry] of matchedReferencedEntries) {
+      try {
+        const targetId = entry.targetId!;
+        const targetItem = await targetService.getContentItemWithDetails(targetId);
+        if (!targetItem) {
+          throw new Error(`Could not load matched target item ${targetId}`);
+        }
+
+        const sourceDeliveryKey = entry.sourceItem.body._meta?.deliveryKey;
+        const targetDeliveryKey = targetItem.body._meta?.deliveryKey;
+
+        if (sourceDeliveryKey && !targetDeliveryKey) {
+          await assignDeliveryKey(targetService, targetId, sourceDeliveryKey, targetItem.version);
+          console.log(`  ✓ Repaired delivery key for matched reference ${sourceId}`);
+        } else if (
+          sourceDeliveryKey &&
+          targetDeliveryKey &&
+          sourceDeliveryKey !== targetDeliveryKey
+        ) {
+          throw new Error(
+            `Matched target item ${targetId} has a different delivery key (${targetDeliveryKey})`
+          );
+        }
+
+        const targetIsPublished =
+          targetItem.publishingStatus === 'EARLY' || targetItem.publishingStatus === 'LATEST';
+        if (shouldPublishItem(entry.sourceItem) && !targetIsPublished) {
+          itemsToPublish.push({ itemId: targetId, sourceItem: entry.sourceItem });
+          console.log(`  📋 Matched reference ${sourceId} marked for publishing recovery`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        referencedFailureCount++;
+        referencedResults.push({
+          id: sourceId,
+          success: false,
+          error: errorMessage,
+          sourceItem: entry.sourceItem,
+        });
+        console.error(
+          `  ❌ Failed to recover matched referenced item ${sourceId}: ${errorMessage}`
+        );
+      }
+    }
+
+    if (referencedFailureCount > 0) {
+      return {
+        success: false,
+        itemsCreated: 0,
+        itemsUpdated: 0,
+        failed: referencedFailureCount,
+        publishFailed: 0,
+        referenceResolution: referenceResolutionResult,
+      };
+    }
+  }
+
   // Create discovered references that weren't matched in target
   // These are content items referenced by the main items but don't exist in target hub
-  if (referenceResolutionResult && sourceToTargetIdMap.size > 0) {
+  if (referenceResolutionResult) {
     // Find items that were discovered but don't have a target ID (not matched)
     const unmatchedEntries = [...referenceResolutionResult.registry.entries.entries()].filter(
       ([sourceId, entry]) =>
         // Item was discovered (has sourceItem) but doesn't have a target ID
-        entry.sourceItem && !entry.targetId && !itemIds.includes(sourceId)
+        entry.sourceItem &&
+        !entry.targetId &&
+        !itemIds.includes(sourceId) &&
+        !referenceResolutionResult.registry.externalReferenceIds.has(sourceId)
     );
 
-    if (unmatchedEntries.length > 0) {
-      console.log(
-        `\n🔗 Phase 0: Creating ${unmatchedEntries.length} referenced items not in target...`
+    const unmatchedEntriesById = new Map(unmatchedEntries);
+    const orderedUnmatchedEntries = referenceResolutionResult.creationOrder
+      .map(sourceId => {
+        const entry = unmatchedEntriesById.get(sourceId);
+
+        return entry ? ([sourceId, entry] as const) : null;
+      })
+      .filter(
+        (entry): entry is readonly [string, NonNullable<(typeof unmatchedEntries)[number][1]>] =>
+          entry !== null
       );
 
-      for (const [sourceId, entry] of unmatchedEntries) {
+    for (const [sourceId, entry] of unmatchedEntries) {
+      if (!orderedUnmatchedEntries.some(([orderedSourceId]) => orderedSourceId === sourceId)) {
+        orderedUnmatchedEntries.push([sourceId, entry]);
+      }
+    }
+
+    if (orderedUnmatchedEntries.length > 0) {
+      console.log(
+        `\n🔗 Phase 0: Creating ${orderedUnmatchedEntries.length} referenced items not in target...`
+      );
+
+      let fatalReferenceCreationFailure = false;
+
+      for (const [sourceId, entry] of orderedUnmatchedEntries) {
         if (!entry.sourceItem) continue;
+        let creationRecorded = false;
+        let itemCreated = false;
 
         try {
           console.log(`  📋 Creating referenced item: ${entry.sourceItem.label} (${sourceId})`);
@@ -172,16 +294,18 @@ export async function recreateContentItems(
           });
 
           if (newItem) {
+            itemCreated = true;
             // Update the mapping
             sourceToTargetIdMap.set(sourceId, newItem.id);
             console.log(`  ✅ Created: ${entry.sourceItem.label} → ${newItem.id}`);
 
             // Assign delivery key if present
-            if (entry.sourceItem.body._meta?.deliveryKey) {
+            if (entry.sourceItem.body._meta?.deliveryKey && !newItem.body._meta?.deliveryKey) {
               await assignDeliveryKey(
                 targetService,
                 newItem.id,
-                entry.sourceItem.body._meta.deliveryKey
+                entry.sourceItem.body._meta.deliveryKey,
+                newItem.version
               );
               console.log(`  ✓ Assigned delivery key: ${entry.sourceItem.body._meta.deliveryKey}`);
             }
@@ -190,13 +314,60 @@ export async function recreateContentItems(
             if (shouldPublishItem(entry.sourceItem)) {
               itemsToPublish.push({ itemId: newItem.id, sourceItem: entry.sourceItem });
             }
+
+            referencedSuccessCount++;
+            referencedResults.push({
+              id: sourceId,
+              success: true,
+              newId: newItem.id,
+              sourceItem: entry.sourceItem,
+            });
+            creationRecorded = true;
           } else {
+            fatalReferenceCreationFailure = true;
+            referencedFailureCount++;
+            referencedResults.push({
+              id: sourceId,
+              success: false,
+              error: 'Failed to create referenced item',
+              sourceItem: entry.sourceItem,
+            });
+            creationRecorded = true;
             console.warn(`  ⚠️  Failed to create referenced item: ${entry.sourceItem.label}`);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!creationRecorded) {
+            fatalReferenceCreationFailure = !itemCreated;
+            referencedFailureCount++;
+            referencedResults.push({
+              id: sourceId,
+              success: false,
+              error: errorMessage,
+              sourceItem: entry.sourceItem,
+            });
+          }
           console.warn(`  ❌ Error creating referenced item ${sourceId}: ${errorMessage}`);
         }
+
+        if (fatalReferenceCreationFailure) {
+          break;
+        }
+      }
+
+      if (fatalReferenceCreationFailure) {
+        console.error(
+          '❌ Referenced item creation failed. Dependent content items were not created.'
+        );
+
+        return {
+          success: false,
+          itemsCreated: referencedSuccessCount,
+          itemsUpdated: 0,
+          failed: referencedFailureCount,
+          publishFailed: 0,
+          referenceResolution: referenceResolutionResult,
+        };
       }
     }
   }
@@ -208,11 +379,8 @@ export async function recreateContentItems(
     try {
       console.log(`\n📋 Processing item: ${itemId}`);
 
-      // Step 1: Fetch full content item details from source
-      const sourceItem = await fetchFullContentItem(sourceService, itemId);
-      if (!sourceItem) {
-        throw new Error(`Could not fetch source item details`);
-      }
+      // Step 1: Use the source snapshot that passed preflight validation
+      const sourceItem = preflight.sourceItems.get(itemId)!;
 
       console.log(`  ✓ Fetched: ${sourceItem.label}`);
 
@@ -299,7 +467,12 @@ export async function recreateContentItems(
 
       // Step 5: Handle delivery key if present
       if (sourceItem.body._meta?.deliveryKey && !newItem.body._meta?.deliveryKey) {
-        await assignDeliveryKey(targetService, newItem.id, sourceItem.body._meta.deliveryKey);
+        await assignDeliveryKey(
+          targetService,
+          newItem.id,
+          sourceItem.body._meta.deliveryKey,
+          newItem.version
+        );
         console.log(`  ✓ Assigned delivery key: ${sourceItem.body._meta.deliveryKey}`);
       }
 
@@ -496,6 +669,7 @@ export async function recreateContentItems(
   }
 
   // Step 8: Batch publish all items that were marked for publishing
+  let publishFailedCount = 0;
   if (itemsToPublish.length > 0) {
     console.log(`\n📤 Publishing ${itemsToPublish.length} content items...`);
     const configuredConcurrency = parseInt(process.env.PUBLISH_CONCURRENCY || '5', 10);
@@ -530,7 +704,7 @@ export async function recreateContentItems(
 
     await Promise.all(workers);
     const publishedCount = publishResults.filter(r => r.success).length;
-    const publishFailedCount = publishResults.filter(r => !r.success).length;
+    publishFailedCount = publishResults.filter(r => !r.success).length;
 
     console.log(
       `  📊 Publishing completed: ${publishedCount} successful, ${publishFailedCount} failed`
@@ -605,28 +779,40 @@ export async function recreateContentItems(
   }
 
   // Final report
+  const totalSuccessCount = successCount + referencedSuccessCount;
+  const totalFailureCount = failureCount + referencedFailureCount;
   console.log('\n📊 Recreation Summary:');
-  console.log(`✅ Successfully recreated: ${successCount} items (including hierarchy children)`);
+  console.log(
+    `✅ Successfully recreated: ${totalSuccessCount} items ` +
+      `(including hierarchy children and recursively referenced items)`
+  );
   if (itemsUpdated > 0) {
     console.log(`🔄 Updated with resolved references: ${itemsUpdated} items`);
   }
-  console.log(`❌ Failed: ${failureCount} items`);
+  console.log(`❌ Failed: ${totalFailureCount} items`);
 
-  if (failureCount > 0) {
+  if (totalFailureCount > 0) {
     console.log('\n❌ Failed items:');
+    referencedResults
+      .filter(result => !result.success)
+      .forEach(result => console.log(`  - ${result.id}: ${result.error}`));
     results.filter(r => !r.success).forEach(r => console.log(`  - ${r.id}: ${r.error}`));
   }
 
-  if (successCount > 0) {
+  if (totalSuccessCount > 0) {
     console.log('\n✅ Successfully recreated items:');
+    referencedResults
+      .filter(result => result.success)
+      .forEach(result => console.log(`  - ${result.id} → ${result.newId}`));
     results.filter(r => r.success).forEach(r => console.log(`  - ${r.id} → ${r.newId}`));
   }
 
   return {
-    success: failureCount === 0,
-    itemsCreated: successCount,
+    success: totalFailureCount === 0 && publishFailedCount === 0,
+    itemsCreated: totalSuccessCount,
     itemsUpdated,
-    failed: failureCount,
+    failed: totalFailureCount,
+    publishFailed: publishFailedCount,
     referenceResolution: referenceResolutionResult,
   };
 }
@@ -639,29 +825,9 @@ export type RecreateResult = {
   itemsCreated: number;
   itemsUpdated: number;
   failed: number;
+  publishFailed: number;
   referenceResolution?: ReferenceResolutionResult | undefined;
 };
-
-/**
- * Fetch full content item details including hierarchy children
- */
-async function fetchFullContentItem(
-  service: AmplienceService,
-  itemId: string
-): Promise<Amplience.ContentItemWithDetails | null> {
-  try {
-    console.log(`  🔍 Fetching content item ${itemId}...`);
-
-    // Use the new method we added to AmplienceService
-    const item = await service.getContentItemWithDetails(itemId);
-
-    return item;
-  } catch (error) {
-    console.error(`  ❌ Error fetching content item ${itemId}:`, error);
-
-    return null;
-  }
-}
 
 /**
  * Prepare content item body for creation by removing read-only properties
@@ -682,17 +848,17 @@ function prepareItemBodyForCreation(
       body._meta.schema = schema;
     }
 
-    // Remove read-only fields that should not be included during content creation
-    // For hierarchy, we'll handle relationships separately after all items are created
-    // IMPORTANT: We must remove ALL hierarchy metadata during creation - the Amplience API
-    // returns 403 Forbidden if we try to create items with _meta.hierarchy already set.
-    // Hierarchy relationships must be established after creation using the hierarchy API.
+    // Roots must retain their marker so Amplience creates a valid hierarchy node.
+    // Child parent IDs belong to the source hub and are recreated after item creation.
     if (body._meta?.hierarchy) {
-      const wasRoot = body._meta.hierarchy.root;
-      delete body._meta.hierarchy;
-      console.log(
-        `  🗂️  Removed hierarchy info from ${wasRoot ? 'root' : 'child'} item - will establish relationship after creation`
-      );
+      if (body._meta.hierarchy.root) {
+        console.log('  🌳 Preserved hierarchy root marker for creation');
+      } else {
+        delete body._meta.hierarchy;
+        console.log(
+          '  🗂️  Removed hierarchy parent info from child item - will establish relationship after creation'
+        );
+      }
     }
   } else {
     // If _meta doesn't exist, create it with the schema
@@ -719,41 +885,6 @@ async function createContentItemInTarget(
   const { body, locale, folderId, label } = newObject;
   try {
     console.log(`  🔨 Creating content item in target...`);
-
-    // First, let's verify we can access the target repository
-    console.log(`  🔍 Verifying access to target repository: ${repositoryId}`);
-    try {
-      const repos = await service.getRepositories();
-      const targetRepo = repos.find(r => r.id === repositoryId);
-      if (!targetRepo) {
-        throw new Error(`Target repository ${repositoryId} not found or not accessible`);
-      }
-      console.log(`  ✓ Target repository accessible: ${targetRepo.label}`);
-
-      // Check if the required schema/content type is available in the target repository
-      const bodyWithMeta = body;
-      const requiredSchema = bodyWithMeta._meta?.schema;
-      if (requiredSchema && targetRepo.contentTypes) {
-        console.log(`  🔍 Required schema: ${requiredSchema}`);
-        // console.warn(JSON.stringify(targetRepo.contentTypes), null, 2);
-
-        const hasContentType = targetRepo.contentTypes.some(
-          ct => ct.contentTypeUri === requiredSchema
-        );
-        if (hasContentType) {
-          console.log(`  ✓ Required content type available: ${requiredSchema}`);
-        } else {
-          console.log(
-            `  ⚠️  Required content type not found in target repository: ${requiredSchema}`
-          );
-          console.log(`  � You need to register this content type in the target repository first.`);
-          throw new Error(`Content type ${requiredSchema} not available in target repository`);
-        }
-      }
-    } catch (repoError) {
-      console.error(`  ❌ Cannot access target repository: ${repoError}`);
-      throw repoError;
-    }
 
     // Prepare the request data
     const createRequest: Amplience.CreateContentItemRequest = {
@@ -807,13 +938,14 @@ async function createContentItemInTarget(
 async function assignDeliveryKey(
   service: AmplienceService,
   itemId: string,
-  deliveryKey: string
+  deliveryKey: string,
+  version: number
 ): Promise<void> {
   try {
     console.log(`  🔑 Assigning delivery key: ${deliveryKey}`);
 
     // Use the new method we added to AmplienceService
-    const success = await service.assignDeliveryKey(itemId, deliveryKey);
+    const success = await service.assignDeliveryKey(itemId, deliveryKey, version);
 
     if (!success) {
       throw new Error('Failed to assign delivery key');

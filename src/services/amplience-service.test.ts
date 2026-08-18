@@ -24,6 +24,7 @@ describe('AmplienceService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockReset();
   });
 
   describe('OAuth Authentication', () => {
@@ -328,6 +329,95 @@ describe('AmplienceService', () => {
 
       // Verify that only the API call was made (no OAuth)
       expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    describe('assignDeliveryKey', () => {
+      it('patches the delivery key with the current item version', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ id: 'item-1', version: 4 }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const success = await service.assignDeliveryKey('item-1', 'article/key', 3);
+
+        expect(success).toBe(true);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/content-items/item-1/delivery-key',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({ deliveryKey: 'article/key', version: 3 }),
+          })
+        );
+      });
+    });
+
+    describe('getContentTypes', () => {
+      it('returns an empty list for a repository without assigned content types', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 'repo-1',
+              name: 'Repository',
+              label: 'Repository',
+              status: 'ACTIVE',
+            }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const contentTypes = await service.getContentTypes('repo-1');
+
+        expect(contentTypes).toEqual([]);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/content-repositories/repo-1',
+          expect.any(Object)
+        );
+      });
+
+      it('returns content types embedded in the repository response', async () => {
+        const firstContentType = {
+          id: 'type-1',
+          contentTypeUri: 'https://schema.example.com/one',
+        } as Amplience.ContentType;
+        const secondContentType = {
+          id: 'type-2',
+          contentTypeUri: 'https://schema.example.com/two',
+        } as Amplience.ContentType;
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 'repo-1',
+              name: 'Repository',
+              label: 'Repository',
+              status: 'ACTIVE',
+              contentTypes: [firstContentType, secondContentType],
+            }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const contentTypes = await service.getContentTypes('repo-1');
+
+        expect(contentTypes).toEqual([firstContentType, secondContentType]);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/content-repositories/repo-1',
+          expect.any(Object)
+        );
+      });
+
+      it('propagates repository assignment lookup failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          text: () => Promise.resolve('Authorization required.'),
+        });
+
+        await expect(service.getContentTypes('repo-1')).rejects.toThrow('API Error: 403 Forbidden');
+      });
     });
   });
 });

@@ -120,6 +120,137 @@ describe('resolveContentReferences', () => {
     expect(result.resolution.totalDiscovered).toBeGreaterThan(0);
   });
 
+  it('fails discovery when an internal referenced item cannot be fetched', async () => {
+    const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1', [
+      { id: 'item-2', contentType: 'https://schema.example.com/type2' },
+    ]);
+    const item2 = createMockItem('item-2', 'Item 2', 'https://schema.example.com/type2');
+
+    vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1, item2]);
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(async (id: string) =>
+      id === 'item-1' ? item1 : null
+    );
+
+    const result = await resolveContentReferences({
+      sourceService: mockSourceService,
+      targetService: mockTargetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['item-1'],
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error('Expected reference discovery to fail');
+    expect(result.error).toContain('Could not fetch source content item item-2');
+    expect(result.failurePhase).toBe('discovery');
+    expect(mockTargetService.getAllContentItems).not.toHaveBeenCalled();
+  });
+
+  it('fails discovery when a recursively discovered internal item cannot be fetched', async () => {
+    const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1', [
+      { id: 'item-2', contentType: 'https://schema.example.com/type2' },
+    ]);
+    const item2 = createMockItem('item-2', 'Item 2', 'https://schema.example.com/type2', [
+      { id: 'item-3', contentType: 'https://schema.example.com/type3' },
+    ]);
+    const item3 = createMockItem('item-3', 'Item 3', 'https://schema.example.com/type3');
+
+    vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1, item2, item3]);
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(
+      async (id: string) => {
+        if (id === 'item-1') return item1;
+        if (id === 'item-2') return item2;
+
+        return null;
+      }
+    );
+
+    const result = await resolveContentReferences({
+      sourceService: mockSourceService,
+      targetService: mockTargetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['item-1'],
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error('Expected recursive reference discovery to fail');
+    expect(result.error).toContain('Could not fetch source content item item-3');
+    expect(mockSourceService.getContentItemWithDetails).toHaveBeenCalledWith('item-2');
+    expect(mockSourceService.getContentItemWithDetails).toHaveBeenCalledWith('item-3');
+  });
+
+  it('marks inaccessible references outside the source repository as external', async () => {
+    const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1', [
+      { id: 'external-item', contentType: 'https://schema.example.com/external' },
+    ]);
+
+    vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1]);
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(async (id: string) =>
+      id === 'item-1' ? item1 : null
+    );
+    vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue([]);
+
+    const result = await resolveContentReferences({
+      sourceService: mockSourceService,
+      targetService: mockTargetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['item-1'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.registry.externalReferenceIds).toEqual(new Set(['external-item']));
+    expect(result.resolution.totalDiscovered).toBe(2);
+    expect(mockSourceService.getContentItemWithDetails).not.toHaveBeenCalledWith('external-item');
+  });
+
+  it('identifies target matching failures separately from discovery failures', async () => {
+    const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1');
+    vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1]);
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockResolvedValue(item1);
+    vi.mocked(mockTargetService.getAllContentItems).mockRejectedValue(
+      new Error('Target repository unavailable')
+    );
+
+    const result = await resolveContentReferences({
+      sourceService: mockSourceService,
+      targetService: mockTargetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['item-1'],
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error('Expected target matching to fail');
+    expect(result.failurePhase).toBe('matching');
+    expect(result.error).toBe('Target repository unavailable');
+  });
+
+  it('fails matching when a source item has multiple target matches', async () => {
+    const item1 = createMockItem('item-1', 'Duplicate label', 'https://schema.example.com/type1');
+    const targetItems = [
+      createMockItem('target-1', 'Duplicate label', 'https://schema.example.com/type1'),
+      createMockItem('target-2', 'Duplicate label', 'https://schema.example.com/type1'),
+    ];
+    vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1]);
+    vi.mocked(mockSourceService.getContentItemWithDetails).mockResolvedValue(item1);
+    vi.mocked(mockTargetService.getAllContentItems).mockResolvedValue(targetItems);
+
+    const result = await resolveContentReferences({
+      sourceService: mockSourceService,
+      targetService: mockTargetService,
+      sourceRepositoryId: 'source-repo',
+      targetRepositoryId: 'target-repo',
+      initialItemIds: ['item-1'],
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error('Expected ambiguous target matching to fail');
+    expect(result.failurePhase).toBe('matching');
+    expect(result.error).toContain('Multiple target matches found for source content item item-1');
+  });
+
   it('should handle items with no references', async () => {
     const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1');
 

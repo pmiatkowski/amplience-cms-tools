@@ -104,6 +104,7 @@ export {
   executePhase2Update,
   getPreFlightSummary,
   resolveContentReferences,
+  type ResolverFailurePhase,
   type ResolverOptions,
   type ResolverResult,
 } from './content-reference-resolver';

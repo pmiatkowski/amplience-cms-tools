@@ -81,21 +81,73 @@ The recreation process follows a comprehensive step-by-step workflow:
 When recreating items across hubs, content references (`content-reference` and
 `content-link` properties) are automatically resolved:
 
-- **Automatic Discovery**: All references in item bodies are discovered recursively
-- **Target Matching**: References are matched to target hub items by delivery key or schema+label
+- **Automatic Discovery**: All references in item bodies are discovered
+  recursively
+- **Target Matching**: References are matched to target hub items by delivery
+  key or schema+label
 - **Recursive Creation**: Missing referenced items are created automatically
-- **Circular Handling**: Circular references are resolved using two-phase creation
-- **External Flagging**: References outside the source repository are flagged for manual handling
+- **Circular Handling**: Circular references are resolved using two-phase
+  creation
+- **External Flagging**: References outside the source repository are flagged
+  for manual handling
 
-See [Content Reference Resolution](./content-reference-resolution.md) for details.
+See [Content Reference Resolution](./content-reference-resolution.md) for
+details.
 
-### 7. Execution and Verification
+### 7. Content Type Assignment Preflight
+
+Before asking for confirmation, the command validates every content type needed
+by items that may be created in the target repository. This includes:
+
+- Explicitly selected items and automatically included hierarchy descendants
+- Recursively discovered referenced items that do not already exist in the
+  target hub
+- The complete `contentTypes` assignment list returned by the target repository
+  resource
+
+Referenced items already matched in the target and external references outside
+the source repository are not creation candidates. If an assignment is missing,
+the command prints each content type URI, its affected-item count, and an
+indented list of item labels and IDs. Items without schema metadata and failures
+to load repository assignments are reported separately.
+
+The command stops before confirmation and no target content items are created
+when preflight is blocked. It also stops before target selection if details for
+any selected item cannot be loaded for hierarchy analysis.
+
+Recursive reference discovery is strict by default. If discovery fails, the
+command stops because it cannot prove that every required content type was
+validated. This policy is controlled in `src/config.ts`:
+
+```typescript
+contentTypeValidation: {
+  abortOnReferenceDiscoveryFailure: true,
+}
+```
+
+Setting the flag to `false` validates only the selected and hierarchy items,
+prints a warning, and continues with unresolved content references nullified.
+Target matching or dependency-planning failures, known missing assignments,
+unknown schemas, and assignment lookup failures always block execution
+regardless of this flag.
+
+### 8. Execution and Verification
 
 - Displays a comprehensive recreation summary before execution
-- Shows reference resolution preview (matched, to create, external)
+- Shows reference resolution and content-type validation results before
+  confirmation
+- Separates selected/hierarchy items from recursively referenced items and
+  displays the total number of items that may be created
 - Processes items with progress tracking
 - Handles folder mapping between source and target locations
-- Provides detailed success/failure reporting
+- Provides detailed success/failure reporting that includes referenced-item
+  creation outcomes
+- Treats required post-creation work, such as delivery-key assignment, as part
+  of each item's success or failure result
+- Reports publication failures separately from creation failures and does not
+  mark the overall command successful when required publishing fails
+- Reports command completion from actual created and failed counts; partial
+  creation is not presented as a successful operation
 
 The system intelligently handles complex scenarios including cross-hub
 migration, folder structure preservation, automatic hierarchy descendant

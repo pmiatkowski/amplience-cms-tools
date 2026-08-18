@@ -1,7 +1,8 @@
 import { getHubConfigs } from '~/app-config';
 import { promptForConfirmation } from '~/prompts';
-import { recreateContentItems } from '~/services/actions';
-import { findAllDescendants } from '~/utils/folder-tree';
+import { preflightContentItemRecreation, recreateContentItems } from '~/services/actions';
+import { analyzeHierarchyStructure } from '../shared/content-operations';
+import { displayContentTypePreflightResult } from '../shared/content-type-preflight';
 import { selectSourceLocation, selectTargetLocation } from '../shared/location-selection';
 import {
   promptForRecreationFilters,
@@ -54,79 +55,40 @@ export async function runRecreateContentItems(): Promise<void> {
     }
 
     // Step 2.5: Analyze hierarchy structure and discover all items to recreate
-    console.log('\n🌳 Analyzing hierarchy structure and discovering children...');
-
-    // Get detailed information for all selected items
-    const selectedItemsDetails: Amplience.ContentItemWithDetails[] = [];
-    for (const item of selectedItems) {
-      const details = await source.service.getContentItemWithDetails(item.id);
-      if (details) {
-        selectedItemsDetails.push(details);
-      }
-    }
-
-    // Check if any selected items are hierarchy roots
-    const hierarchyRootItems = selectedItemsDetails.filter(item => item.hierarchy?.root);
-
-    let allItemsToProcess = selectedItems.map(item => item.id);
-    let hierarchyChildrenFound = 0;
-
-    if (hierarchyRootItems.length > 0) {
-      console.log(
-        `  🌲 Found ${hierarchyRootItems.length} hierarchy root items, discovering all children...`
-      );
-
-      // Fetch ALL content items from the repository to find hierarchy relationships
-      console.log(`  📊 Fetching all repository items to analyze hierarchy relationships...`);
-      const allRepositoryItems = await source.service.getAllContentItems(
-        source.repository.id,
-        (fetched: number, total: number) =>
-          console.log(`    📊 Loading items: ${fetched}/${total} processed`),
-        { size: 100 }
-      );
-
-      console.log(`  ✓ Loaded ${allRepositoryItems.length} items from repository`);
-
-      // For each hierarchy root, find ALL its descendants in the repository
-      const allDescendants = new Set<string>();
-
-      for (const rootItem of hierarchyRootItems) {
-        console.log(
-          `  🔍 Finding descendants for hierarchy root: ${rootItem.label} (${rootItem.id})`
-        );
-
-        // Find all items that have this root as an ancestor
-        const descendants = findAllDescendants(rootItem.id, allRepositoryItems);
-        descendants.forEach(descendantId => allDescendants.add(descendantId));
-
-        console.log(`    ✓ Found ${descendants.length} descendants`);
-      }
-
-      // Add all discovered descendants to the processing list
-      const descendantsArray = Array.from(allDescendants);
-      allItemsToProcess = [...new Set([...allItemsToProcess, ...descendantsArray])];
-      hierarchyChildrenFound = descendantsArray.length;
-
-      console.log(`  📊 Total hierarchy children discovered: ${hierarchyChildrenFound}`);
-    }
-
-    console.log(`📊 Processing Summary:`);
-    console.log(`  • Originally selected: ${selectedItems.length} items`);
-    console.log(`  • Hierarchy roots: ${hierarchyRootItems.length}`);
-    console.log(`  • Hierarchy children: ${hierarchyChildrenFound}`);
-    console.log(`  • Total items to recreate: ${allItemsToProcess.length}`);
-
-    if (hierarchyChildrenFound > 0) {
-      console.log(
-        `\n💡 Hierarchy children detected! ${hierarchyChildrenFound} additional items will be included automatically.`
-      );
-    }
+    const hierarchyAnalysis = await analyzeHierarchyStructure(
+      source.service,
+      source.repository.id,
+      selectedItems
+    );
+    const { allItemsToProcess, hierarchyChildrenFound } = hierarchyAnalysis;
 
     // Step 3: Target Selection
     console.log('\n🎯 Select target location:');
     const target = await selectTargetLocation(hubs, 'Select target folder (optional):', true);
 
-    // Step 3.5: Target Locale Selection
+    // Step 3.5: Validate every content type that may be created
+    console.log('\n🔍 Validating target repository content types...');
+    const preflight = await preflightContentItemRecreation({
+      sourceService: source.service,
+      targetService: target.service,
+      sourceRepositoryId: source.repository.id,
+      targetRepositoryId: target.repository.id,
+      initialItemIds: allItemsToProcess,
+      onProgress: (phase, current, total) => {
+        console.log(`  📊 ${phase}: ${current}/${total}`);
+      },
+    });
+    displayContentTypePreflightResult(preflight, target.repository.name);
+
+    if (preflight.status === 'blocked') {
+      return;
+    }
+
+    const totalItemsToCreate =
+      preflight.referenceSummary?.itemsToCreate ?? allItemsToProcess.length;
+    const referencedItemsToCreate = Math.max(0, totalItemsToCreate - allItemsToProcess.length);
+
+    // Step 4: Target Locale Selection
     console.log('\n🌐 Select target locale:');
     const targetLocale = await promptForTargetLocale(
       target.service,
@@ -134,13 +96,15 @@ export async function runRecreateContentItems(): Promise<void> {
       selectedItems
     );
 
-    // Step 4: Confirmation
+    // Step 5: Confirmation
     console.log('\n📋 Recreation Summary:');
     console.log(`Source Hub: ${source.hub.name}`);
     console.log(`Source Repository: ${source.repository.name}`);
     console.log(`Source Folder: ${source.folder?.name || 'Repository Root'}`);
     console.log(`Originally selected items: ${selectedItems.length}`);
-    console.log(`Total items to recreate: ${allItemsToProcess.length}`);
+    console.log(`Selected and hierarchy items: ${allItemsToProcess.length}`);
+    console.log(`Referenced items to create: ${referencedItemsToCreate}`);
+    console.log(`Total items to create: ${totalItemsToCreate}`);
     if (hierarchyChildrenFound > 0) {
       console.log(`  └─ Includes ${hierarchyChildrenFound} hierarchy children`);
     }
@@ -160,7 +124,7 @@ export async function runRecreateContentItems(): Promise<void> {
       return;
     }
 
-    // Step 5: Execute Recreation
+    // Step 6: Execute Recreation
     console.log('\n🚀 Starting content item recreation...');
 
     // Map all discovered items to the format expected by recreateContentItems
@@ -179,7 +143,7 @@ export async function runRecreateContentItems(): Promise<void> {
       folderMapping.set('', target.folder.id);
     }
 
-    await recreateContentItems(
+    const recreationResult = await recreateContentItems(
       source.service,
       target.service,
       itemsWithFolders,
@@ -188,10 +152,27 @@ export async function runRecreateContentItems(): Promise<void> {
       undefined, // No progress bar - action provides its own detailed logging
       targetLocale,
       true, // resolveReferences - always enable for cross-hub operations
-      source.repository.id // sourceRepositoryId - required for reference resolution
+      source.repository.id, // sourceRepositoryId - required for reference resolution
+      preflight
     );
 
-    console.log('\n✅ Content item recreation completed!');
+    if (!recreationResult.success) {
+      const publishFailureSummary =
+        recreationResult.publishFailed > 0
+          ? `, ${recreationResult.publishFailed} publish failed`
+          : '';
+      console.error(
+        `\n❌ Content item recreation completed with failures: ` +
+          `${recreationResult.itemsCreated} created, ${recreationResult.failed} failed` +
+          `${publishFailureSummary}.`
+      );
+
+      return;
+    }
+
+    console.log(
+      `\n✅ Content item recreation completed: ${recreationResult.itemsCreated} items created.`
+    );
   } catch (error) {
     console.error('\n❌ Error during content item recreation:', error);
     throw error;

@@ -7,6 +7,8 @@ export * from './cleanup-folder';
 export * from './export-extensions';
 export * from './item-removal';
 export * from './list-nested-subfolders';
+export * from './preflight-content-item-recreation';
 export * from './recreate-content-items';
 export * from './recreate-folder-structure';
 export * from './sync-hierarchy';
+export * from './validate-content-type-assignments';

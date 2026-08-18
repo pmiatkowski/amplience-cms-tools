@@ -1,5 +1,6 @@
 // Re-export all global type definitions
 export * from './amplience';
+export * from './config';
 export * from './global';
 
 // Ensure the global declarations are loaded

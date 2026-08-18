@@ -48,24 +48,66 @@ tracking:
 - Prompts for the target repository where content will be copied
 - Prompts for the parent folder in the target repository (or repository root)
 
-### 3. Analysis and Confirmation
+### 3. Analysis and Content Type Preflight
 
 - Analyzes the source folder structure to count subfolders and content items
 - Fetches all content items from the source folder and its subfolders
+- Discovers hierarchy descendants and content references recursively
+- Matches references that already exist in the target hub
+- Validates that every content type needed for selected, hierarchy, and
+  unmatched referenced items is assigned to the target repository
+
+If assignments are missing, the command prints each content type URI, its
+affected-item count, and a sub-list of item labels and IDs. Items without schema
+metadata and failures to load repository assignments are reported separately.
+The operation stops before confirmation, so no target folder, subfolder, or
+content item is created. Incomplete source folder enumeration, subfolder content
+loading, selected-item details, or hierarchy descendant loading also stops the
+operation before target mutation.
+
+Reference discovery is strict by default. A discovery failure blocks the
+operation because the required content-type list may be incomplete. Set
+`contentTypeValidation.abortOnReferenceDiscoveryFailure` to `false` in
+`src/config.ts` to validate only known folder and hierarchy items, warn, and
+continue with unresolved references nullified. Known validation failures always
+block execution. Target matching and dependency-planning failures are not
+discovery failures and cannot be bypassed by this setting.
+
+### 4. Confirmation
+
 - Displays a comprehensive summary including:
   - Source and target locations
   - Number of subfolders to be created
-  - Total number of content items to be copied
+  - Folder and hierarchy item count
+  - Recursively referenced item count
+  - Total number of content items that may be created
 - Prompts for user confirmation before proceeding
 
-### 4. Execution with Progress Tracking
+### 5. Execution with Progress Tracking
 
 - **Step 1**: Creates the main folder in the target location
 - **Step 2**: Recursively recreates the entire subfolder structure with progress
   tracking
 - **Step 3**: Recreates all content items with proper folder assignments and
   progress tracking
-- Provides detailed feedback on success/failure rates and any errors encountered
+- Creates recursively referenced items in dependency order before items that
+  link to them
+- Preserves hierarchy-root metadata during creation while deferring child-parent
+  relationships until target IDs are available
+- Keeps delivery keys applied by content creation; when a fallback assignment is
+  required, it uses the created item's current version
+- Repairs publication state for matched referenced items left incomplete by a
+  prior partial run
+- Stops dependent item creation when a required referenced item fails, avoiding
+  follow-on schema errors caused by null required references
+- Stops before content recreation if any target subfolder cannot be created, so
+  items are not silently placed in the repository root
+- Provides detailed feedback on success/failure rates for folder, hierarchy, and
+  recursively referenced items
+- Uses actual recreation results in the completion message and does not claim a
+  successful folder copy when any content item creation failed
+- Reports publication failures separately and does not claim a successful copy
+  when recreated content could not be published as required
 
 The system maintains a folder mapping between source and target folder IDs to
 ensure content items are placed in the correct corresponding folders in the

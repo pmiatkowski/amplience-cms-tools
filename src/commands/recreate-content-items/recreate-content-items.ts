@@ -1,6 +1,7 @@
 import { getHubConfigs } from '~/app-config';
 import { promptForConfirmation, promptForProtectedEnvironment } from '~/prompts';
 import { preflightContentItemRecreation, recreateContentItems } from '~/services/actions';
+import { createPhaseProgressBar } from '~/utils';
 import { analyzeHierarchyStructure } from '../shared/content-operations';
 import { displayContentTypePreflightResult } from '../shared/content-type-preflight';
 import { selectSourceLocation, selectTargetLocation } from '../shared/location-selection';
@@ -68,16 +69,21 @@ export async function runRecreateContentItems(): Promise<void> {
 
     // Step 3.5: Validate every content type that may be created
     console.log('\n🔍 Validating target repository content types...');
-    const preflight = await preflightContentItemRecreation({
-      sourceService: source.service,
-      targetService: target.service,
-      sourceRepositoryId: source.repository.id,
-      targetRepositoryId: target.repository.id,
-      initialItemIds: allItemsToProcess,
-      onProgress: (phase, current, total) => {
-        console.log(`  📊 ${phase}: ${current}/${total}`);
-      },
-    });
+    const preflightProgress = createPhaseProgressBar();
+    let preflight: Awaited<ReturnType<typeof preflightContentItemRecreation>>;
+
+    try {
+      preflight = await preflightContentItemRecreation({
+        sourceService: source.service,
+        targetService: target.service,
+        sourceRepositoryId: source.repository.id,
+        targetRepositoryId: target.repository.id,
+        initialItemIds: allItemsToProcess,
+        onProgress: preflightProgress.update,
+      });
+    } finally {
+      preflightProgress.stop();
+    }
     displayContentTypePreflightResult(preflight, target.repository.name);
 
     if (preflight.status === 'blocked') {

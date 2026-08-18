@@ -184,6 +184,7 @@ describe('resolveContentReferences', () => {
     const item1 = createMockItem('item-1', 'Item 1', 'https://schema.example.com/type1', [
       { id: 'external-item', contentType: 'https://schema.example.com/external' },
     ]);
+    const progressCallback = vi.fn();
 
     vi.mocked(mockSourceService.getAllContentItems).mockResolvedValue([item1]);
     vi.mocked(mockSourceService.getContentItemWithDetails).mockImplementation(async (id: string) =>
@@ -197,12 +198,16 @@ describe('resolveContentReferences', () => {
       sourceRepositoryId: 'source-repo',
       targetRepositoryId: 'target-repo',
       initialItemIds: ['item-1'],
+      onProgress: progressCallback,
     });
 
     expect(result.success).toBe(true);
     expect(result.registry.externalReferenceIds).toEqual(new Set(['external-item']));
     expect(result.resolution.totalDiscovered).toBe(2);
     expect(mockSourceService.getContentItemWithDetails).not.toHaveBeenCalledWith('external-item');
+    const matchingCalls = progressCallback.mock.calls.filter(([phase]) => phase === 'matching');
+    const [, current, total] = matchingCalls.at(-1)!;
+    expect(current).toBe(total);
   });
 
   it('identifies target matching failures separately from discovery failures', async () => {

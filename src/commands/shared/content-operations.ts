@@ -1,6 +1,11 @@
 import { AmplienceService } from '~/services/amplience-service';
-import { createProgressBar } from '~/utils';
-import { findAllDescendants, getAllSubfolderIds, type FolderTreeNode } from '~/utils';
+import {
+  createPhaseProgressBar,
+  createProgressBar,
+  findAllDescendants,
+  getAllSubfolderIds,
+  type FolderTreeNode,
+} from '~/utils';
 
 /**
  * Analyze hierarchy structure and discover all descendant items
@@ -55,11 +60,18 @@ export async function analyzeHierarchyStructure(
 
     // Fetch ALL content items from the repository to find hierarchy relationships
     console.log(`  📦 Fetching all repository items to analyze hierarchy relationships...`);
-    const allRepositoryItems = await service.getAllContentItems(
-      repositoryId,
-      (fetched, total) => console.log(`    📊 Loading items: ${fetched}/${total} processed`),
-      { size: 100 }
-    );
+    const loadingProgress = createPhaseProgressBar();
+    let allRepositoryItems: Amplience.ContentItem[];
+
+    try {
+      allRepositoryItems = await service.getAllContentItems(
+        repositoryId,
+        (fetched, total) => loadingProgress.update('Loading items', fetched, total),
+        { size: 100 }
+      );
+    } finally {
+      loadingProgress.stop();
+    }
 
     console.log(`  ✓ Loaded ${allRepositoryItems.length} items from repository`);
 

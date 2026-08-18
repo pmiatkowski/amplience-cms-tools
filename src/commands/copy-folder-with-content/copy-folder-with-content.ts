@@ -7,7 +7,12 @@ import {
 import { preflightContentItemRecreation } from '~/services/actions/preflight-content-item-recreation';
 import { recreateContentItems } from '~/services/actions/recreate-content-items';
 import { recreateFolderStructure } from '~/services/actions/recreate-folder-structure';
-import { countTotalFolders, createProgressBar, getAllSubfolderIds } from '~/utils';
+import {
+  countTotalFolders,
+  createPhaseProgressBar,
+  createProgressBar,
+  getAllSubfolderIds,
+} from '~/utils';
 import {
   analyzeHierarchyStructure,
   confirmOperation,
@@ -235,16 +240,21 @@ export async function runCopyFolderWithContent(): Promise<void> {
 
     // === CONTENT TYPE PREFLIGHT ===
     console.log('\n🔍 Validating target repository content types...');
-    const preflight = await preflightContentItemRecreation({
-      sourceService: source.service,
-      targetService: target.service,
-      sourceRepositoryId: source.repository.id,
-      targetRepositoryId: target.repository.id,
-      initialItemIds: sortedItemsWithFolders.map(({ item }) => item.id),
-      onProgress: (phase, current, total) => {
-        console.log(`  📊 ${phase}: ${current}/${total}`);
-      },
-    });
+    const preflightProgress = createPhaseProgressBar();
+    let preflight: Awaited<ReturnType<typeof preflightContentItemRecreation>>;
+
+    try {
+      preflight = await preflightContentItemRecreation({
+        sourceService: source.service,
+        targetService: target.service,
+        sourceRepositoryId: source.repository.id,
+        targetRepositoryId: target.repository.id,
+        initialItemIds: sortedItemsWithFolders.map(({ item }) => item.id),
+        onProgress: preflightProgress.update,
+      });
+    } finally {
+      preflightProgress.stop();
+    }
     displayContentTypePreflightResult(preflight, target.repository.name);
 
     if (preflight.status === 'blocked') {

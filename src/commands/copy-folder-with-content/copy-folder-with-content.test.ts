@@ -10,7 +10,12 @@ import {
 import { recreateContentItems } from '~/services/actions/recreate-content-items';
 import { recreateFolderStructure } from '~/services/actions/recreate-folder-structure';
 import type { ResolverResult } from '~/services/content-reference';
-import { countTotalFolders, createProgressBar, getAllSubfolderIds } from '~/utils';
+import {
+  countTotalFolders,
+  createPhaseProgressBar,
+  createProgressBar,
+  getAllSubfolderIds,
+} from '~/utils';
 import {
   analyzeHierarchyStructure,
   confirmOperation,
@@ -32,6 +37,10 @@ vi.mock('~/utils');
 vi.mock('../shared');
 
 describe('runCopyFolderWithContent content type preflight', () => {
+  const preflightProgress = {
+    stop: vi.fn(),
+    update: vi.fn(),
+  };
   const progressBar = {
     increment: vi.fn(),
     setTotal: vi.fn(),
@@ -107,6 +116,7 @@ describe('runCopyFolderWithContent content type preflight', () => {
     vi.mocked(createProgressBar).mockReturnValue(
       progressBar as unknown as ReturnType<typeof createProgressBar>
     );
+    vi.mocked(createPhaseProgressBar).mockReturnValue(preflightProgress);
     sourceService.getAllContentItems.mockResolvedValue([sourceItem]);
     vi.mocked(analyzeHierarchyStructure).mockResolvedValue({
       allItemsToProcess: ['source-item'],
@@ -173,10 +183,39 @@ describe('runCopyFolderWithContent content type preflight', () => {
       })
     );
     expect(displayContentTypePreflightResult).toHaveBeenCalledWith(blockedPreflight, 'Newsroom');
+    expect(preflightProgress.stop).toHaveBeenCalledOnce();
     expect(confirmOperation).not.toHaveBeenCalled();
     expect(targetService.createFolder).not.toHaveBeenCalled();
     expect(recreateFolderStructure).not.toHaveBeenCalled();
     expect(recreateContentItems).not.toHaveBeenCalled();
+  });
+
+  it('renders preflight updates through a phase progress bar', async () => {
+    vi.mocked(preflightContentItemRecreation).mockImplementation(async options => {
+      options.onProgress?.('matching', 2, 4);
+
+      return readyPreflight;
+    });
+
+    await runCopyFolderWithContent();
+
+    expect(createPhaseProgressBar).toHaveBeenCalledOnce();
+    expect(preflightProgress.update).toHaveBeenCalledWith('matching', 2, 4);
+    expect(preflightProgress.stop).toHaveBeenCalledOnce();
+    expect(console.log).not.toHaveBeenCalledWith('  📊 matching: 2/4');
+  });
+
+  it('stops preflight progress when preflight rejects', async () => {
+    const error = new Error('Preflight failed');
+    vi.mocked(preflightContentItemRecreation).mockRejectedValue(error);
+
+    await runCopyFolderWithContent();
+
+    expect(preflightProgress.stop).toHaveBeenCalledOnce();
+    expect(console.error).toHaveBeenCalledWith(
+      '❌ Unexpected error during folder copy operation:',
+      error
+    );
   });
 
   it('passes the ready preflight to recreation after confirmation', async () => {

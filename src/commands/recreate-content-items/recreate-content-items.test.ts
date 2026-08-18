@@ -8,6 +8,7 @@ import {
   type ContentItemRecreationPreflightReady,
 } from '~/services/actions';
 import type { ResolverResult } from '~/services/content-reference';
+import { createPhaseProgressBar } from '~/utils';
 import { analyzeHierarchyStructure } from '../shared/content-operations';
 import { displayContentTypePreflightResult } from '../shared/content-type-preflight';
 import { selectSourceLocation, selectTargetLocation } from '../shared/location-selection';
@@ -22,6 +23,7 @@ import { applyFilters } from './utils';
 vi.mock('~/app-config');
 vi.mock('~/prompts');
 vi.mock('~/services/actions');
+vi.mock('~/utils');
 vi.mock('../shared/content-operations');
 vi.mock('../shared/content-type-preflight');
 vi.mock('../shared/location-selection');
@@ -29,6 +31,10 @@ vi.mock('./prompts');
 vi.mock('./utils');
 
 describe('runRecreateContentItems content type preflight', () => {
+  const preflightProgress = {
+    stop: vi.fn(),
+    update: vi.fn(),
+  };
   const sourceService = {
     getAllContentItems: vi.fn(),
     getContentItemWithDetails: vi.fn(),
@@ -104,6 +110,7 @@ describe('runRecreateContentItems content type preflight', () => {
     vi.mocked(promptForTargetLocale).mockResolvedValue(null);
     vi.mocked(promptForConfirmation).mockResolvedValue(true);
     vi.mocked(promptForProtectedEnvironment).mockResolvedValue(undefined);
+    vi.mocked(createPhaseProgressBar).mockReturnValue(preflightProgress);
     vi.mocked(recreateContentItems).mockResolvedValue({
       success: true,
       itemsCreated: 3,
@@ -152,8 +159,32 @@ describe('runRecreateContentItems content type preflight', () => {
       })
     );
     expect(displayContentTypePreflightResult).toHaveBeenCalledWith(blockedPreflight, 'Newsroom');
+    expect(preflightProgress.stop).toHaveBeenCalledOnce();
     expect(promptForConfirmation).not.toHaveBeenCalled();
     expect(recreateContentItems).not.toHaveBeenCalled();
+  });
+
+  it('renders preflight updates through a phase progress bar', async () => {
+    vi.mocked(preflightContentItemRecreation).mockImplementation(async options => {
+      options.onProgress?.('discovery', 1, 3);
+
+      return readyPreflight;
+    });
+
+    await runRecreateContentItems();
+
+    expect(createPhaseProgressBar).toHaveBeenCalledOnce();
+    expect(preflightProgress.update).toHaveBeenCalledWith('discovery', 1, 3);
+    expect(preflightProgress.stop).toHaveBeenCalledOnce();
+    expect(console.log).not.toHaveBeenCalledWith('  📊 discovery: 1/3');
+  });
+
+  it('stops preflight progress when preflight rejects', async () => {
+    vi.mocked(preflightContentItemRecreation).mockRejectedValue(new Error('Preflight failed'));
+
+    await expect(runRecreateContentItems()).rejects.toThrow('Preflight failed');
+
+    expect(preflightProgress.stop).toHaveBeenCalledOnce();
   });
 
   it('passes the ready preflight to recreation after confirmation', async () => {

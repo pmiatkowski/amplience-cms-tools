@@ -6,6 +6,110 @@ import { AmplienceService } from './amplience-service';
  */
 export class ContentTypeService {
   /**
+   * Replace a configured source visualization base URL with the target base URL.
+   */
+  rewriteVisualizationOrigins(
+    definition: Amplience.ContentTypeExportDefinition,
+    sourceOrigin: string,
+    targetOrigin: string
+  ): Amplience.ContentTypeExportDefinition {
+    const normalizedSource = normalizeVisualizationOrigin(sourceOrigin, 'source');
+    const normalizedTarget = normalizeVisualizationOrigin(targetOrigin, 'target');
+    const visualizations = definition.settings?.visualizations?.map(visualization => ({
+      ...visualization,
+      ...(visualization.templatedUri !== undefined && {
+        templatedUri: replaceVisualizationOrigin(
+          visualization.templatedUri,
+          normalizedSource,
+          normalizedTarget
+        ),
+      }),
+    }));
+
+    return {
+      ...definition,
+      ...(definition.settings && {
+        settings: {
+          ...definition.settings,
+          ...(visualizations && { visualizations }),
+        },
+      }),
+    };
+  }
+
+  /**
+   * Build a deterministic source-to-target content type alignment plan.
+   */
+  buildSyncPlan(
+    sourceDefinitions: Amplience.ContentTypeExportDefinition[],
+    targetDefinitions: Amplience.ContentTypeExportDefinition[],
+    repositoryMode: Amplience.ContentTypeRepositoryMode
+  ): Amplience.ContentTypeAlignmentPlan {
+    const targetsByUri = new Map(
+      targetDefinitions.map(definition => [definition.contentTypeUri, definition])
+    );
+
+    const items = sourceDefinitions
+      .filter(source => source.status !== 'ARCHIVED')
+      .map(source => {
+        const target = targetsByUri.get(source.contentTypeUri);
+        const sourceRepositories = normalizeRepositories(source.repositories);
+        const targetRepositories = normalizeRepositories(target?.repositories);
+        const desiredRepositories =
+          repositoryMode === 'additive'
+            ? normalizeRepositories([...sourceRepositories, ...targetRepositories])
+            : sourceRepositories;
+        const repositoriesToAssign = desiredRepositories.filter(
+          repository => !targetRepositories.includes(repository)
+        );
+        const repositoriesToUnassign =
+          repositoryMode === 'exact'
+            ? targetRepositories.filter(repository => !desiredRepositories.includes(repository))
+            : [];
+        const settingsChanges = buildSettingsChanges(source.settings, target?.settings);
+        const actions: Amplience.ContentTypeSyncAction[] = [];
+
+        if (!target) {
+          actions.push('CREATE');
+        } else {
+          if (target.status === 'ARCHIVED') {
+            actions.push('UNARCHIVE');
+          }
+
+          if (settingsChanges.length > 0) {
+            actions.push('UPDATE_SETTINGS');
+          }
+        }
+
+        if (repositoriesToAssign.length > 0) {
+          actions.push('ASSIGN');
+        }
+
+        if (repositoriesToUnassign.length > 0) {
+          actions.push('UNASSIGN');
+        }
+
+        if (actions.length === 0) {
+          actions.push('NO_CHANGE');
+        }
+
+        return {
+          contentTypeUri: source.contentTypeUri,
+          source,
+          ...(target && { target }),
+          ...(target?.id && { targetContentTypeId: target.id }),
+          desiredRepositories,
+          repositoriesToAssign,
+          repositoriesToUnassign,
+          settingsChanges,
+          actions,
+        };
+      });
+
+    return { repositoryMode, items };
+  }
+
+  /**
    * Identifies content types that exist in the source hub but not in the target hub.
    * Compares based on contentTypeUri to determine missing content types.
    *
@@ -220,4 +324,75 @@ export class ContentTypeService {
 
     return repositoryMap;
   }
+}
+
+function normalizeRepositories(repositories: string[] = []): string[] {
+  return [...new Set(repositories)].sort((left, right) => left.localeCompare(right));
+}
+
+function normalizeVisualizationOrigin(value: string, name: 'source' | 'target'): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:') {
+      throw new Error();
+    }
+  } catch {
+    throw new Error(`Invalid ${name} visualization origin: ${value}`);
+  }
+
+  return value.replace(/\/+$/, '');
+}
+
+function replaceVisualizationOrigin(
+  templatedUri: string,
+  sourceOrigin: string,
+  targetOrigin: string
+): string {
+  if (!templatedUri.startsWith(sourceOrigin)) {
+    return templatedUri;
+  }
+
+  const boundary = templatedUri.charAt(sourceOrigin.length);
+  if (boundary && !['/', '?', '#'].includes(boundary)) {
+    return templatedUri;
+  }
+
+  return `${targetOrigin}${templatedUri.slice(sourceOrigin.length)}`;
+}
+
+function buildSettingsChanges(
+  source: Amplience.ContentTypeSettings | undefined,
+  target: Amplience.ContentTypeSettings | undefined
+): Amplience.ContentTypeSettingChange[] {
+  const sourceSettings = normalizeSettings(source);
+  const targetSettings = normalizeSettings(target);
+  const settingNames: Amplience.ContentTypeSettingName[] = [
+    'label',
+    'icons',
+    'visualizations',
+    'cards',
+  ];
+
+  return settingNames.flatMap(setting => {
+    const plannedTargetValue = sourceSettings[setting];
+    const currentTargetValue = targetSettings[setting];
+
+    if (JSON.stringify(plannedTargetValue) === JSON.stringify(currentTargetValue)) {
+      return [];
+    }
+
+    return [{ setting, currentTargetValue, plannedTargetValue }];
+  });
+}
+
+function normalizeSettings(
+  settings: Amplience.ContentTypeSettings | undefined
+): Required<Pick<Amplience.ContentTypeSettings, 'icons' | 'visualizations' | 'cards'>> &
+  Pick<Amplience.ContentTypeSettings, 'label'> {
+  return {
+    ...(settings?.label !== undefined && { label: settings.label }),
+    icons: settings?.icons ?? [],
+    visualizations: settings?.visualizations ?? [],
+    cards: settings?.cards ?? [],
+  };
 }

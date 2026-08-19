@@ -37,8 +37,8 @@ export async function promptForCommand(): Promise<CommandChoice> {
           value: 'sync-content-type-properties',
         },
         {
-          name: 'Copy content-types (Creates missing content-types and assigns to repositories)',
-          value: 'copy-content-types',
+          name: 'Synchronize content-types (Aligns settings and repository assignments between hubs)',
+          value: 'sync-content-types',
         },
         { name: 'Copy folder with its content-items', value: 'copy-folder-with-content' },
         { name: 'Copy content-items (including hierarchies)', value: 'recreate-content-items' },
@@ -76,6 +76,7 @@ type CommandChoice =
   | 'recreate-content-items'
   | 'copy-folder-with-content'
   | 'copy-content-type-schemas'
+  | 'sync-content-types'
   | 'copy-content-types'
   | 'sync-content-type-properties'
   | 'archive-content-type-schemas'

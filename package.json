@@ -32,7 +32,7 @@
     "automation"
   ],
   "dependencies": {
-    "@amplience/dc-cli": "^0.26.1",
+    "@amplience/dc-cli": "0.31.0",
     "@types/cli-progress": "^3.11.6",
     "cli-progress": "^3.12.0",
     "dotenv": "^16.4.5",

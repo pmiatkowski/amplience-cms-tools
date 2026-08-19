@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { VALID_COMMAND_NAMES } from '~/services/command-set-config-service';
+import { SELECTABLE_COMMAND_NAMES } from '~/services/command-set-config-service';
 
 import {
   promptForEditSet,
@@ -146,7 +146,9 @@ describe('promptForAddCommands', () => {
       q => q.choices
     );
 
-    expect(commandQuestion?.choices).toEqual(expect.arrayContaining([...VALID_COMMAND_NAMES]));
+    expect(commandQuestion?.choices).toEqual(expect.arrayContaining([...SELECTABLE_COMMAND_NAMES]));
+    expect(commandQuestion?.choices).not.toContain('copy-content-types');
+    expect(commandQuestion?.choices).toContain('sync-content-types');
   });
 });
 

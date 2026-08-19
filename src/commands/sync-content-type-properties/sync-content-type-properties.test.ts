@@ -85,4 +85,48 @@ describe('syncContentTypeProperties protection', () => {
       vi.mocked(prompts.promptForProtectedEnvironment).mock.invocationCallOrder[0]
     ).toBeLessThan(syncExecute.mock.invocationCallOrder[0]);
   });
+
+  it('should sync only selected IDs without nested prompts after parent confirmation', async () => {
+    listExecute.mockResolvedValue({
+      stdout: JSON.stringify([
+        {
+          id: 'content-type-id',
+          hubContentTypeId: 'hub-content-type-id',
+          contentTypeUri: 'https://example.com/content-type',
+          status: 'ACTIVE',
+        },
+        {
+          id: 'selected-content-type-id',
+          hubContentTypeId: 'selected-hub-content-type-id',
+          contentTypeUri: 'https://example.com/selected-content-type',
+          status: 'ACTIVE',
+        },
+      ]),
+      stderr: '',
+    });
+    const listBuilder = createCommandBuilder(listExecute);
+    const selectedSyncBuilder = createCommandBuilder(syncExecute);
+    const unselectedSyncBuilder = createCommandBuilder(vi.fn());
+    vi.mocked(createDcCliCommand)
+      .mockReset()
+      .mockReturnValueOnce(listBuilder as never)
+      .mockReturnValueOnce(selectedSyncBuilder as never)
+      .mockReturnValueOnce(unselectedSyncBuilder as never);
+
+    const result = await syncContentTypeProperties({
+      context: {
+        targetHub,
+        targetContentTypeIds: ['selected-content-type-id'],
+        skipConfirmations: true,
+        protectedEnvironmentConfirmed: true,
+      },
+    });
+
+    expect(result.processedContentTypes).toEqual(['selected-content-type-id']);
+    expect(selectedSyncBuilder.withArgs).toHaveBeenCalledWith('selected-content-type-id', '--json');
+    expect(selectedSyncBuilder.execute).toHaveBeenCalledWith({ logCommand: false });
+    expect(unselectedSyncBuilder.execute).not.toHaveBeenCalled();
+    expect(prompts.promptForConfirmation).not.toHaveBeenCalled();
+    expect(prompts.promptForProtectedEnvironment).not.toHaveBeenCalled();
+  });
 });

@@ -8,8 +8,8 @@ into reusable sets that can be executed in a single workflow.
 
 The functionality is implemented as a self-contained command module that reads
 JSON configuration files defining command sets, validates command references
-against the available CLI commands, and provides interactive execution with
-both "run all" and "step-by-step" modes including error recovery options.
+against the available CLI commands, and provides interactive execution with both
+"run all" and "step-by-step" modes including error recovery options.
 
 ## Purpose
 
@@ -40,14 +40,14 @@ operations.
   `COMMAND_SETS_PATH` environment variable)
 - If no configuration exists at the default path, an example file is
   automatically created
-- If `COMMAND_SETS_PATH` is set but the file is missing, the user is prompted
-  to create an example file
+- If `COMMAND_SETS_PATH` is set but the file is missing, the user is prompted to
+  create an example file
 - Available command sets are displayed showing name, description, and command
   count
 - User selects a command set to execute
 - User chooses execution mode: "Run all", "Step-by-step", or "Pick commands"
-- If "Pick commands" is selected, the user selects a subset of commands and
-  then chooses whether to "Run selected" or "Step-by-step selected"
+- If "Pick commands" is selected, the user selects a subset of commands and then
+  chooses whether to "Run selected" or "Step-by-step selected"
 - Commands execute sequentially with progress feedback
 - If errors occur, user can choose to Continue, Stop, or Retry
 - Execution summary displays success/failure counts and duration
@@ -76,8 +76,8 @@ The configuration file location is determined by:
           "description": "Sync content hierarchy structure"
         },
         {
-          "command": "copy-content-types",
-          "description": "Copy any missing content types"
+          "command": "sync-content-types",
+          "description": "Align content types and repository assignments"
         }
       ]
     },
@@ -101,16 +101,16 @@ The configuration file location is determined by:
 
 ### Configuration Fields
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `version` | Yes | Configuration format version (currently "1.0") |
-| `commandSets` | Yes | Array of command set definitions |
-| `commandSets[].name` | Yes | Display name for the command set |
-| `commandSets[].description` | No | Optional description shown in menu |
-| `commandSets[].commands` | Yes | Array of command entries (can be empty) |
-| `commandSets[].commands[].command` | Yes | Valid CLI command name |
-| `commandSets[].commands[].description` | No | Optional description for the command |
-| `commandSets[].commands[].parameters` | No | Pre-configured parameters (future) |
+| Field                                  | Required | Description                                    |
+| -------------------------------------- | -------- | ---------------------------------------------- |
+| `version`                              | Yes      | Configuration format version (currently "1.0") |
+| `commandSets`                          | Yes      | Array of command set definitions               |
+| `commandSets[].name`                   | Yes      | Display name for the command set               |
+| `commandSets[].description`            | No       | Optional description shown in menu             |
+| `commandSets[].commands`               | Yes      | Array of command entries (can be empty)        |
+| `commandSets[].commands[].command`     | Yes      | Valid CLI command name                         |
+| `commandSets[].commands[].description` | No       | Optional description for the command           |
+| `commandSets[].commands[].parameters`  | No       | Pre-configured parameters (future)             |
 
 ### Valid Command Names
 
@@ -122,6 +122,7 @@ The following command names can be used in command sets:
 - `bulk-sync-hierarchies`
 - `copy-content-type-schemas`
 - `sync-content-type-properties`
+- `sync-content-types`
 - `copy-content-types`
 - `copy-folder-with-content`
 - `recreate-content-items`
@@ -131,6 +132,10 @@ The following command names can be used in command sets:
 - `archive-content-type-schemas`
 - `list-folder-tree`
 - `update-locale`
+
+`copy-content-types` is accepted only as a deprecated compatibility alias for
+existing files and delegates to `sync-content-types`. It is not offered when
+creating or editing command sets.
 
 ## Execution Modes
 
@@ -161,11 +166,11 @@ execution. After selecting commands, you choose one of two secondary modes:
 
 When a command fails during execution, you're prompted with three options:
 
-| Option | Behavior |
-| --- | --- |
+| Option       | Behavior                                              |
+| ------------ | ----------------------------------------------------- |
 | **Continue** | Skip the failed command and proceed with the next one |
-| **Stop** | End execution immediately |
-| **Retry** | Attempt to run the failed command again |
+| **Stop**     | End execution immediately                             |
+| **Retry**    | Attempt to run the failed command again               |
 
 ## Managing Command Sets
 
@@ -211,8 +216,8 @@ any text editor.
 
 - Order commands logically based on dependencies
 - Group related operations together
-- Consider creating separate sets for different use cases rather than one
-  large set
+- Consider creating separate sets for different use cases rather than one large
+  set
 
 ### Testing
 
@@ -229,12 +234,23 @@ any text editor.
   "name": "Sync Prod to Dev",
   "description": "Complete production to development sync",
   "commands": [
-    { "command": "copy-content-type-schemas", "description": "Sync schemas first" },
-    { "command": "copy-content-types", "description": "Ensure content types exist" },
+    {
+      "command": "sync-content-types",
+      "description": "Align schemas, content types, settings, and repositories"
+    },
     { "command": "sync-hierarchy", "description": "Sync content hierarchies" }
   ]
 }
 ```
+
+`sync-content-types` can copy selected schemas and synchronize updated content
+types with those schemas in one preflight-driven workflow, so separate entries
+are not required for that sequence.
+
+If a set intentionally runs `copy-content-type-schemas` immediately before
+`sync-content-types`, decline schema copying in the second command to avoid
+repeating the same export/import stage. Command-set entries do not preconfigure
+the interactive answers.
 
 ### Schema Deployment
 
@@ -243,8 +259,14 @@ any text editor.
   "name": "Deploy Schema Changes",
   "description": "Deploy schema updates and sync content types",
   "commands": [
-    { "command": "copy-content-type-schemas", "description": "Deploy new schemas" },
-    { "command": "sync-content-type-properties", "description": "Update content type settings" }
+    {
+      "command": "copy-content-type-schemas",
+      "description": "Deploy new schemas"
+    },
+    {
+      "command": "sync-content-type-properties",
+      "description": "Update content type settings"
+    }
   ]
 }
 ```

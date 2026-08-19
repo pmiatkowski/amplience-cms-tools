@@ -4,6 +4,12 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+const SUPPORTED_DC_CLI_VERSION = '0.31.0';
+
+type DcCliExecute = (command: string) => Promise<{ stdout: string; stderr: string }>;
+
+const executeCommand = execAsync as DcCliExecute;
+
 /**
  * Check if dc-cli is available in the system
  */
@@ -33,6 +39,8 @@ export class DcCliCommandBuilder {
   private command: string = '';
   private args: string[] = [];
   private hub: Amplience.HubConfig | null = null;
+
+  constructor(private readonly commandExecutor: DcCliExecute = executeCommand) {}
 
   /**
    * Set the hub configuration for authentication
@@ -101,15 +109,20 @@ export class DcCliCommandBuilder {
   /**
    * Execute the built command
    */
-  async execute(): Promise<{ stdout: string; stderr: string }> {
+  async execute(
+    options: { logCommand?: boolean } = {}
+  ): Promise<{ stdout: string; stderr: string }> {
     const fullCommand = this.buildCommandString();
+    if (options.logCommand !== false) {
+      const sanitizedCommand = this.getSanitizedCommandString();
 
-    // Log command with length info for debugging (truncate long commands)
-    console.log(
-      `Executing: ${fullCommand.substring(0, 200)}${fullCommand.length > 200 ? '...' : ''}`
-    );
+      // Log command with length info for debugging (truncate long commands)
+      console.log(
+        `Executing: ${sanitizedCommand.substring(0, 200)}${sanitizedCommand.length > 200 ? '...' : ''}`
+      );
+    }
 
-    const result = await execAsync(fullCommand);
+    const result = await this.commandExecutor(fullCommand);
 
     return result;
   }
@@ -119,6 +132,16 @@ export class DcCliCommandBuilder {
    */
   getCommandString(): string {
     return this.buildCommandString();
+  }
+
+  /**
+   * Get a credential-safe command string for diagnostics.
+   */
+  getSanitizedCommandString(): string {
+    return this.buildCommandString().replace(
+      /--(patToken|clientId|clientSecret)\s+"[^"]*"/g,
+      '--$1 "***"'
+    );
   }
 }
 
@@ -135,4 +158,74 @@ export const getDcCliPath = (): string => {
   }
 
   return binPath;
+};
+
+/**
+ * Validate the exact dc-cli command surfaces used by Sync Content Types.
+ */
+export const validateContentTypeSyncCapabilities = async (
+  execute: DcCliExecute = executeCommand
+): Promise<void> => {
+  await validateDcCliVersion(execute);
+
+  const checks = [
+    {
+      name: 'content-type export',
+      command: 'content-type export --help',
+      required: ['<dir>', '--force', '--archived'],
+    },
+    {
+      name: 'content-type import',
+      command: 'content-type import --help',
+      required: ['<dir>', '--skipAssign'],
+    },
+    {
+      name: 'content-type sync',
+      command: 'content-type sync --help',
+      required: ['[id]', '--json'],
+    },
+  ];
+
+  for (const check of checks) {
+    let stdout: string;
+    try {
+      ({ stdout } = await execute(`"${getDcCliPath()}" ${check.command}`));
+    } catch {
+      throw new Error(`Could not inspect dc-cli ${check.name}.`);
+    }
+
+    for (const capability of check.required) {
+      if (!stdout.includes(capability)) {
+        throw new Error(`dc-cli ${check.name} is missing required capability: ${capability}`);
+      }
+    }
+  }
+};
+
+/**
+ * Validate that the local dc-cli binary matches the audited version.
+ */
+export const validateDcCliVersion = async (
+  execute: DcCliExecute = executeCommand
+): Promise<string> => {
+  let stdout: string;
+
+  try {
+    ({ stdout } = await execute(`"${getDcCliPath()}" --version`));
+  } catch {
+    throw new Error('Could not execute the local dc-cli binary.');
+  }
+
+  const installedVersion = stdout.match(/\b\d+\.\d+\.\d+\b/)?.[0];
+  if (!installedVersion) {
+    throw new Error('Could not determine the installed dc-cli version.');
+  }
+
+  if (installedVersion !== SUPPORTED_DC_CLI_VERSION) {
+    throw new Error(
+      `Unsupported dc-cli version ${installedVersion}. Expected ${SUPPORTED_DC_CLI_VERSION}.`
+    );
+  }
+
+  return installedVersion;
 };

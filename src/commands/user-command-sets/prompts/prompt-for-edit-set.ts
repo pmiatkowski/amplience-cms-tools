@@ -1,6 +1,6 @@
 import inquirer from 'inquirer';
 
-import { VALID_COMMAND_NAMES } from '~/services/command-set-config-service';
+import { SELECTABLE_COMMAND_NAMES } from '~/services/command-set-config-service';
 
 import { validateCommandCount, validateSetName } from './prompt-for-create-set';
 
@@ -32,7 +32,7 @@ export async function promptForAddCommands(): Promise<Amplience.CommandSetEntry[
         type: 'list',
         name: `command_${i}`,
         message: `Command ${i + 1}:`,
-        choices: [...VALID_COMMAND_NAMES],
+        choices: [...SELECTABLE_COMMAND_NAMES],
       },
       {
         type: 'input',

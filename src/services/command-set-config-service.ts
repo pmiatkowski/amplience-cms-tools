@@ -60,8 +60,8 @@ export function generateExampleConfig(): Amplience.CommandSetConfig {
             description: 'Sync content hierarchy structure',
           },
           {
-            command: 'copy-content-types',
-            description: 'Copy any missing content types',
+            command: 'sync-content-types',
+            description: 'Align content types and repository assignments',
           },
         ],
       },
@@ -203,6 +203,27 @@ export function removeCommandSetFromConfig(
 }
 
 /**
+ * Commands offered when creating or editing command sets.
+ */
+export const SELECTABLE_COMMAND_NAMES = [
+  'manage-extensions',
+  'vse-management',
+  'sync-hierarchy',
+  'bulk-sync-hierarchies',
+  'copy-content-type-schemas',
+  'sync-content-type-properties',
+  'sync-content-types',
+  'copy-folder-with-content',
+  'recreate-content-items',
+  'recreate-folder-structure',
+  'cleanup-folder',
+  'clean-repo',
+  'archive-content-type-schemas',
+  'list-folder-tree',
+  'update-locale',
+] as const;
+
+/**
  * Update a command set in a configuration object by name.
  * Returns a new config object without mutating the original.
  * If the set is not found, returns the original config unchanged.
@@ -230,23 +251,7 @@ export function updateCommandSetInConfig(
  * List of valid CLI command names that can be referenced in command sets.
  * This registry is used for validating command references in configurations.
  */
-export const VALID_COMMAND_NAMES = [
-  'manage-extensions',
-  'vse-management',
-  'sync-hierarchy',
-  'bulk-sync-hierarchies',
-  'copy-content-type-schemas',
-  'sync-content-type-properties',
-  'copy-content-types',
-  'copy-folder-with-content',
-  'recreate-content-items',
-  'recreate-folder-structure',
-  'cleanup-folder',
-  'clean-repo',
-  'archive-content-type-schemas',
-  'list-folder-tree',
-  'update-locale',
-] as const;
+export const VALID_COMMAND_NAMES = [...SELECTABLE_COMMAND_NAMES, 'copy-content-types'] as const;
 
 /**
  * Validate that all command references in the config match known command names.

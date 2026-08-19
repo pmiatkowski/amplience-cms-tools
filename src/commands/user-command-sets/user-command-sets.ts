@@ -10,6 +10,7 @@ import { runManageExtensions } from '~/commands/manage-extensions';
 import { runRecreateContentItems } from '~/commands/recreate-content-items';
 import { runRecreateFolderStructure } from '~/commands/recreate-folder-structure';
 import { runSyncContentTypeProperties } from '~/commands/sync-content-type-properties';
+import { runSyncContentTypes } from '~/commands/sync-content-types';
 import { runSyncHierarchy } from '~/commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from '~/commands/update-delivery-keys-locale';
 import { runVseManagement } from '~/commands/vse-management';
@@ -55,6 +56,7 @@ const COMMAND_REGISTRY: Record<string, () => Promise<unknown>> = {
   'bulk-sync-hierarchies': runBulkSyncHierarchies,
   'copy-content-type-schemas': copyContentTypeSchemas,
   'sync-content-type-properties': runSyncContentTypeProperties,
+  'sync-content-types': runSyncContentTypes,
   'copy-content-types': runCopyContentTypes,
   'copy-folder-with-content': runCopyFolderWithContent,
   'recreate-content-items': runRecreateContentItems,

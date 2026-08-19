@@ -7,6 +7,7 @@ import {
   validateCommandSetConfig,
   validateCommandReferences,
   generateExampleConfig,
+  VALID_COMMAND_NAMES,
 } from './command-set-config-service';
 
 vi.mock('fs');
@@ -298,6 +299,7 @@ describe('Command Set Config Service', () => {
       'bulk-sync-hierarchies',
       'copy-content-type-schemas',
       'sync-content-type-properties',
+      'sync-content-types',
       'copy-content-types',
       'copy-folder-with-content',
       'recreate-content-items',
@@ -308,6 +310,18 @@ describe('Command Set Config Service', () => {
       'list-folder-tree',
       'update-locale',
     ];
+
+    it('should generate examples with the current command and retain the legacy alias', () => {
+      const example = generateExampleConfig();
+      const commandNames = example.commandSets.flatMap(commandSet =>
+        commandSet.commands.map(command => command.command)
+      );
+
+      expect(commandNames).toContain('sync-content-types');
+      expect(commandNames).not.toContain('copy-content-types');
+      expect(VALID_COMMAND_NAMES).toContain('sync-content-types');
+      expect(VALID_COMMAND_NAMES).toContain('copy-content-types');
+    });
 
     it('should return valid for known command names', () => {
       const config: Amplience.CommandSetConfig = {

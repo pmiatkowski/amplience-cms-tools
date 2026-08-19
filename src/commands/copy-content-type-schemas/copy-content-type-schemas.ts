@@ -20,91 +20,6 @@ type SchemaValidationResult = {
   errors: string[];
 };
 
-type CopyContext = {
-  sourceHub: Amplience.HubConfig;
-  targetHub: Amplience.HubConfig;
-  specificSchemas: string[]; // Array of schema URIs to copy
-  skipConfirmations?: boolean; // Skip user confirmation prompts
-  skipValidation?: boolean; // Skip schema validation
-};
-
-type CopyResult = {
-  success: boolean; // Overall operation success
-  processedSchemas: string[]; // Successfully processed schema URIs
-  failedSchemas: { schemaId: string; error: string }[]; // Failed schemas with errors
-  totalCount: number; // Total number of schemas processed
-};
-
-type CopyContentTypeSchemasOptions = {
-  context?: CopyContext;
-};
-
-/**
- * Validate a schema file
- */
-const validateSchemaFile = async (configFilePath: string): Promise<SchemaValidationResult> => {
-  const errors: string[] = [];
-
-  try {
-    // Read the configuration file first
-    const configContent = JSON.parse(await fs.readFile(configFilePath, 'utf-8'));
-
-    // Resolve the actual schema file path
-    const actualSchemaFile = path.resolve(path.dirname(configFilePath), configContent.body);
-
-    // Check if the actual schema file exists
-    if (!fsSync.existsSync(actualSchemaFile)) {
-      return {
-        isValid: false,
-        errors: [`Schema file not found: ${configContent.body}`],
-      };
-    }
-
-    // Read and parse the actual schema content
-    const schemaContent = await fs.readFile(actualSchemaFile, 'utf-8');
-    const schema = JSON.parse(schemaContent);
-
-    // Basic schema validation
-    if (!schema.$id) {
-      errors.push('Schema missing required "$id" field');
-    }
-
-    if (!schema.title) {
-      errors.push('Schema missing required "title" field');
-    }
-
-    if (!schema.type) {
-      errors.push('Schema missing required "type" field');
-    }
-
-    if (!schema.allOf && !schema.properties && !schema.oneOf && !schema.anyOf) {
-      errors.push('Schema missing content definition (properties, allOf, oneOf, or anyOf)');
-    }
-
-    // Check for common schema structure
-    if (schema.type !== 'object') {
-      errors.push('Root schema type should be "object"');
-    }
-
-    // Validate that the schema $id matches the configuration schemaId
-    if (schema.$id !== configContent.schemaId) {
-      errors.push(
-        `Schema $id (${schema.$id}) does not match config schemaId (${configContent.schemaId})`
-      );
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      errors: [`Failed to parse schema: ${error instanceof Error ? error.message : String(error)}`],
-    };
-  }
-};
-
 export const copyContentTypeSchemas = async (
   options?: CopyContentTypeSchemasOptions
 ): Promise<CopyResult> => {
@@ -204,15 +119,22 @@ export const copyContentTypeSchemas = async (
         console.log(
           `🎯 Filtering for ${options.context.specificSchemas.length} specific schemas...`
         );
-        exportedFiles = exportedFiles.filter(file => {
+        const selectedFiles: string[] = [];
+        const unselectedFiles: string[] = [];
+        for (const file of exportedFiles) {
           try {
             const configContent = JSON.parse(fsSync.readFileSync(file, 'utf-8'));
-
-            return options.context!.specificSchemas.includes(configContent.schemaId);
+            if (options.context.specificSchemas.includes(configContent.schemaId)) {
+              selectedFiles.push(file);
+            } else {
+              unselectedFiles.push(file);
+            }
           } catch {
-            return false;
+            unselectedFiles.push(file);
           }
-        });
+        }
+        await removeSchemaConfigFiles(unselectedFiles);
+        exportedFiles = selectedFiles;
         console.log(`✅ Found ${exportedFiles.length} matching schema files`);
       } else if (schemaIdFilter.trim()) {
         console.log(`🔍 Filtering schemas using pattern: ${schemaIdFilter}`);
@@ -298,6 +220,18 @@ export const copyContentTypeSchemas = async (
             result.errors.forEach((error: string) => console.error(`    • ${error}`));
           });
 
+          if (options?.context?.failOnValidationErrors) {
+            result.failedSchemas.push(
+              ...invalidSchemas.map(({ file, result: validation }) => ({
+                schemaId: getSchemaId(file),
+                error: validation.errors.join('; '),
+              }))
+            );
+            result.totalCount = exportedFiles.length;
+
+            return result;
+          }
+
           if (!options?.context?.skipConfirmations) {
             const proceedAnyway = await promptForConfirmation(
               'Some schemas have validation errors. Do you want to proceed anyway?'
@@ -332,6 +266,9 @@ export const copyContentTypeSchemas = async (
           return result;
         }
       }
+
+      const selectedSchemaFiles = new Set(schemasToCopy);
+      await removeSchemaConfigFiles(exportedFiles.filter(file => !selectedSchemaFiles.has(file)));
 
       // 5. Content type sync confirmation - skip if context provided
       let shouldSyncContentTypes = false;
@@ -390,7 +327,9 @@ export const copyContentTypeSchemas = async (
         return result;
       }
 
-      await promptForProtectedEnvironment(targetHub);
+      if (!options?.context?.protectedEnvironmentConfirmed) {
+        await promptForProtectedEnvironment(targetHub);
+      }
 
       // 7. Bulk import schemas
       console.log(`📤 Importing ${schemasToCopy.length} schemas to ${targetHub.name}...`);
@@ -485,4 +424,134 @@ export const copyContentTypeSchemas = async (
 
     return result;
   }
+};
+
+async function removeSchemaConfigFiles(configFiles: string[]): Promise<void> {
+  for (const configFile of configFiles) {
+    let schemaFile: string | undefined;
+    try {
+      const config = JSON.parse(await fs.readFile(configFile, 'utf-8'));
+      if (typeof config.body === 'string') {
+        schemaFile = path.resolve(path.dirname(configFile), config.body);
+      }
+    } catch {
+      // The invalid config file must still be excluded from the import directory.
+    }
+
+    await removeFile(configFile);
+    if (schemaFile) {
+      await removeFile(schemaFile);
+    }
+  }
+}
+
+async function removeFile(filePath: string): Promise<void> {
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !('code' in error) ||
+      (error as NodeJS.ErrnoException).code !== 'ENOENT'
+    ) {
+      throw error;
+    }
+  }
+}
+
+function getSchemaId(configFile: string): string {
+  try {
+    const config = JSON.parse(fsSync.readFileSync(configFile, 'utf-8'));
+
+    return typeof config.schemaId === 'string' ? config.schemaId : path.basename(configFile);
+  } catch {
+    return path.basename(configFile);
+  }
+}
+
+export type CopyContentTypeSchemasOptions = {
+  context?: CopyContext;
+};
+
+export type CopyContext = {
+  sourceHub: Amplience.HubConfig;
+  targetHub: Amplience.HubConfig;
+  specificSchemas: string[]; // Array of schema URIs to copy
+  skipConfirmations?: boolean; // Skip user confirmation prompts
+  skipValidation?: boolean; // Skip schema validation
+  protectedEnvironmentConfirmed?: boolean; // Parent command already completed the challenge
+  failOnValidationErrors?: boolean; // Parent command cannot pause for validation decisions
+};
+
+/**
+ * Validate a schema file
+ */
+const validateSchemaFile = async (configFilePath: string): Promise<SchemaValidationResult> => {
+  const errors: string[] = [];
+
+  try {
+    // Read the configuration file first
+    const configContent = JSON.parse(await fs.readFile(configFilePath, 'utf-8'));
+
+    // Resolve the actual schema file path
+    const actualSchemaFile = path.resolve(path.dirname(configFilePath), configContent.body);
+
+    // Check if the actual schema file exists
+    if (!fsSync.existsSync(actualSchemaFile)) {
+      return {
+        isValid: false,
+        errors: [`Schema file not found: ${configContent.body}`],
+      };
+    }
+
+    // Read and parse the actual schema content
+    const schemaContent = await fs.readFile(actualSchemaFile, 'utf-8');
+    const schema = JSON.parse(schemaContent);
+
+    // Basic schema validation
+    if (!schema.$id) {
+      errors.push('Schema missing required "$id" field');
+    }
+
+    if (!schema.title) {
+      errors.push('Schema missing required "title" field');
+    }
+
+    if (!schema.type) {
+      errors.push('Schema missing required "type" field');
+    }
+
+    if (!schema.allOf && !schema.properties && !schema.oneOf && !schema.anyOf) {
+      errors.push('Schema missing content definition (properties, allOf, oneOf, or anyOf)');
+    }
+
+    // Check for common schema structure
+    if (schema.type !== 'object') {
+      errors.push('Root schema type should be "object"');
+    }
+
+    // Validate that the schema $id matches the configuration schemaId
+    if (schema.$id !== configContent.schemaId) {
+      errors.push(
+        `Schema $id (${schema.$id}) does not match config schemaId (${configContent.schemaId})`
+      );
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Failed to parse schema: ${error instanceof Error ? error.message : String(error)}`],
+    };
+  }
+};
+
+export type CopyResult = {
+  success: boolean; // Overall operation success
+  processedSchemas: string[]; // Successfully processed schema URIs
+  failedSchemas: { schemaId: string; error: string }[]; // Failed schemas with errors
+  totalCount: number; // Total number of schemas processed
 };

@@ -13,6 +13,7 @@ export * from './manage-extensions';
 export * from './recreate-content-items';
 export * from './recreate-folder-structure';
 export * from './sync-content-type-properties';
+export * from './sync-content-types';
 export * from './sync-hierarchy';
 export * from './update-delivery-keys-locale';
 export * from './user-command-sets';

@@ -38,6 +38,7 @@ vi.mock('~/prompts', () => ({
   promptForIncludeArchived: vi.fn(),
   promptForSchemasToSync: vi.fn(),
   promptForDryRun: vi.fn(),
+  promptForProtectedEnvironment: vi.fn(),
   promptForValidateSchemas: vi.fn(),
   promptForCommand: vi.fn(),
 }));
@@ -74,6 +75,7 @@ describe('copyContentTypeSchemas', () => {
     (prompts.promptForDryRun as Mock).mockResolvedValue(false);
     (prompts.promptForSchemasToSync as Mock).mockImplementation(files => Promise.resolve(files));
     (prompts.promptForConfirmation as Mock).mockResolvedValue(true); // Confirm action
+    (prompts.promptForProtectedEnvironment as Mock).mockResolvedValue(undefined);
 
     // Mock exec to succeed by default
     (exec as unknown as Mock).mockImplementation((_cmd, cb) => {
@@ -131,6 +133,14 @@ describe('copyContentTypeSchemas', () => {
       expect.stringContaining('content-type-schema import'),
       expect.anything()
     );
+    expect(prompts.promptForProtectedEnvironment).toHaveBeenCalledWith(mockTargetHub);
+
+    const importCallIndex = (exec as unknown as Mock).mock.calls.findIndex(([command]) =>
+      command.includes('content-type-schema import')
+    );
+    expect(
+      (prompts.promptForProtectedEnvironment as Mock).mock.invocationCallOrder[0]
+    ).toBeLessThan((exec as unknown as Mock).mock.invocationCallOrder[importCallIndex]);
 
     expect(result.success).toBe(true);
     expect(result.totalCount).toBe(2); // Based on readdir mock returning 2 files
@@ -152,6 +162,7 @@ describe('copyContentTypeSchemas', () => {
       expect.stringContaining('content-type-schema import'),
       expect.anything()
     );
+    expect(prompts.promptForProtectedEnvironment).not.toHaveBeenCalled();
 
     expect(result.success).toBe(true);
     expect(result.totalCount).toBe(2);
@@ -240,5 +251,6 @@ describe('copyContentTypeSchemas', () => {
 
     // Should filter for specific schema
     expect(result.totalCount).toBe(2); // Our mock readdir returns 2, filtering logic depends on file content
+    expect(prompts.promptForProtectedEnvironment).toHaveBeenCalledWith(mockTargetHub);
   });
 });

@@ -13,6 +13,7 @@ export { promptForHub } from './prompt-for-hub';
 export { promptForIncludeArchived } from './prompt-for-include-archived';
 export { promptForItemsToClean } from './prompt-for-items-to-clean';
 export { promptForLocale } from './prompt-for-locale';
+export { promptForProtectedEnvironment } from './prompt-for-protected-environment';
 export { promptForRepository } from './prompt-for-repository';
 export { promptForSchemaIdFilter } from './prompt-for-schema-id-filter';
 export { promptForSchemasToArchive } from './prompt-for-schemas-to-archive';

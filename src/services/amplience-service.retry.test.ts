@@ -31,6 +31,12 @@ describe('AmplienceService - HTTP 429 Retry Logic', () => {
     _embedded: {
       'content-repositories': [{ id: 'test-repo-id', name: 'Test Repository' }],
     },
+    page: {
+      size: 100,
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+    },
   };
 
   // Store original environment variables

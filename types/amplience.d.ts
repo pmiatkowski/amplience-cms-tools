@@ -215,6 +215,7 @@ declare global {
       envKey: string;
       hubId: string;
       extUrl?: string;
+      protected?: boolean;
     };
 
     /**

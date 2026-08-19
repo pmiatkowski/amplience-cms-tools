@@ -4,6 +4,7 @@ import {
   promptForRepository,
   promptForFolder,
   promptForConfirmation,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { listNestedSubfolders, FolderTreeNode } from '~/services/actions/list-nested-subfolders';
 import { recreateFolderStructure } from '~/services/actions/recreate-folder-structure';
@@ -121,6 +122,8 @@ export async function runRecreateFolderStructure(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(targetHub, targetRepository);
 
     // === EXECUTE RECREATION ===
     console.log('\n🚀 Creating folder structure...');

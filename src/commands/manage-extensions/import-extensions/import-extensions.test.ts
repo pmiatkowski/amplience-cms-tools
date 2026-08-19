@@ -2,15 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import * as appConfig from '~/app-config';
 import * as prompts from '~/prompts';
-import { importExtensions } from '~/services/actions/import-extensions';
+import { importExtensions, previewExtensions } from '~/services/actions/import-extensions';
 import * as utils from '~/utils';
 
 import { runImportExtensions } from './import-extensions';
+import { promptForExtensionFilterPattern } from './prompt-for-extension-filter-pattern';
+import { promptForExtensionInputDirectory } from './prompt-for-extension-input-directory';
+import { promptForImportConfirmation } from './prompt-for-import-confirmation';
 
 // Mock dependencies
 vi.mock('~/prompts');
 vi.mock('~/utils');
 vi.mock('~/app-config');
+vi.mock('./prompt-for-extension-filter-pattern');
+vi.mock('./prompt-for-extension-input-directory');
+vi.mock('./prompt-for-import-confirmation');
 vi.mock('~/services/actions/import-extensions', async () => {
   const actual = await vi.importActual<typeof import('~/services/actions/import-extensions')>(
     '~/services/actions/import-extensions'
@@ -19,6 +25,7 @@ vi.mock('~/services/actions/import-extensions', async () => {
   return {
     ...actual,
     importExtensions: vi.fn(),
+    previewExtensions: vi.fn(),
   };
 });
 
@@ -124,6 +131,49 @@ describe('runImportExtensions', () => {
       // Will be fully implemented in Task 1.7
       // Placeholder assertion
       expect(true).toBe(true);
+    });
+  });
+
+  describe('protected hub confirmation', () => {
+    it('should challenge the protected hub before importing extensions', async () => {
+      const protectedHub = { ...mockHub, protected: true };
+      const extension = {
+        extension: { name: 'Test extension', url: 'https://example.com' },
+        filePath: 'C:/extensions/test.json',
+      } as never;
+
+      vi.mocked(utils.checkDcCliAvailability).mockResolvedValue(true);
+      vi.mocked(appConfig.getHubConfigs).mockReturnValue([protectedHub]);
+      mockPromptForHub.mockResolvedValue(protectedHub);
+      vi.mocked(promptForExtensionInputDirectory).mockResolvedValue('./extensions');
+      vi.mocked(promptForExtensionFilterPattern).mockResolvedValue('.*');
+      vi.mocked(previewExtensions).mockResolvedValue({
+        sourceDir: './extensions',
+        totalFilesFound: 1,
+        matchedCount: 1,
+        filteredOutCount: 0,
+        invalidCount: 0,
+        kept: [extension],
+        invalidFiles: [],
+      });
+      vi.mocked(promptForImportConfirmation).mockResolvedValue(true);
+      vi.mocked(prompts.promptForProtectedEnvironment).mockResolvedValue(undefined);
+      mockImportExtensions.mockResolvedValue({
+        sourceDir: './extensions',
+        totalFilesFound: 1,
+        matchedCount: 1,
+        filteredOutCount: 0,
+        invalidCount: 0,
+        importedCount: 1,
+        invalidFiles: [],
+      });
+
+      await runImportExtensions();
+
+      expect(prompts.promptForProtectedEnvironment).toHaveBeenCalledWith(protectedHub);
+      expect(
+        vi.mocked(prompts.promptForProtectedEnvironment).mock.invocationCallOrder[0]
+      ).toBeLessThan(mockImportExtensions.mock.invocationCallOrder[0]);
     });
   });
 

@@ -3,6 +3,21 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
+function getProtectedValue(hubName: string): boolean {
+  const key = `AMP_HUB_${hubName}_PROTECTED`;
+  const value = process.env[key]?.trim();
+
+  if (!value || value === '0') {
+    return false;
+  }
+
+  if (value === '1') {
+    return true;
+  }
+
+  throw new Error(`Invalid value for ${key}: "${value}". Expected "0" or "1".`);
+}
+
 function getHubConfigs(): Amplience.HubConfig[] {
   const patToken = process.env.PAT_TOKEN;
   const configs: Amplience.HubConfig[] = [];
@@ -23,7 +38,13 @@ function getHubConfigs(): Amplience.HubConfig[] {
       const name = process.env[`AMP_HUB_${hubName}_HUB_NAME`];
       const extUrl = process.env[`AMP_HUB_${hubName}_EXT_URL`];
       if (hubId && name) {
-        const config: Amplience.HubConfig = { name, envKey: hubName, hubId, patToken };
+        const config: Amplience.HubConfig = {
+          name,
+          envKey: hubName,
+          hubId,
+          patToken,
+          protected: getProtectedValue(hubName),
+        };
         if (extUrl) {
           config.extUrl = extUrl;
         }
@@ -54,7 +75,14 @@ function getHubConfigs(): Amplience.HubConfig[] {
     const extUrl = process.env[`AMP_HUB_${hubName}_EXT_URL`];
 
     if (clientId && clientSecret && hubId && name) {
-      const config: Amplience.HubConfig = { name, envKey: hubName, clientId, clientSecret, hubId };
+      const config: Amplience.HubConfig = {
+        name,
+        envKey: hubName,
+        clientId,
+        clientSecret,
+        hubId,
+        protected: getProtectedValue(hubName),
+      };
       if (extUrl) {
         config.extUrl = extUrl;
       }

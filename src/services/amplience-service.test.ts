@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { AmplienceApiError } from './amplience-api-error';
 import { AmplienceService } from './amplience-service';
 
 // Mock fetch globally
@@ -24,6 +25,7 @@ describe('AmplienceService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockReset();
   });
 
   describe('OAuth Authentication', () => {
@@ -328,6 +330,349 @@ describe('AmplienceService', () => {
 
       // Verify that only the API call was made (no OAuth)
       expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    describe('validateAuthentication', () => {
+      it('makes one lightweight authenticated request without OAuth', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          headers: new Headers(),
+        });
+
+        await service.validateAuthentication();
+
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/hubs/test-hub-id-pat/content-repositories?page=0&size=1',
+          expect.any(Object)
+        );
+
+        const requestOptions = mockFetch.mock.calls[0][1];
+        expect(requestOptions.headers).toBeInstanceOf(Headers);
+        expect(requestOptions.headers.get('Authorization')).toBe('Bearer test-pat-token-12345');
+      });
+
+      it('propagates structured authentication failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          text: () => Promise.resolve('Invalid credentials'),
+        });
+
+        await expect(service.validateAuthentication()).rejects.toMatchObject({
+          status: 401,
+          message: 'API Error: 401 Unauthorized - Invalid credentials',
+        });
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('getRepositories', () => {
+      it('exposes the HTTP status for authentication failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          text: () => Promise.resolve('Invalid credentials'),
+        });
+
+        const request = service.getRepositories();
+
+        await expect(request).rejects.toBeInstanceOf(AmplienceApiError);
+        await expect(request).rejects.toMatchObject({
+          status: 401,
+          message: 'API Error: 401 Unauthorized - Invalid credentials',
+        });
+      });
+
+      it('aggregates all HAL pages in response order', async () => {
+        const firstRepository = {
+          id: 'repo-1',
+          name: 'Repository 1',
+        } as Amplience.ContentRepository;
+        const secondRepository = {
+          id: 'repo-2',
+          name: 'Repository 2',
+        } as Amplience.ContentRepository;
+        const thirdRepository = {
+          id: 'repo-3',
+          name: 'Repository 3',
+        } as Amplience.ContentRepository;
+
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                _embedded: {
+                  'content-repositories': [firstRepository, secondRepository],
+                },
+                page: {
+                  size: 100,
+                  totalElements: 3,
+                  totalPages: 2,
+                  number: 0,
+                },
+              }),
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                _embedded: {
+                  'content-repositories': [thirdRepository],
+                },
+                page: {
+                  size: 100,
+                  totalElements: 3,
+                  totalPages: 2,
+                  number: 1,
+                },
+              }),
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+          });
+
+        const repositories = await service.getRepositories();
+
+        expect(repositories).toEqual([firstRepository, secondRepository, thirdRepository]);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(mockFetch).toHaveBeenNthCalledWith(
+          1,
+          'https://api.amplience.net/v2/content/hubs/test-hub-id-pat/content-repositories?page=0&size=100',
+          expect.any(Object)
+        );
+        expect(mockFetch).toHaveBeenNthCalledWith(
+          2,
+          'https://api.amplience.net/v2/content/hubs/test-hub-id-pat/content-repositories?page=1&size=100',
+          expect.any(Object)
+        );
+      });
+
+      it('returns an empty list when the initial response reports zero pages', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              _embedded: {
+                'content-repositories': [],
+              },
+              page: {
+                size: 100,
+                totalElements: 0,
+                totalPages: 0,
+                number: 0,
+              },
+            }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        await expect(service.getRepositories()).resolves.toEqual([]);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/hubs/test-hub-id-pat/content-repositories?page=0&size=100',
+          expect.any(Object)
+        );
+      });
+
+      it('propagates a later page error instead of returning a partial list', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                _embedded: {
+                  'content-repositories': [
+                    {
+                      id: 'repo-1',
+                      name: 'Repository 1',
+                    } as Amplience.ContentRepository,
+                  ],
+                },
+                page: {
+                  size: 100,
+                  totalElements: 2,
+                  totalPages: 2,
+                  number: 0,
+                },
+              }),
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+          })
+          .mockResolvedValueOnce({
+            ok: false,
+            status: 500,
+            statusText: 'Internal Server Error',
+            text: () => Promise.resolve('Unexpected failure.'),
+          });
+
+        await expect(service.getRepositories()).rejects.toThrow(
+          'API Error: 500 Internal Server Error'
+        );
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe('assignDeliveryKey', () => {
+      it('patches the delivery key with the current item version', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ id: 'item-1', version: 4 }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const success = await service.assignDeliveryKey('item-1', 'article/key', 3);
+
+        expect(success).toBe(true);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/content-items/item-1/delivery-key',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({ deliveryKey: 'article/key', version: 3 }),
+          })
+        );
+      });
+    });
+
+    describe('getContentItemByDeliveryKey', () => {
+      it('returns the hub item that owns a delivery key', async () => {
+        const targetItem = {
+          id: 'target-item',
+          label: 'Existing item',
+          contentRepositoryId: 'other-repo',
+          body: { _meta: { deliveryKey: 'en/news/article' } },
+        } as Amplience.ContentItemWithDetails;
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(targetItem),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const result = await service.getContentItemByDeliveryKey('en/news/article');
+
+        expect(result).toEqual(targetItem);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/hubs/test-hub-id-pat/delivery-keys/content-item?key=en%2Fnews%2Farticle',
+          expect.any(Object)
+        );
+      });
+
+      it('returns null when a 403 response leaves the owner unresolved', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          text: () => Promise.resolve('Authorization required.'),
+        });
+
+        await expect(service.getContentItemByDeliveryKey('unresolved/key')).resolves.toBeNull();
+      });
+
+      it('returns null when a 404 response leaves the owner unresolved', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          text: () => Promise.resolve(''),
+        });
+
+        await expect(service.getContentItemByDeliveryKey('unresolved/key')).resolves.toBeNull();
+      });
+
+      it('propagates genuine delivery-key lookup authentication failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          text: () => Promise.resolve('Authorization required.'),
+        });
+
+        await expect(service.getContentItemByDeliveryKey('restricted/key')).rejects.toThrow(
+          'API Error: 401 Unauthorized'
+        );
+      });
+
+      it('propagates delivery-key lookup server failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          text: () => Promise.resolve('Unexpected failure.'),
+        });
+
+        await expect(service.getContentItemByDeliveryKey('failed/key')).rejects.toThrow(
+          'API Error: 500 Internal Server Error'
+        );
+      });
+    });
+
+    describe('getContentTypes', () => {
+      it('returns an empty list for a repository without assigned content types', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 'repo-1',
+              name: 'Repository',
+              label: 'Repository',
+              status: 'ACTIVE',
+            }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const contentTypes = await service.getContentTypes('repo-1');
+
+        expect(contentTypes).toEqual([]);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/content-repositories/repo-1',
+          expect.any(Object)
+        );
+      });
+
+      it('returns content types embedded in the repository response', async () => {
+        const firstContentType = {
+          id: 'type-1',
+          contentTypeUri: 'https://schema.example.com/one',
+        } as Amplience.ContentType;
+        const secondContentType = {
+          id: 'type-2',
+          contentTypeUri: 'https://schema.example.com/two',
+        } as Amplience.ContentType;
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 'repo-1',
+              name: 'Repository',
+              label: 'Repository',
+              status: 'ACTIVE',
+              contentTypes: [firstContentType, secondContentType],
+            }),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        const contentTypes = await service.getContentTypes('repo-1');
+
+        expect(contentTypes).toEqual([firstContentType, secondContentType]);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.amplience.net/v2/content/content-repositories/repo-1',
+          expect.any(Object)
+        );
+      });
+
+      it('propagates repository assignment lookup failures', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          text: () => Promise.resolve('Authorization required.'),
+        });
+
+        await expect(service.getContentTypes('repo-1')).rejects.toThrow('API Error: 403 Forbidden');
+      });
     });
   });
 });

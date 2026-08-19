@@ -91,8 +91,8 @@ async function getAllNestedSubfoldersWithParents(
         foldersToProcess.push(...subfolders.map(folder => folder.id));
       }
     } catch (error) {
-      // Log error but continue processing other folders
-      console.warn(`Failed to get subfolders for folder ${currentFolderId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to get subfolders for folder ${currentFolderId}: ${errorMessage}`);
     }
   }
 

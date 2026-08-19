@@ -2,6 +2,7 @@ import { getHubConfigs } from '~/app-config';
 import {
   promptForHub,
   promptForConfirmation,
+  promptForProtectedEnvironment,
   promptForSchemaIdFilter,
   promptForValidateSchemas,
 } from '~/prompts';
@@ -369,6 +370,8 @@ export async function runCopyContentTypes(): Promise<void> {
 
       return;
     }
+
+    await promptForProtectedEnvironment(targetHub);
 
     // === EXECUTE SYNC PLAN ===
     console.log('\n🚀 Executing sync plan...');

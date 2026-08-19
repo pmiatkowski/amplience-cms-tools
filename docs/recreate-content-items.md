@@ -81,21 +81,105 @@ The recreation process follows a comprehensive step-by-step workflow:
 When recreating items across hubs, content references (`content-reference` and
 `content-link` properties) are automatically resolved:
 
-- **Automatic Discovery**: All references in item bodies are discovered recursively
-- **Target Matching**: References are matched to target hub items by delivery key or schema+label
+- **Automatic Discovery**: All references in item bodies are discovered
+  recursively
+- **Target Matching**: References are matched to target hub items by delivery
+  key or schema+label
 - **Recursive Creation**: Missing referenced items are created automatically
-- **Circular Handling**: Circular references are resolved using two-phase creation
-- **External Flagging**: References outside the source repository are flagged for manual handling
+- **Dependency Ordering**: Selected, hierarchy, and recursively referenced items
+  are created in reference dependency order
+- **Immediate ID Mapping**: Each successful creation is added to the
+  source-to-target map before the next item body is prepared
+- **Circular Handling**: Circular references are resolved using two-phase
+  creation
+- **External Flagging**: References outside the source repository are flagged
+  for manual handling
 
-See [Content Reference Resolution](./content-reference-resolution.md) for details.
+See [Content Reference Resolution](./content-reference-resolution.md) for
+details.
 
-### 7. Execution and Verification
+### 7. Content Type and Delivery Key Preflight
+
+Before asking for confirmation, the command validates every content type needed
+by items that may be created in the target repository. This includes:
+
+- Explicitly selected items and automatically included hierarchy descendants
+- Recursively discovered referenced items that do not already exist in the
+  target hub
+- The complete `contentTypes` assignment list returned by the target repository
+  resource
+
+Referenced items already matched in the target and external references outside
+the source repository are not creation candidates. If an assignment is missing,
+the command prints each content type URI, its affected-item count, and an
+indented list of item labels and IDs. Items without schema metadata and failures
+to load repository assignments are reported separately.
+
+The command stops before confirmation and no target content items are created
+when preflight is blocked. It also stops before target selection if details for
+any selected item cannot be loaded for hierarchy analysis.
+
+Recursive reference discovery is strict by default. If discovery fails, the
+command stops because it cannot prove that every required content type was
+validated. This policy is controlled in `src/config.ts`:
+
+```typescript
+contentTypeValidation: {
+  abortOnReferenceDiscoveryFailure: true,
+}
+```
+
+Setting the flag to `false` validates only the selected and hierarchy items,
+prints a warning, and continues with unresolved content references nullified.
+Target matching or dependency-planning failures, known missing assignments,
+unknown schemas, and assignment lookup failures always block execution
+regardless of this flag.
+
+The command checks the same creation-candidate list for delivery-key conflicts.
+It starts with Amplience's official
+`GET /hubs/{hubId}/delivery-keys/content-item` lookup, which quickly identifies
+an existing owner. If any candidate owner is unresolved by this direct stage,
+the command performs one complete fallback inventory: it paginates all
+target-hub repositories returned to the configured credential, fetches full-body
+`ACTIVE` and `ARCHIVED` items separately from every repository, and compares
+their delivery keys.
+
+An unresolved direct lookup does not establish that a key is available. The
+fallback inventory is fail-closed: failure to list or paginate repositories, or
+to fetch any repository's `ACTIVE` or `ARCHIVED` pages, blocks before
+confirmation and mutation. The error identifies the failed stage and repository
+when available, and partial inventory is never accepted. Coverage is limited to
+repositories returned to the configured credential; it does not imply visibility
+beyond that credential's API ACLs.
+
+Delivery keys are unique across the target hub. Duplicate source keys and any
+owner found by direct lookup or inventory block the operation. Output identifies
+the key, every affected source item, and the existing owner's label, ID, and
+repository. The command does not overwrite, delete, or silently reuse an owner.
+This also catches content left by a partial run, so a retry stops before
+creating duplicates and lets the user resolve the existing content deliberately.
+
+During fallback, progress is reported once per repository after both status
+scans finish. A completed validation reports one final delivery-key completion;
+it does not print one console line per key.
+
+### 8. Execution and Verification
 
 - Displays a comprehensive recreation summary before execution
-- Shows reference resolution preview (matched, to create, external)
+- Shows reference resolution, content-type validation, and hub-wide delivery-key
+  validation results before confirmation
+- Separates selected/hierarchy items from recursively referenced items and
+  displays the total number of items that may be created
 - Processes items with progress tracking
 - Handles folder mapping between source and target locations
-- Provides detailed success/failure reporting
+- Provides detailed success/failure reporting that includes referenced-item
+  creation outcomes
+- Treats required post-creation work, such as delivery-key assignment, as part
+  of each item's success or failure result
+- Reports publication failures separately from creation failures and does not
+  mark the overall command successful when required publishing fails
+- Reports command completion from actual created and failed counts; partial
+  creation is not presented as a successful operation
 
 The system intelligently handles complex scenarios including cross-hub
 migration, folder structure preservation, automatic hierarchy descendant

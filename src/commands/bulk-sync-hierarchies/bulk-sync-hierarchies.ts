@@ -4,6 +4,7 @@ import {
   promptForRepository,
   promptForDryRun,
   promptForConfirmation,
+  promptForProtectedEnvironment,
 } from '~/prompts';
 import { bulkSyncHierarchies } from '~/services/actions';
 import { AmplienceService } from '~/services/amplience-service';
@@ -253,6 +254,10 @@ export async function runBulkSyncHierarchies(): Promise<void> {
     }
 
     console.log('✅ All hierarchy trees built\n');
+
+    if (!isDryRun) {
+      await promptForProtectedEnvironment(targetHub, targetRepo);
+    }
 
     // Step 7: Execute Bulk Synchronization
     console.log('🚀 Step 7: Executing Bulk Synchronization');

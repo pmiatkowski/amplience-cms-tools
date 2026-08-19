@@ -39,8 +39,20 @@ describe('app-config', () => {
       expect(configs).toHaveLength(2);
       expect(configs).toEqual(
         expect.arrayContaining([
-          { name: 'Development', envKey: 'DEV', hubId: 'dev-hub-id', patToken: 'pat-token-123' },
-          { name: 'Production', envKey: 'PROD', hubId: 'prod-hub-id', patToken: 'pat-token-123' },
+          {
+            name: 'Development',
+            envKey: 'DEV',
+            hubId: 'dev-hub-id',
+            patToken: 'pat-token-123',
+            protected: false,
+          },
+          {
+            name: 'Production',
+            envKey: 'PROD',
+            hubId: 'prod-hub-id',
+            patToken: 'pat-token-123',
+            protected: false,
+          },
         ])
       );
     });
@@ -70,6 +82,7 @@ describe('app-config', () => {
         envKey: 'DEV',
         hubId: 'dev-hub-id',
         patToken: 'pat-token-abc',
+        protected: false,
       });
     });
 
@@ -118,6 +131,7 @@ describe('app-config', () => {
             clientId: 'dev-client-id',
             clientSecret: 'dev-client-secret',
             hubId: 'dev-hub-id',
+            protected: false,
           },
           {
             name: 'Production',
@@ -125,6 +139,7 @@ describe('app-config', () => {
             clientId: 'prod-client-id',
             clientSecret: 'prod-client-secret',
             hubId: 'prod-hub-id',
+            protected: false,
           },
         ])
       );
@@ -169,6 +184,7 @@ describe('app-config', () => {
         clientId: 'staging-client-id',
         clientSecret: 'staging-client-secret',
         hubId: 'staging-hub-id',
+        protected: false,
       });
     });
 
@@ -246,7 +262,57 @@ describe('app-config', () => {
         clientId: 'env1-client-id',
         clientSecret: 'env1-client-secret',
         hubId: 'env1-hub-id',
+        protected: false,
       });
+    });
+
+    it('should parse protected flag for PAT authentication', async () => {
+      process.env.PAT_TOKEN = 'pat-token';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      process.env.AMP_HUB_DEV_PROTECTED = '1';
+
+      const { getHubConfigs } = await import('./app-config');
+
+      expect(getHubConfigs()[0].protected).toBe(true);
+    });
+
+    it('should parse protected flag for OAuth authentication', async () => {
+      process.env.AMP_HUB_DEV_CLIENT_ID = 'dev-client-id';
+      process.env.AMP_HUB_DEV_CLIENT_SECRET = 'dev-client-secret';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      process.env.AMP_HUB_DEV_PROTECTED = '1';
+
+      const { getHubConfigs } = await import('./app-config');
+
+      expect(getHubConfigs()[0].protected).toBe(true);
+    });
+
+    it.each([undefined, '', '0'])('should default protected value %s to false', async value => {
+      process.env.PAT_TOKEN = 'pat-token';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      if (value !== undefined) {
+        process.env.AMP_HUB_DEV_PROTECTED = value;
+      }
+
+      const { getHubConfigs } = await import('./app-config');
+
+      expect(getHubConfigs()[0].protected).toBe(false);
+    });
+
+    it.each(['true', '2'])('should reject invalid protected value %s', async value => {
+      process.env.PAT_TOKEN = 'pat-token';
+      process.env.AMP_HUB_DEV_HUB_ID = 'dev-hub-id';
+      process.env.AMP_HUB_DEV_HUB_NAME = 'Development';
+      process.env.AMP_HUB_DEV_PROTECTED = value;
+
+      const { getHubConfigs } = await import('./app-config');
+
+      expect(() => getHubConfigs()).toThrow(
+        `Invalid value for AMP_HUB_DEV_PROTECTED: "${value}". Expected "0" or "1".`
+      );
     });
   });
 });

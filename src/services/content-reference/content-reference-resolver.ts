@@ -77,7 +77,8 @@ export async function executePhase1Creation(
         if (entry.sourceItem.body._meta?.deliveryKey) {
           await targetService.assignDeliveryKey(
             result.updatedItem.id,
-            entry.sourceItem.body._meta.deliveryKey
+            entry.sourceItem.body._meta.deliveryKey,
+            result.updatedItem.version
           );
         }
       } else {
@@ -241,6 +242,7 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
     initialItemIds,
     onProgress,
   } = options;
+  let failurePhase: ResolverFailurePhase = 'discovery';
 
   try {
     // Step 1: Create registry
@@ -250,12 +252,11 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
     onProgress?.('discovery', 0, initialItemIds.length);
 
     // Fetch all items in source repository to determine external references
-    const sourceRepoItems = await sourceService.getAllContentItems(
-      sourceRepositoryId,
-      () => {},
-      {}
-    );
+    const sourceRepoItems = await sourceService.getAllContentItems(sourceRepositoryId, () => {}, {
+      status: ['ACTIVE', 'ARCHIVED'] as Amplience.ContentStatus[],
+    });
     const sourceRepoItemIds = new Set(sourceRepoItems.map(item => item.id));
+    const initialItemIdSet = new Set(initialItemIds);
 
     // Process each initial item and discover its references
     const processedIds = new Set<string>();
@@ -269,19 +270,22 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
       }
       processedIds.add(currentId);
 
+      // References outside the selected source repository will not be created.
+      // Do not let an inaccessible external item make internal discovery incomplete.
+      if (!initialItemIdSet.has(currentId) && !sourceRepoItemIds.has(currentId)) {
+        markExternalReference(registry, currentId);
+        onProgress?.('discovery', processedIds.size, processedIds.size + queue.length);
+        continue;
+      }
+
       // Fetch the item
       const item = await sourceService.getContentItemWithDetails(currentId);
       if (!item) {
-        continue;
+        throw new Error(`Could not fetch source content item ${currentId} during discovery`);
       }
 
       // Scan for references
       const scanResult = scanContentItem(item);
-
-      // Check if this item is external (outside the repository)
-      if (!sourceRepoItemIds.has(currentId)) {
-        markExternalReference(registry, currentId);
-      }
 
       // Register the item
       registerItem(registry, item, scanResult.references);
@@ -300,6 +304,7 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
     buildReverseReferences(registry);
 
     // Step 4: Fetch target items and match
+    failurePhase = 'matching';
     onProgress?.('matching', 0, registry.entries.size);
 
     const targetItems = await targetService.getAllContentItems(targetRepositoryId, () => {}, {});
@@ -316,7 +321,8 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
 
       if (matchResult.status === 'matched' && matchResult.targetItem) {
         recordMapping(registry, sourceId, matchResult.targetItem.id);
-        matchCount++;
+      } else if (matchResult.status === 'multiple_matches') {
+        throw new Error(`Multiple target matches found for source content item ${sourceId}`);
       } else if (matchResult.status === 'no_match') {
         markUnresolved(registry, sourceId);
       }
@@ -326,6 +332,7 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
     }
 
     // Step 5: Build dependency graph
+    failurePhase = 'planning';
     const graph = buildDependencyGraph(registry);
     const circularGroups = graph.circularGroups;
 
@@ -336,7 +343,7 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
     const stats = getRegistryStats(registry);
 
     const resolution: ReferenceResolutionResult = {
-      totalDiscovered: stats.totalItems,
+      totalDiscovered: new Set([...registry.entries.keys(), ...registry.externalReferenceIds]).size,
       matchedCount: stats.mappedItems,
       toCreateCount: stats.unmappedItems,
       unresolvedCount: stats.unresolvedItems,
@@ -368,9 +375,12 @@ export async function resolveContentReferences(options: ResolverOptions): Promis
       },
       registry: createReferenceRegistry(),
       error: errorMessage,
+      failurePhase,
     };
   }
 }
+
+export type ResolverFailurePhase = 'discovery' | 'matching' | 'planning';
 
 /**
  * Options for the content reference resolver
@@ -390,16 +400,24 @@ export type ResolverOptions = {
   onProgress?: (phase: string, current: number, total: number) => void;
 };
 
-/**
- * Result of the content reference resolution
- */
-export type ResolverResult = {
-  /** Whether resolution was successful */
-  success: boolean;
-  /** The resolution result details */
-  resolution: ReferenceResolutionResult;
-  /** The populated registry */
-  registry: ReferenceRegistry;
-  /** Error message if resolution failed */
-  error?: string;
-};
+export type ResolverResult =
+  | {
+      /** Whether resolution was successful */
+      success: true;
+      /** The resolution result details */
+      resolution: ReferenceResolutionResult;
+      /** The populated registry */
+      registry: ReferenceRegistry;
+    }
+  | {
+      /** Whether resolution was successful */
+      success: false;
+      /** The empty resolution result retained for existing callers */
+      resolution: ReferenceResolutionResult;
+      /** The empty registry retained for existing callers */
+      registry: ReferenceRegistry;
+      /** Error message describing the failed phase */
+      error: string;
+      /** Resolver phase that failed */
+      failurePhase: ResolverFailurePhase;
+    };

@@ -140,6 +140,8 @@ The tool supports two authentication methods (configured via `.env`):
 - If `PAT_TOKEN` is set, it takes precedence for all hubs
 - Each hub can optionally include: `EXT_URL` (valid HTTPS URL pointing to the
   hub's Amplience extensions interfaces)
+- Each hub can optionally include: `PROTECTED` (`0` by default; `1` requires
+  exact typed confirmation before live remote writes)
 
 **Example Hub Configuration:**
 
@@ -150,12 +152,14 @@ AMP_HUB_DEV_CLIENT_SECRET=client_secret_here
 AMP_HUB_DEV_HUB_ID=hub_id_here
 AMP_HUB_DEV_HUB_NAME=DEV
 AMP_HUB_DEV_EXT_URL=https://dev.amplience.net
+AMP_HUB_DEV_PROTECTED=0
 
 # PAT
 PAT_TOKEN=token_here
 AMP_HUB_PROD_HUB_ID=hub_id_here
 AMP_HUB_PROD_HUB_NAME=PROD
 AMP_HUB_PROD_EXT_URL=https://prod.amplience.net
+AMP_HUB_PROD_PROTECTED=1
 ```
 
 See `src/app-config.ts` for implementation.

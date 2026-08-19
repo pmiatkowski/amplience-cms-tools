@@ -78,6 +78,16 @@ const result = await syncContentTypeProperties({
     skipConfirmations: false,
   },
 });
+
+// Sync an exact set selected and verified by a parent workflow
+const exactResult = await syncContentTypeProperties({
+  context: {
+    targetHub: myHubConfig,
+    targetContentTypeIds: ['content-type-id-1', 'content-type-id-2'],
+    skipConfirmations: true,
+    protectedEnvironmentConfirmed: true,
+  },
+});
 ```
 
 ## Integration with Copy Content Type Schemas
@@ -95,16 +105,41 @@ If you answer "Yes", the system will:
 2. Filter content types to only those using the newly copied schemas
 3. Synchronize those content types automatically
 
+## Integration with Sync Content Types
+
+`Sync Content Types` asks during preflight whether successfully changed content
+types should be synchronized with their target schemas. The answer is stored in
+the confirmed plan. After alignment and post-import verification, this command
+is called non-interactively with exact target content type IDs.
+
+The candidate URI set combines successfully verified creates, settings updates,
+and unarchives with every schema successfully copied by the parent run. The
+parent resolves those URIs against the current target content type list and
+passes the resulting exact IDs. A repository-only change does not add a
+candidate by itself, but the same type can qualify because its schema was
+copied. The child command does not repeat ordinary or protected-environment
+prompts because the parent completed them before execution started.
+
+Per-ID command diagnostics are suppressed while the progress bar is active, so
+the bar remains on one updating terminal line. Individual failures are retained
+and displayed after the bar stops.
+
 ## Parameters
 
 ### Context Object (for programmatic use)
 
-| Parameter           | Type                              | Required | Description                                    |
-| ------------------- | --------------------------------- | -------- | ---------------------------------------------- |
-| `targetHub`         | `Amplience.HubConfig`             | Yes      | Target hub configuration                       |
-| `schemaIdFilter`    | `string`                          | No       | Regex pattern to filter by schema URI          |
-| `statusFilter`      | `'ACTIVE' \| 'ARCHIVED' \| 'ALL'` | No       | Content type status filter (default: 'ACTIVE') |
-| `skipConfirmations` | `boolean`                         | No       | Skip user confirmation prompts                 |
+| Parameter                       | Type                              | Required | Description                                                  |
+| ------------------------------- | --------------------------------- | -------- | ------------------------------------------------------------ |
+| `targetHub`                     | `Amplience.HubConfig`             | Yes      | Target hub configuration                                     |
+| `schemaIdFilter`                | `string`                          | No       | Regex pattern to filter by schema URI                        |
+| `statusFilter`                  | `'ACTIVE' \| 'ARCHIVED' \| 'ALL'` | No       | Content type status filter (default: 'ACTIVE')               |
+| `targetContentTypeIds`          | `string[]`                        | No       | Exact target IDs; takes precedence over regex/status filters |
+| `skipConfirmations`             | `boolean`                         | No       | Skip ordinary confirmation prompts                           |
+| `protectedEnvironmentConfirmed` | `boolean`                         | No       | Parent already completed the protected-hub challenge         |
+
+`skipConfirmations` alone does not bypass protected-hub safety. Unless
+`protectedEnvironmentConfirmed` is also true, the command still performs the
+protected-environment challenge before remote writes.
 
 ### Return Object
 
@@ -169,8 +204,8 @@ When using the "Copy content-type-schemas" command:
    processing time
 2. **Active Content Types**: Usually only active content types need
    synchronization
-3. **Test First**: Use dry-run mode in copy-content-type-schemas to preview
-   which schemas will be copied
+3. **Test First**: Use dry-run mode in Sync Content Types to preview cross-hub
+   content type and repository changes
 4. **Wait for Indexing**: When syncing after schema copy, the system
    automatically waits for indexing
 5. **Monitor Errors**: Review failed synchronizations and retry if needed
@@ -179,6 +214,8 @@ When using the "Copy content-type-schemas" command:
 
 - Uses `dc-cli content-type list --json` to retrieve content types
 - Executes `dc-cli content-type sync {id} --json` for each content type
+- Suppresses per-item command diagnostics while the progress bar is active so
+  progress remains on one updating terminal line
 - Supports Windows and Unix-based systems
 - Progress feedback via cli-progress library
 - Regex filtering uses case-insensitive matching
@@ -186,13 +223,14 @@ When using the "Copy content-type-schemas" command:
 ## Related Commands
 
 - **Copy Content Type Schemas**: Often used before this command
-- **Copy Content Types**: Creates new content types (doesn't sync existing ones)
+- **Sync Content Types**: Creates or updates cross-hub content types and can run
+  this command for the verified successful subset
 - **Archive Content Type Schemas**: Archives schemas and their content types
 
 ## Notes
 
 - This command synchronizes **existing** content types with their schemas
-- It does **not** create new content types (use "Copy Content Types" for that)
+- It does **not** create new content types (use "Sync Content Types" for that)
 - Content types must exist on the target hub before synchronization
 - Schema updates must be published before synchronizing content types
 - Archived content types can be synchronized if needed (use status filter)

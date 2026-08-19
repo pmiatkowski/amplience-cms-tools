@@ -6,7 +6,7 @@ code in this repository.
 ## Project Overview
 
 Amplience CMS Tools is a CLI application for automating bulk operations in
-Amplience CMS. It provides 13 specialized commands for content management tasks
+Amplience CMS. It provides 16 specialized commands for content management tasks
 not available through the standard Amplience UI.
 
 **Key Technologies:**
@@ -14,7 +14,7 @@ not available through the standard Amplience UI.
 - TypeScript 5+ with strict mode
 - Node.js v22+ (specified in package.json engines)
 - Vitest for testing
-- Amplience DC-CLI integration for schema operations
+- Amplience DC-CLI integration for schema and content type operations
 - Inquirer.js for interactive prompts
 
 ## Development Commands
@@ -87,7 +87,7 @@ concerns:
 
 ### Directory Structure
 
-```
+```text
 src/
 ├── commands/                  # CLI command implementations
 │   ├── <command-name>/       # Each command in its own directory

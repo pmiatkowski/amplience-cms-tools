@@ -10,6 +10,7 @@ export * from './list-nested-subfolders';
 export * from './preflight-content-item-recreation';
 export * from './recreate-content-items';
 export * from './recreate-folder-structure';
+export * from './sync-content-types';
 export * from './sync-hierarchy';
 export * from './validate-content-type-assignments';
 export * from './validate-delivery-key-conflicts';

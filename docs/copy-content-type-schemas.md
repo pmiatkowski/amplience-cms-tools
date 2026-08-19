@@ -80,9 +80,9 @@ for a stable and predictable content management workflow.
 ## Integration with Sync Content Type Properties
 
 After successfully importing schemas, the tool offers to automatically
-synchronize content types. This ensures that content type display properties
-(icons, visualizations, cards) are updated to match the newly imported schema
-definitions.
+synchronize content types with the current versions of their registered schemas.
+VSE visualization configuration is managed separately and is not inferred from
+schema synchronization.
 
 When enabled:
 
@@ -90,3 +90,39 @@ When enabled:
 2. Builds a regex filter from processed schema IDs
 3. Calls sync-content-type-properties with skipConfirmations enabled
 4. Reports sync results alongside schema import results
+
+## Integration with Sync Content Types
+
+When this operation runs inside `Sync Content Types`, the parent command owns
+all interaction:
+
+1. The user chooses during preflight whether selected schemas should be copied.
+2. The complete content type plan and protected target are confirmed once.
+3. Schema export/import runs with the selected schema IDs and no nested prompts.
+4. Files for schemas outside the confirmed selection are removed from the
+   temporary import directory.
+5. Validation errors stop parent-orchestrated execution instead of requiring a
+   mid-execution decision.
+6. Successfully imported schema IDs become candidates for the preselected
+   property synchronization stage.
+
+Standalone use retains this command's own schema selection, property-sync,
+operation confirmation, and protected-environment prompts.
+
+### Programmatic Context
+
+The reusable schema function accepts this context:
+
+| Parameter                       | Required | Behavior                                                         |
+| ------------------------------- | -------- | ---------------------------------------------------------------- |
+| `sourceHub`                     | Yes      | Source hub configuration                                         |
+| `targetHub`                     | Yes      | Target hub configuration                                         |
+| `specificSchemas`               | Yes      | Exact schema IDs retained in the temporary import directory      |
+| `skipConfirmations`             | No       | Skips ordinary selection/operation prompts                       |
+| `skipValidation`                | No       | Disables local schema validation                                 |
+| `protectedEnvironmentConfirmed` | No       | Indicates that a parent already completed the target challenge   |
+| `failOnValidationErrors`        | No       | Returns failures instead of prompting or proceeding when invalid |
+
+`Sync Content Types` supplies exact selected schema IDs, keeps validation
+enabled, sets `failOnValidationErrors`, and marks the protected environment as
+already confirmed after its own preflight challenge.

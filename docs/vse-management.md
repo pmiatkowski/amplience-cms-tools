@@ -2,14 +2,19 @@
 
 ## Overview
 
-The `VSE Management` command provides operations for managing Visual Studio Edition (VSE) visualization settings across multiple content types in Amplience CMS. This command enables bulk updates to visualization configurations, making it easier to maintain consistent preview and live view settings across environments.
+The `VSE Management` command provides operations for managing Visual Studio
+Edition (VSE) visualization settings across multiple content types in Amplience
+CMS. This command enables bulk updates to visualization configurations, making
+it easier to maintain consistent preview and live view settings across
+environments.
 
 ## When to Use
 
 Use `VSE Management` when you need to:
 
 - Bulk update visualization settings for multiple content types at once
-- Synchronize visualization configurations between environments (DEV, STAGING, PROD)
+- Synchronize visualization configurations between environments (DEV, STAGING,
+  PROD)
 - Update visualization URLs after migrating content types to a new hub
 - Apply consistent visualization templates across content types
 - Preview visualization changes before applying them (dry-run mode)
@@ -18,17 +23,22 @@ Use `VSE Management` when you need to:
 
 ### Bulk Update Visualizations
 
-Updates the visualization settings for multiple content types with a provided configuration.
+Updates the visualization settings for multiple content types with a provided
+configuration.
 
 ### Initialize Default Files
 
-Displays setup instructions and validates configuration files for VSE default visualization settings. This command helps users:
+Displays setup instructions and validates configuration files for VSE default
+visualization settings. This command helps users:
 
-1. **Environment Variable Setup** - Shows required environment variables and recommended file paths
+1. **Environment Variable Setup** - Shows required environment variables and
+   recommended file paths
 2. **File Validation** - Checks if configured VSE files exist at specified paths
-3. **Example Content** - Displays example JSON content for both configuration files
+3. **Example Content** - Displays example JSON content for both configuration
+   files
 
-This is a **non-destructive** command that only displays information and validates file existence - no files are created or modified.
+This is a **non-destructive** command that only displays information and
+validates file existence - no files are created or modified.
 
 ## How It Works
 
@@ -66,7 +76,8 @@ Visualizations are defined in a JSON configuration file:
 }
 ```
 
-The `{{ORIGIN_REPLACE}}` placeholder is automatically replaced with the hub-specific visualization URL configured via environment variable:
+The `{{ORIGIN_REPLACE}}` placeholder is automatically replaced with the
+hub-specific visualization URL configured via environment variable:
 
 ```env
 AMP_HUB_<HUBNAME>_VISUALISATION_APP_URL=https://vse.example.com
@@ -109,7 +120,7 @@ AMP_HUB_<HUBNAME>_VISUALISATION_APP_URL=https://vse.example.com
 
 ### Dry-Run Mode
 
-```
+```text
 ? Run in dry-run mode (preview changes without executing)? (y/N)
 ```
 
@@ -120,7 +131,7 @@ AMP_HUB_<HUBNAME>_VISUALISATION_APP_URL=https://vse.example.com
 
 #### API Filtering (Regex)
 
-```
+```text
 ? Filter by schema ID pattern: https://schema.example.com/.*
 ```
 
@@ -132,7 +143,7 @@ Enter a regex pattern to filter content types by their schema URI. For example:
 
 #### File-Based Selection
 
-```
+```text
 ? Content types list file path: ./config/content-types.json
 ```
 
@@ -148,7 +159,7 @@ Provide a JSON file containing an array of content type URIs:
 
 ### Visualization Configuration File
 
-```
+```text
 ? Visualization config file path: ./config/visualizations.json
 ```
 
@@ -179,13 +190,15 @@ AMP_HUB_PROD_VISUALISATION_APP_URL=https://vse.prod.example.com
 
 ## Initialize Default Files Operation
 
-The Initialize Default Files operation helps you set up and validate VSE configuration files.
+The Initialize Default Files operation helps you set up and validate VSE
+configuration files.
 
 ### When Environment Variables Are Not Set
 
-If you haven't configured the required environment variables, the command displays:
+If you haven't configured the required environment variables, the command
+displays:
 
-```
+```text
 ========================================
   Environment Variables Not Configured
 ========================================
@@ -226,9 +239,10 @@ To use VSE Default Files, set the following environment variables:
 
 ### When Environment Variables Are Set
 
-If the environment variables are configured, the command validates file existence:
+If the environment variables are configured, the command validates file
+existence:
 
-```
+```text
 🎨 Initialize Default Files
 ========================
 
@@ -310,7 +324,8 @@ Follow these steps to set up your VSE default files:
 
 ## Reports
 
-All operations generate detailed markdown reports in the `reports/` directory with:
+All operations generate detailed markdown reports in the `reports/` directory
+with:
 
 - Operation summary (hub, mode, timestamp)
 - Visualization configuration applied
@@ -332,8 +347,10 @@ Generated: 2025-01-16
 
 ## Visualization Configuration
 
-- **Preview**: `https://vse.dev.example.com/preview?id={{contentItemId}}` (default)
-- **Live View**: `https://vse.dev.example.com/live?id={{contentItemId}}&locale={{locale}}`
+- **Preview**: `https://vse.dev.example.com/preview?id={{contentItemId}}`
+  (default)
+- **Live View**:
+  `https://vse.dev.example.com/live?id={{contentItemId}}&locale={{locale}}`
 
 ## Results
 
@@ -349,7 +366,8 @@ Generated: 2025-01-16
 API Error: 409 Conflict - Content type version mismatch
 
 ---
-*This report was automatically generated by the Amplience CMS Tools*
+
+_This report was automatically generated by the Amplience CMS Tools_
 ```
 
 ## Best Practices
@@ -408,7 +426,7 @@ Always review the generated report for:
 
 The command continues processing remaining content types when one fails:
 
-```
+```text
 ✅ Product (https://schema.example.com/product.json)
 ❌ Category (https://schema.example.com/category.json): API Error: 409 Conflict
 ✅ Blog (https://schema.example.com/blog.json)
@@ -416,12 +434,12 @@ The command continues processing remaining content types when one fails:
 
 ### Common Errors
 
-| Error                     | Cause                              | Solution                                      |
-| ------------------------- | ---------------------------------- | --------------------------------------------- |
-| "Schema not found"        | Content type URI doesn't exist      | Verify content type exists in the hub         |
-| "Rate limit exceeded"     | Too many API calls                 | Wait and retry, or reduce batch size          |
-| "Version mismatch"        | Content type was modified elsewhere | Fetch latest version and retry                |
-| "Invalid config"          | Visualization config has errors    | Validate JSON syntax and structure            |
+| Error                 | Cause                               | Solution                              |
+| --------------------- | ----------------------------------- | ------------------------------------- |
+| "Schema not found"    | Content type URI doesn't exist      | Verify content type exists in the hub |
+| "Rate limit exceeded" | Too many API calls                  | Wait and retry, or reduce batch size  |
+| "Version mismatch"    | Content type was modified elsewhere | Fetch latest version and retry        |
+| "Invalid config"      | Visualization config has errors     | Validate JSON syntax and structure    |
 
 ## Troubleshooting
 
@@ -430,11 +448,13 @@ The command continues processing remaining content types when one fails:
 **Problem**: Regex pattern returns zero results.
 
 **Possible Causes**:
+
 - Pattern is too restrictive
 - Schema URIs don't match expected format
 - Content types don't exist in hub
 
 **Solutions**:
+
 1. Test pattern with broader match first
 2. Use `*` wildcard: `https://schema.example.com/.*`
 3. Verify content types exist using Amplience Management API
@@ -444,10 +464,12 @@ The command continues processing remaining content types when one fails:
 **Problem**: `{{ORIGIN_REPLACE}}` placeholder not replaced in output.
 
 **Possible Causes**:
+
 - Missing hub visualization URL environment variable
 - Environment variable name doesn't match hub name
 
 **Solutions**:
+
 1. Verify environment variable format: `AMP_HUB_<HUBNAME>_VISUALISATION_APP_URL`
 2. Check hub name matches exactly (case-sensitive)
 3. Ensure URL is valid HTTPS format
@@ -457,11 +479,13 @@ The command continues processing remaining content types when one fails:
 **Problem**: Every content type update fails with same error.
 
 **Possible Causes**:
+
 - Invalid credentials
 - Insufficient permissions
 - Network connectivity issues
 
 **Solutions**:
+
 1. Verify API credentials in `.env` file
 2. Check user has write permissions for content types
 3. Test network connectivity to Amplience API
@@ -599,7 +623,7 @@ Report saved to: reports/bulk-visualizations-2025-01-16-14-40-00.md
 
 ## Command Workflow Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     START: VSE Management                   │
 └────────────────────────────┬────────────────────────────────┘
@@ -683,14 +707,25 @@ Report saved to: reports/bulk-visualizations-2025-01-16-14-40-00.md
 ## Related Commands
 
 - **`Manage Extensions`**: Bulk export/import extensions for VSE
-- **`Copy Content Types`**: Copy content types between hubs
+- **`Sync Content Types`**: Align cross-hub content type settings and rewrite
+  configured source VSE origins to the target origin
 - **`Sync Content Type Properties`**: Synchronize content types with schemas
+
+Use VSE Management when applying a shared visualization configuration file to
+content types on one hub. Use Sync Content Types when visualizations should be
+copied from a source hub as part of complete content type alignment.
+
+Sync Content Types compares visualization arrays exported from the two hubs; it
+does not read the VSE Management configuration file. It rewrites only URLs using
+the configured source hub origin, while third-party and localhost URLs remain
+unchanged.
 
 ## Technical Notes
 
 ### Performance Considerations
 
-- Content types are updated **sequentially** (not in parallel) to avoid API rate limiting
+- Content types are updated **sequentially** (not in parallel) to avoid API rate
+  limiting
 - Each content type update involves one PATCH request
 - Estimated time: ~1-2 seconds per content type
 

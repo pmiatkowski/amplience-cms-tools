@@ -9,6 +9,8 @@ export {
   createDcCliCommand,
   DcCliCommandBuilder,
   getDcCliPath,
+  validateContentTypeSyncCapabilities,
+  validateDcCliVersion,
 } from './dc-cli-executor';
 export {
   type ContentTypesList,
@@ -17,6 +19,11 @@ export {
   type VisualizationConfig,
   type VisualizationItem,
 } from './json-file-parser';
+export {
+  type ContentTypeSyncReportContext,
+  generateContentTypeSyncReport,
+  saveContentTypeSyncReport,
+} from './content-type-sync-report';
 export {
   countTotalFolders,
   findAllDescendants,

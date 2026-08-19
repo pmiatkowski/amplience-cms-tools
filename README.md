@@ -25,7 +25,7 @@ prompts, advanced filtering, and detailed reporting.
   operations
 - **Interactive CLI**: User-friendly prompts and progress indicators
 - **Amplience DC-CLI Integration**: Leverages official Amplience tooling for
-  schema operations
+  schema and content type operations
 - **Cross-Hub Operations**: Support for content migration and synchronization
   between different hubs
 
@@ -33,6 +33,7 @@ prompts, advanced filtering, and detailed reporting.
 
 - Node.js v22.0.0 or higher
 - npm (comes with Node.js)
+- `@amplience/dc-cli` 0.31.0 (installed by `npm install`)
 - Access to Amplience CMS with appropriate API credentials
 
 ## 🛠️ Installation
@@ -345,13 +346,18 @@ Archives content type schemas and their dependencies (content types and content
 items) in the correct dependency order to maintain data integrity and prevent
 orphaned content.
 
-### 10. Copy Content Types
+### 10. Sync Content Types
 
-**Command**: Copy Content Types  
-**Documentation**: [copy-content-types.md](docs/copy-content-types.md)
+**Command**: Sync Content Types **Documentation**:
+[sync-content-types.md](docs/sync-content-types.md)
 
-Compares and creates missing content types between hubs with proper schema
-validation and repository assignments.
+Aligns content types between hubs by creating missing types, updating existing
+settings and VSE visualizations, reactivating archived matches, and reconciling
+repository assignments in additive or exact mode. All choices, including
+optional schema-property synchronization, are collected before uninterrupted
+execution. Dry-run planning, post-import verification, and Markdown reporting
+are included. The confirmation and report show field-level settings differences
+and current/planned repository assignments for every selected type.
 
 ### 11. Sync Content Type Properties
 
@@ -436,7 +442,7 @@ Example configuration:
       "description": "Sync prod to dev",
       "commands": [
         { "command": "sync-hierarchy" },
-        { "command": "copy-content-types" }
+        { "command": "sync-content-types" }
       ]
     }
   ]
@@ -445,6 +451,9 @@ Example configuration:
 
 Set `COMMAND_SETS_PATH` environment variable to use a custom configuration file
 location.
+
+The legacy `copy-content-types` key remains accepted for existing command sets,
+but it is deprecated and delegates to `sync-content-types`.
 
 ## 📊 Common Features Across All Commands
 

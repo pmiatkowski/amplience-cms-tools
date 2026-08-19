@@ -11,6 +11,7 @@ import { runManageExtensions } from './commands/manage-extensions';
 import { runRecreateContentItems } from './commands/recreate-content-items';
 import { runRecreateFolderStructure } from './commands/recreate-folder-structure';
 import { runSyncContentTypeProperties } from './commands/sync-content-type-properties';
+import { runSyncContentTypes } from './commands/sync-content-types';
 import { runSyncHierarchy } from './commands/sync-hierarchy';
 import { runUpdateDeliveryKeysLocale } from './commands/update-delivery-keys-locale';
 import { runUserCommandSets } from './commands/user-command-sets';
@@ -62,6 +63,9 @@ async function main(): Promise<void> {
         break;
       case 'copy-content-types':
         await runCopyContentTypes();
+        break;
+      case 'sync-content-types':
+        await runSyncContentTypes();
         break;
       case 'sync-content-type-properties':
         await runSyncContentTypeProperties();

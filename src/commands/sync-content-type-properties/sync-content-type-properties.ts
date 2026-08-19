@@ -19,23 +19,6 @@ type ContentType = {
   };
 };
 
-type SyncContext = {
-  targetHub: Amplience.HubConfig;
-  schemaIdFilter?: string; // Optional regex filter for schema URIs
-  statusFilter?: ContentTypeStatusFilter; // Filter by content type status
-  skipConfirmations?: boolean; // Skip user confirmation prompts
-};
-
-type SyncResult = {
-  success: boolean; // Overall operation success
-  processedContentTypes: string[]; // Successfully processed content type IDs
-  failedContentTypes: { contentTypeId: string; error: string }[]; // Failed content types with errors
-  totalCount: number; // Total number of content types processed
-};
-type SyncContentTypePropertiesOptions = {
-  context?: SyncContext;
-};
-
 /**
  * Main command function for interactive synchronization
  */
@@ -131,25 +114,34 @@ export const syncContentTypeProperties = async (
 
     console.log(`📂 Found ${contentTypes.length} total content types`);
 
-    // 4. Filter by status
-    let filteredContentTypes = contentTypes;
-    if (statusFilter === 'ACTIVE') {
-      filteredContentTypes = contentTypes.filter(ct => ct.status === 'ACTIVE');
-    } else if (statusFilter === 'ARCHIVED') {
-      filteredContentTypes = contentTypes.filter(ct => ct.status === 'ARCHIVED');
-    }
-    // If statusFilter === 'ALL', keep all content types
+    let filteredContentTypes: ContentType[];
+    const targetContentTypeIds = options?.context?.targetContentTypeIds;
 
-    console.log(
-      `📊 After status filter (${statusFilter}): ${filteredContentTypes.length} content types`
-    );
+    if (targetContentTypeIds !== undefined) {
+      const selectedIds = new Set(targetContentTypeIds);
+      filteredContentTypes = contentTypes.filter(contentType => selectedIds.has(contentType.id));
+      console.log(`🎯 After exact ID filter: ${filteredContentTypes.length} content types`);
+    } else {
+      // 4. Filter by status
+      filteredContentTypes = contentTypes;
+      if (statusFilter === 'ACTIVE') {
+        filteredContentTypes = contentTypes.filter(ct => ct.status === 'ACTIVE');
+      } else if (statusFilter === 'ARCHIVED') {
+        filteredContentTypes = contentTypes.filter(ct => ct.status === 'ARCHIVED');
+      }
+      // If statusFilter === 'ALL', keep all content types
 
-    // 5. Filter by schema ID pattern if provided
-    if (schemaIdFilter.trim()) {
-      console.log(`🔍 Applying schema ID filter: ${schemaIdFilter}`);
-      const regex = new RegExp(schemaIdFilter, 'i'); // case insensitive
-      filteredContentTypes = filteredContentTypes.filter(ct => regex.test(ct.contentTypeUri));
-      console.log(`✅ After schema filter: ${filteredContentTypes.length} content types`);
+      console.log(
+        `📊 After status filter (${statusFilter}): ${filteredContentTypes.length} content types`
+      );
+
+      // 5. Filter by schema ID pattern if provided
+      if (schemaIdFilter.trim()) {
+        console.log(`🔍 Applying schema ID filter: ${schemaIdFilter}`);
+        const regex = new RegExp(schemaIdFilter, 'i'); // case insensitive
+        filteredContentTypes = filteredContentTypes.filter(ct => regex.test(ct.contentTypeUri));
+        console.log(`✅ After schema filter: ${filteredContentTypes.length} content types`);
+      }
     }
 
     if (filteredContentTypes.length === 0) {
@@ -178,7 +170,9 @@ export const syncContentTypeProperties = async (
       }
     }
 
-    await promptForProtectedEnvironment(targetHub);
+    if (!options?.context?.protectedEnvironmentConfirmed) {
+      await promptForProtectedEnvironment(targetHub);
+    }
 
     // 7. Sync each content type
     console.log(`\n🚀 Synchronizing ${filteredContentTypes.length} content types...`);
@@ -190,7 +184,7 @@ export const syncContentTypeProperties = async (
           .withHub(targetHub)
           .withCommand('content-type sync')
           .withArgs(contentType.id, '--json')
-          .execute();
+          .execute({ logCommand: false });
 
         result.processedContentTypes.push(contentType.id);
         progressBar.increment();
@@ -233,4 +227,24 @@ export const syncContentTypeProperties = async (
 
     return result;
   }
+};
+
+export type SyncContentTypePropertiesOptions = {
+  context?: SyncContext;
+};
+
+export type SyncContext = {
+  targetHub: Amplience.HubConfig;
+  schemaIdFilter?: string; // Optional regex filter for schema URIs
+  statusFilter?: ContentTypeStatusFilter; // Filter by content type status
+  targetContentTypeIds?: string[]; // Exact content type IDs to synchronize
+  skipConfirmations?: boolean; // Skip user confirmation prompts
+  protectedEnvironmentConfirmed?: boolean; // Parent command already completed the challenge
+};
+
+export type SyncResult = {
+  success: boolean; // Overall operation success
+  processedContentTypes: string[]; // Successfully processed content type IDs
+  failedContentTypes: { contentTypeId: string; error: string }[]; // Failed content types with errors
+  totalCount: number; // Total number of content types processed
 };

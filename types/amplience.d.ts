@@ -81,24 +81,29 @@ declare global {
       contentTypes: ContentType[];
     }
 
+    interface ContentTypeTemplatedView {
+      label?: string;
+      templatedUri?: string;
+      default?: boolean;
+    }
+
+    interface ContentTypeSettings {
+      label?: string;
+      icons?: Array<{
+        size?: number;
+        url?: string;
+      }>;
+      visualizations?: ContentTypeTemplatedView[];
+      cards?: ContentTypeTemplatedView[];
+    }
+
     interface ContentType {
       id: string;
       hubContentTypeId: string;
       /** schema id */
       contentTypeUri: string;
       status: ContentTypeStatus;
-      settings?: {
-        label?: string;
-        icons?: Array<{
-          size: number;
-          url: string;
-        }>;
-        visualizations?: Array<{
-          label: string;
-          templatedUri: string;
-          default?: boolean;
-        }>;
-      };
+      settings?: ContentTypeSettings;
       _links?: {
         self?: { href: string };
         archive?: { href: string };
@@ -680,18 +685,51 @@ declare global {
      */
     interface CreateContentTypeRequest {
       contentTypeUri: string;
-      settings?: {
-        label?: string;
-        icons?: Array<{
-          size: number;
-          url: string;
-        }>;
-        visualizations?: Array<{
-          label: string;
-          templatedUri: string;
-          default?: boolean;
-        }>;
-      };
+      settings?: ContentTypeSettings;
+    }
+
+    type ContentTypeRepositoryMode = 'additive' | 'exact';
+
+    type ContentTypeSettingName = 'label' | 'icons' | 'visualizations' | 'cards';
+
+    interface ContentTypeSettingChange {
+      setting: ContentTypeSettingName;
+      currentTargetValue: unknown;
+      plannedTargetValue: unknown;
+    }
+
+    type ContentTypeSyncAction =
+      | 'CREATE'
+      | 'UPDATE_SETTINGS'
+      | 'UNARCHIVE'
+      | 'ASSIGN'
+      | 'UNASSIGN'
+      | 'NO_CHANGE'
+      | 'SKIP';
+
+    interface ContentTypeExportDefinition {
+      id?: string;
+      contentTypeUri: string;
+      status?: ContentTypeStatus;
+      settings?: ContentTypeSettings;
+      repositories?: string[];
+    }
+
+    interface ContentTypeAlignmentPlanItem {
+      contentTypeUri: string;
+      source: ContentTypeExportDefinition;
+      target?: ContentTypeExportDefinition;
+      targetContentTypeId?: string;
+      desiredRepositories: string[];
+      repositoriesToAssign: string[];
+      repositoriesToUnassign: string[];
+      settingsChanges: ContentTypeSettingChange[];
+      actions: ContentTypeSyncAction[];
+    }
+
+    interface ContentTypeAlignmentPlan {
+      repositoryMode: ContentTypeRepositoryMode;
+      items: ContentTypeAlignmentPlanItem[];
     }
 
     /**
@@ -699,22 +737,6 @@ declare global {
      */
     interface AssignContentTypeRequest {
       contentTypeId: string;
-    }
-
-    /**
-     * Represents a node in the content type synchronization plan.
-     */
-    interface ContentTypeSyncItem {
-      sourceContentType: Amplience.ContentType;
-      targetRepositories: Amplience.ContentRepository[];
-    }
-
-    /**
-     * Represents the complete plan for content type synchronization.
-     */
-    interface ContentTypeSyncPlan {
-      hub: Amplience.Hub;
-      items: ContentTypeSyncItem[];
     }
 
     /**

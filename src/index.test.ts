@@ -19,4 +19,11 @@ describe('index.ts command integration', () => {
     const commands = await import('./commands');
     expect(commands.runBulkSyncHierarchies).toBeDefined();
   });
+
+  it('should export the sync content types command from the commands barrel', async () => {
+    const commands = await import('./commands');
+
+    expect(commands.runSyncContentTypes).toBeDefined();
+    expect(typeof commands.runSyncContentTypes).toBe('function');
+  });
 });

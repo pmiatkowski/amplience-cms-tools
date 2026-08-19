@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DcCliCommandBuilder, createDcCliCommand, getDcCliPath } from './dc-cli-executor';
+import {
+  DcCliCommandBuilder,
+  createDcCliCommand,
+  getDcCliPath,
+  validateContentTypeSyncCapabilities,
+  validateDcCliVersion,
+} from './dc-cli-executor';
 
 describe('DC-CLI Executor', () => {
   beforeEach(() => {
@@ -35,7 +41,91 @@ describe('DC-CLI Executor', () => {
     });
   });
 
+  describe('validateDcCliVersion', () => {
+    it('accepts the supported dc-cli version', async () => {
+      const execute = vi.fn().mockResolvedValue({ stdout: '0.31.0\n', stderr: '' });
+
+      await expect(validateDcCliVersion(execute)).resolves.toBe('0.31.0');
+      expect(execute).toHaveBeenCalledWith(expect.stringContaining('--version'));
+    });
+
+    it('rejects an unsupported dc-cli version', async () => {
+      const execute = vi.fn().mockResolvedValue({ stdout: '0.27.0\n', stderr: '' });
+
+      await expect(validateDcCliVersion(execute)).rejects.toThrow(
+        'Unsupported dc-cli version 0.27.0. Expected 0.31.0.'
+      );
+    });
+
+    it('rejects an unparsable dc-cli version', async () => {
+      const execute = vi.fn().mockResolvedValue({ stdout: 'unknown\n', stderr: '' });
+
+      await expect(validateDcCliVersion(execute)).rejects.toThrow(
+        'Could not determine the installed dc-cli version.'
+      );
+    });
+
+    it('rejects a missing dc-cli executable', async () => {
+      const execute = vi.fn().mockRejectedValue(new Error('ENOENT'));
+
+      await expect(validateDcCliVersion(execute)).rejects.toThrow(
+        'Could not execute the local dc-cli binary.'
+      );
+    });
+  });
+
+  describe('validateContentTypeSyncCapabilities', () => {
+    it('accepts the documented content type command surfaces', async () => {
+      const execute = vi
+        .fn()
+        .mockResolvedValueOnce({ stdout: '0.31.0\n', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: 'content-type export <dir> --force --archived',
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: 'content-type import <dir> --skipAssign', stderr: '' })
+        .mockResolvedValueOnce({ stdout: 'content-type sync [id] --json', stderr: '' });
+
+      await expect(validateContentTypeSyncCapabilities(execute)).resolves.toBeUndefined();
+      expect(execute).toHaveBeenCalledTimes(4);
+    });
+
+    it('rejects a missing required command option', async () => {
+      const execute = vi
+        .fn()
+        .mockResolvedValueOnce({ stdout: '0.31.0\n', stderr: '' })
+        .mockResolvedValueOnce({ stdout: 'content-type export <dir> --force', stderr: '' });
+
+      await expect(validateContentTypeSyncCapabilities(execute)).rejects.toThrow(
+        'dc-cli content-type export is missing required capability: --archived'
+      );
+    });
+  });
+
   describe('DcCliCommandBuilder', () => {
+    describe('execute', () => {
+      it('should suppress command diagnostics when logging is disabled', async () => {
+        const execute = vi.fn().mockResolvedValue({ stdout: '{}', stderr: '' });
+        const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+        const hub: Amplience.HubConfig = {
+          name: 'Test Hub',
+          envKey: 'TEST_HUB',
+          hubId: 'hub-123',
+          patToken: 'pat-token-123',
+        };
+
+        await new DcCliCommandBuilder(execute)
+          .withHub(hub)
+          .withCommand('content-type sync')
+          .withArgs('content-type-id', '--json')
+          .execute({ logCommand: false });
+
+        expect(execute).toHaveBeenCalledOnce();
+        expect(log).not.toHaveBeenCalled();
+        log.mockRestore();
+      });
+    });
+
     describe('withHub', () => {
       it('should set the hub configuration', () => {
         const hub: Amplience.HubConfig = {
@@ -120,6 +210,43 @@ describe('DC-CLI Executor', () => {
         expect(commandString).toContain('--hubId "hub-123"');
         expect(commandString).toContain('--json');
         expect(commandString).not.toContain('--patToken');
+      });
+
+      it('should redact PAT credentials from diagnostic output', () => {
+        const hub: Amplience.HubConfig = {
+          name: 'Test Hub',
+          envKey: 'TEST_HUB',
+          hubId: 'hub-123',
+          patToken: 'pat-token-123',
+        };
+
+        const commandString = new DcCliCommandBuilder()
+          .withHub(hub)
+          .withCommand('content-type export')
+          .getSanitizedCommandString();
+
+        expect(commandString).toContain('--patToken "***"');
+        expect(commandString).not.toContain('pat-token-123');
+      });
+
+      it('should redact OAuth credentials from diagnostic output', () => {
+        const hub: Amplience.HubConfig = {
+          name: 'Test Hub',
+          envKey: 'TEST_HUB',
+          hubId: 'hub-123',
+          clientId: 'client-123',
+          clientSecret: 'secret-123',
+        };
+
+        const commandString = new DcCliCommandBuilder()
+          .withHub(hub)
+          .withCommand('content-type import')
+          .getSanitizedCommandString();
+
+        expect(commandString).toContain('--clientId "***"');
+        expect(commandString).toContain('--clientSecret "***"');
+        expect(commandString).not.toContain('client-123');
+        expect(commandString).not.toContain('secret-123');
       });
 
       it('should throw error if hub is not set', () => {

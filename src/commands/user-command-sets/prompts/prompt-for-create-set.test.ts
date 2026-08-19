@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { VALID_COMMAND_NAMES } from '~/services/command-set-config-service';
+import { SELECTABLE_COMMAND_NAMES } from '~/services/command-set-config-service';
 
 import { promptForCreateSet, validateSetName, validateCommandCount } from './prompt-for-create-set';
 
@@ -124,7 +124,9 @@ describe('promptForCreateSet', () => {
       commandPromptCall as unknown as Array<{ type: string; choices?: string[] }>
     ).find(q => q.type === 'list');
     expect(commandQuestion).toBeDefined();
-    expect(commandQuestion?.choices).toEqual(expect.arrayContaining([...VALID_COMMAND_NAMES]));
+    expect(commandQuestion?.choices).toEqual(expect.arrayContaining([...SELECTABLE_COMMAND_NAMES]));
+    expect(commandQuestion?.choices).not.toContain('copy-content-types');
+    expect(commandQuestion?.choices).toContain('sync-content-types');
   });
 
   it('should allow zero commands', async () => {

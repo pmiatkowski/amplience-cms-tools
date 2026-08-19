@@ -253,4 +253,74 @@ describe('copyContentTypeSchemas', () => {
     expect(result.totalCount).toBe(2); // Our mock readdir returns 2, filtering logic depends on file content
     expect(prompts.promptForProtectedEnvironment).toHaveBeenCalledWith(mockTargetHub);
   });
+
+  it('should not repeat protected environment confirmation owned by a parent command', async () => {
+    const context = {
+      sourceHub: mockSourceHub,
+      targetHub: mockTargetHub,
+      specificSchemas: ['https://schema.com/test'],
+      skipConfirmations: true,
+      protectedEnvironmentConfirmed: true,
+    };
+    (fsSync.readFileSync as Mock).mockReturnValue(
+      JSON.stringify({
+        schemaId: 'https://schema.com/test',
+        body: './schemas/test.json',
+      })
+    );
+
+    const result = await copyContentTypeSchemas({ context });
+
+    expect(result.success).toBe(true);
+    expect(prompts.promptForProtectedEnvironment).not.toHaveBeenCalled();
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining('content-type-schema import'),
+      expect.anything()
+    );
+  });
+
+  it('should remove unselected schema files before a context import', async () => {
+    (fsSync.readFileSync as Mock).mockImplementation((filePath: string) =>
+      JSON.stringify(
+        filePath.includes('schema1')
+          ? { schemaId: 'https://schema.com/schema1', body: 'schemas/schema1.json' }
+          : { schemaId: 'https://schema.com/schema2', body: 'schemas/schema2.json' }
+      )
+    );
+
+    const result = await copyContentTypeSchemas({
+      context: {
+        sourceHub: mockSourceHub,
+        targetHub: mockTargetHub,
+        specificSchemas: ['https://schema.com/schema1'],
+        skipConfirmations: true,
+        skipValidation: true,
+        protectedEnvironmentConfirmed: true,
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(fsPromises.unlink).toHaveBeenCalledWith(expect.stringContaining('schema2.json'));
+  });
+
+  it('should fail closed on validation errors in parent-orchestrated mode', async () => {
+    const result = await copyContentTypeSchemas({
+      context: {
+        sourceHub: mockSourceHub,
+        targetHub: mockTargetHub,
+        specificSchemas: ['https://schema.com/test'],
+        skipConfirmations: true,
+        skipValidation: false,
+        protectedEnvironmentConfirmed: true,
+        failOnValidationErrors: true,
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.failedSchemas).not.toHaveLength(0);
+    expect(exec).not.toHaveBeenCalledWith(
+      expect.stringContaining('content-type-schema import'),
+      expect.anything()
+    );
+  });
 });

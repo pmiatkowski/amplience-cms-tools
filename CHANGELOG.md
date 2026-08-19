@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.8.0...v1.9.0) (2026-08-19)
+
+
+### Features
+
+* sync content types cmd ([#25](https://github.com/pmiatkowski/amplience-cms-tools/issues/25)) ([b743c1a](https://github.com/pmiatkowski/amplience-cms-tools/commit/b743c1adccedf3406a919db4641566526a82e3ed))
+
 # [1.8.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.7.1...v1.8.0) (2026-08-18)
 
 

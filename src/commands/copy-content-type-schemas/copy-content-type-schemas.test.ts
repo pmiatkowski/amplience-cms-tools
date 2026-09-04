@@ -102,7 +102,12 @@ describe('copyContentTypeSchemas', () => {
     };
 
     const readFileMock = (path: string): string => {
-      if (path.includes('schemas/') || path.includes('s1.json') || path.includes('s2.json')) {
+      const normalized = path.replace(/\\/g, '/');
+      if (
+        normalized.includes('schemas/') ||
+        normalized.includes('s1.json') ||
+        normalized.includes('s2.json')
+      ) {
         return JSON.stringify(defaultSchemaBody);
       }
 
@@ -304,6 +309,19 @@ describe('copyContentTypeSchemas', () => {
   });
 
   it('should fail closed on validation errors in parent-orchestrated mode', async () => {
+    (fsPromises.readFile as Mock).mockImplementation(async (filePath: string) => {
+      const normalized = String(filePath).replace(/\\/g, '/');
+      if (normalized.includes('schemas/')) {
+        // Missing "$id" and "title" makes the schema body fail validation.
+        return JSON.stringify({ type: 'object', properties: {} });
+      }
+
+      return JSON.stringify({
+        schemaId: 'https://schema.com/test',
+        body: './schemas/test.json',
+      });
+    });
+
     const result = await copyContentTypeSchemas({
       context: {
         sourceHub: mockSourceHub,

@@ -214,6 +214,11 @@ describe('prepareContentTypeSync', () => {
     },
     repositories: ['Content'],
   };
+  const archivedSchemaDefinition: Amplience.ContentTypeExportDefinition = {
+    ...sourceDefinition,
+    contentTypeUri: 'https://schema.example.com/archived-article.json',
+    settings: { label: 'Archived Article' },
+  };
   const targetRepository: Amplience.ContentRepository = {
     id: 'target-repository-id',
     name: 'Content',
@@ -235,6 +240,11 @@ describe('prepareContentTypeSync', () => {
         order.push(`export-${hub.envKey}`);
 
         return hub.hubId === sourceHub.hubId ? [sourceDefinition] : [];
+      },
+      getActiveSourceSchemaIds: async () => {
+        order.push('active-source-schemas');
+
+        return [sourceDefinition.contentTypeUri];
       },
       promptSchemaFilter: async () => {
         order.push('filter');
@@ -264,6 +274,7 @@ describe('prepareContentTypeSync', () => {
         return 'automatic';
       },
       selectRepositories: async () => [],
+      confirmUnresolvedRepositories: async () => true,
       promptDryRun: async () => {
         order.push('dry-run');
 
@@ -291,6 +302,7 @@ describe('prepareContentTypeSync', () => {
       'hub-target',
       'export-SOURCE',
       'export-TARGET',
+      'active-source-schemas',
       'filter',
       'types',
       'copy-schemas',
@@ -307,27 +319,139 @@ describe('prepareContentTypeSync', () => {
     ).toContain('https://vse.prod.example.com');
   });
 
-  it('fails closed when automatic repository mapping cannot resolve a source name', async () => {
-    await expect(
-      prepareContentTypeSync({
-        getHubConfigs: () => [sourceHub, targetHub],
-        selectHub: async (_hubs, role) => (role === 'source' ? sourceHub : targetHub),
-        exportDefinitions: async hub => (hub.hubId === sourceHub.hubId ? [sourceDefinition] : []),
-        promptSchemaFilter: async () => '',
-        selectDefinitions: async definitions => definitions,
-        promptCopySchemas: async () => true,
-        getTargetSchemaIds: async () => [],
-        getTargetRepositories: async () => [],
-        promptRepositoryMode: async () => 'exact',
-        promptRepositoryStrategy: async () => 'automatic',
-        selectRepositories: async () => [],
-        promptDryRun: async () => false,
-        promptPropertySync: async () => true,
-        confirmPlan: async () => true,
-        confirmProtectedEnvironment: async () => undefined,
-        getVisualizationUrl: () => 'https://vse.example.com',
-      })
-    ).rejects.toThrow('No target repository mapping found for: Content');
+  it('cancels preparation when the user declines to skip unresolved source repositories', async () => {
+    const promptDryRun = vi.fn();
+    const promptPropertySync = vi.fn();
+    const confirmPlan = vi.fn();
+    const confirmProtectedEnvironment = vi.fn();
+    const confirmUnresolvedRepositories = vi.fn(async () => false);
+
+    const prepared = await prepareContentTypeSync({
+      getHubConfigs: () => [sourceHub, targetHub],
+      selectHub: async (_hubs, role) => (role === 'source' ? sourceHub : targetHub),
+      exportDefinitions: async hub => (hub.hubId === sourceHub.hubId ? [sourceDefinition] : []),
+      getActiveSourceSchemaIds: async () => [sourceDefinition.contentTypeUri],
+      promptSchemaFilter: async () => '',
+      selectDefinitions: async definitions => definitions,
+      promptCopySchemas: async () => true,
+      getTargetSchemaIds: async () => [],
+      getTargetRepositories: async () => [],
+      promptRepositoryMode: async () => 'exact',
+      promptRepositoryStrategy: async () => 'automatic',
+      selectRepositories: async () => [],
+      confirmUnresolvedRepositories,
+      promptDryRun,
+      promptPropertySync,
+      confirmPlan,
+      confirmProtectedEnvironment,
+      getVisualizationUrl: () => 'https://vse.example.com',
+    });
+
+    expect(confirmUnresolvedRepositories).toHaveBeenCalledWith(['Content']);
+    expect(prepared).toBeUndefined();
+    expect(promptDryRun).not.toHaveBeenCalled();
+    expect(promptPropertySync).not.toHaveBeenCalled();
+    expect(confirmPlan).not.toHaveBeenCalled();
+    expect(confirmProtectedEnvironment).not.toHaveBeenCalled();
+  });
+
+  it('drops unresolved source repositories from the plan when the user confirms', async () => {
+    const multiRepoDefinition: Amplience.ContentTypeExportDefinition = {
+      ...sourceDefinition,
+      repositories: ['Content', 'Legacy'],
+    };
+    const confirmUnresolvedRepositories = vi.fn(async () => true);
+
+    const prepared = await prepareContentTypeSync({
+      getHubConfigs: () => [sourceHub, targetHub],
+      selectHub: async (_hubs, role) => (role === 'source' ? sourceHub : targetHub),
+      exportDefinitions: async hub => (hub.hubId === sourceHub.hubId ? [multiRepoDefinition] : []),
+      getActiveSourceSchemaIds: async () => [multiRepoDefinition.contentTypeUri],
+      promptSchemaFilter: async () => '',
+      selectDefinitions: async definitions => definitions,
+      promptCopySchemas: async () => false,
+      getTargetSchemaIds: async () => [multiRepoDefinition.contentTypeUri],
+      getTargetRepositories: async () => [targetRepository],
+      promptRepositoryMode: async () => 'exact',
+      promptRepositoryStrategy: async () => 'automatic',
+      selectRepositories: async () => [],
+      confirmUnresolvedRepositories,
+      promptDryRun: async () => true,
+      promptPropertySync: async () => false,
+      confirmPlan: async () => true,
+      confirmProtectedEnvironment: async () => undefined,
+      getVisualizationUrl: () => 'https://vse.example.com',
+    });
+
+    expect(confirmUnresolvedRepositories).toHaveBeenCalledWith(['Legacy']);
+    expect(prepared?.alignmentPlan.items[0].desiredRepositories).toEqual(['Content']);
+    expect(prepared?.alignmentPlan.items[0].desiredRepositories).not.toContain('Legacy');
+  });
+
+  it('omits definitions backed by archived source schemas before target schema preflight', async () => {
+    const selectDefinitions = vi.fn(async definitions => definitions);
+    const getTargetSchemaIds = vi.fn(async () => [sourceDefinition.contentTypeUri]);
+
+    const prepared = await prepareContentTypeSync({
+      getHubConfigs: () => [sourceHub, targetHub],
+      selectHub: async (_hubs, role) => (role === 'source' ? sourceHub : targetHub),
+      exportDefinitions: async hub =>
+        hub.hubId === sourceHub.hubId ? [sourceDefinition, archivedSchemaDefinition] : [],
+      getActiveSourceSchemaIds: async () => [sourceDefinition.contentTypeUri],
+      promptSchemaFilter: async () => '',
+      selectDefinitions,
+      promptCopySchemas: async () => false,
+      getTargetSchemaIds,
+      getTargetRepositories: async () => [targetRepository],
+      promptRepositoryMode: async () => 'exact',
+      promptRepositoryStrategy: async () => 'automatic',
+      selectRepositories: async () => [],
+      confirmUnresolvedRepositories: async () => true,
+      promptDryRun: async () => true,
+      promptPropertySync: async () => false,
+      confirmPlan: async () => true,
+      confirmProtectedEnvironment: async () => undefined,
+      getVisualizationUrl: () => 'https://vse.example.com',
+    });
+
+    expect(selectDefinitions).toHaveBeenCalledWith([sourceDefinition]);
+    expect(getTargetSchemaIds).toHaveBeenCalledOnce();
+    expect(prepared?.schemaIds).toEqual([sourceDefinition.contentTypeUri]);
+    expect(prepared?.schemaIds).not.toContain(archivedSchemaDefinition.contentTypeUri);
+  });
+
+  it('cancels safely when no source definitions have active schemas', async () => {
+    const promptCopySchemas = vi.fn();
+    const getTargetSchemaIds = vi.fn();
+    const getTargetRepositories = vi.fn();
+    const selectDefinitions = vi.fn(async definitions => definitions);
+
+    const prepared = await prepareContentTypeSync({
+      getHubConfigs: () => [sourceHub, targetHub],
+      selectHub: async (_hubs, role) => (role === 'source' ? sourceHub : targetHub),
+      exportDefinitions: async hub => (hub.hubId === sourceHub.hubId ? [sourceDefinition] : []),
+      getActiveSourceSchemaIds: async () => [],
+      promptSchemaFilter: async () => '',
+      selectDefinitions,
+      promptCopySchemas,
+      getTargetSchemaIds,
+      getTargetRepositories,
+      promptRepositoryMode: vi.fn(),
+      promptRepositoryStrategy: vi.fn(),
+      selectRepositories: vi.fn(),
+      confirmUnresolvedRepositories: vi.fn(),
+      promptDryRun: vi.fn(),
+      promptPropertySync: vi.fn(),
+      confirmPlan: vi.fn(),
+      confirmProtectedEnvironment: vi.fn(),
+      getVisualizationUrl: () => 'https://vse.example.com',
+    });
+
+    expect(prepared).toBeUndefined();
+    expect(selectDefinitions).toHaveBeenCalledWith([]);
+    expect(promptCopySchemas).not.toHaveBeenCalled();
+    expect(getTargetSchemaIds).not.toHaveBeenCalled();
+    expect(getTargetRepositories).not.toHaveBeenCalled();
   });
 });
 

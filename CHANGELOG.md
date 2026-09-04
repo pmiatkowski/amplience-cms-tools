@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.9.0...v1.9.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* archived-content-type-schemas-not-omited: Fixed ([#26](https://github.com/pmiatkowski/amplience-cms-tools/issues/26)) ([235c5c2](https://github.com/pmiatkowski/amplience-cms-tools/commit/235c5c28a16ae86cbe7eb2a2fa26ea3300ccba48))
+
 # [1.9.0](https://github.com/pmiatkowski/amplience-cms-tools/compare/v1.8.0...v1.9.0) (2026-08-19)
 
 

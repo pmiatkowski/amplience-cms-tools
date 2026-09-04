@@ -40,9 +40,10 @@ The command collects all input before making remote changes:
 
 1. Select source and target hubs.
 2. Export active source content types and active/archived target content types
-   using read-only dc-cli operations.
-3. Optionally filter source types by schema URI regex, then select the types to
-   align.
+   using read-only dc-cli operations. Only source content types backed by an
+   active source schema are eligible.
+3. Omit source content types backed by archived schemas, then optionally filter
+   the remaining source types by schema URI regex and select the types to align.
 4. Choose whether corresponding schemas should be copied first.
 5. If schemas will not be copied, verify that every selected schema already
    exists on the target.
@@ -128,6 +129,10 @@ are updated. Files outside the confirmed selection are removed from the
 temporary import directory, and validation errors stop the parent workflow
 without a mid-execution prompt.
 
+Only active source content types backed by active source schemas are selectable.
+Source content types whose backing schemas are archived are omitted before the
+selection prompt and cannot reach schema copy or target schema preflight.
+
 When schema copy is declined, preflight requires every selected schema URI to
 already exist on the target. Missing schemas stop planning before repository
 mapping or content type writes.
@@ -147,7 +152,10 @@ assignments that will be removed.
 ### Mapping Strategies
 
 - **Automatic**: Match every source repository by exact target repository name.
-  Preflight stops in either repository mode if any source name is unresolved.
+  When one or more source repositories cannot be resolved on the target hub,
+  preparation warns and prompts to continue. On continue, the unresolved
+  assignments are skipped and mapping proceeds with the remaining names; on
+  decline, preparation cancels without writes.
 - **Manual**: Select target repositories independently for each content type. In
   exact mode, selecting none plans removal of every current assignment. In
   additive mode, selecting none preserves all current target assignments.
@@ -247,7 +255,6 @@ Planning or execution stops without content type writes when:
 - the dc-cli version or required command surface is unsupported;
 - the schema URI filter is invalid;
 - schema copy is declined and a selected schema is missing from the target;
-- automatic repository mapping cannot resolve every source repository name;
 - selected visualizations require a missing, invalid, or non-HTTPS hub origin;
 - parent-orchestrated schema validation fails; or
 - schema copy fails before content type alignment begins.

@@ -214,8 +214,12 @@ export async function prepareContentTypeSync(
 
   const sourceDefinitions = await dependencies.exportDefinitions(sourceHub, false);
   const targetDefinitions = await dependencies.exportDefinitions(targetHub, true);
+  const activeSourceSchemaIds = new Set(await dependencies.getActiveSourceSchemaIds());
+  const activeSourceDefinitions = sourceDefinitions.filter(definition =>
+    activeSourceSchemaIds.has(definition.contentTypeUri)
+  );
   const schemaFilter = (await dependencies.promptSchemaFilter()).trim();
-  const filteredDefinitions = filterDefinitions(sourceDefinitions, schemaFilter);
+  const filteredDefinitions = filterDefinitions(activeSourceDefinitions, schemaFilter);
   const selectedDefinitions = await dependencies.selectDefinitions(filteredDefinitions);
   if (selectedDefinitions.length === 0) {
     return undefined;
@@ -234,6 +238,19 @@ export async function prepareContentTypeSync(
   const targetRepositories = await dependencies.getTargetRepositories();
   const repositoryMode = await dependencies.promptRepositoryMode();
   const repositoryStrategy = await dependencies.promptRepositoryStrategy();
+  if (repositoryStrategy === 'automatic') {
+    const unresolvedRepositories = getUnresolvedSourceRepositories(
+      selectedDefinitions,
+      targetRepositories
+    );
+    if (unresolvedRepositories.length > 0) {
+      const shouldContinue =
+        await dependencies.confirmUnresolvedRepositories(unresolvedRepositories);
+      if (!shouldContinue) {
+        return undefined;
+      }
+    }
+  }
   const mappedDefinitions = await mapDefinitionRepositories(
     selectedDefinitions,
     targetRepositories,
@@ -299,6 +316,7 @@ export type PrepareContentTypeSyncDependencies = {
     hub: Amplience.HubConfig,
     includeArchived: boolean
   ) => Promise<Amplience.ContentTypeExportDefinition[]>;
+  getActiveSourceSchemaIds: () => Promise<string[]>;
   promptSchemaFilter: () => Promise<string>;
   selectDefinitions: (
     definitions: Amplience.ContentTypeExportDefinition[]
@@ -312,6 +330,7 @@ export type PrepareContentTypeSyncDependencies = {
     definition: Amplience.ContentTypeExportDefinition,
     repositories: Amplience.ContentRepository[]
   ) => Promise<Amplience.ContentRepository[]>;
+  confirmUnresolvedRepositories: (unresolved: string[]) => Promise<boolean>;
   promptDryRun: () => Promise<boolean>;
   promptPropertySync: () => Promise<boolean>;
   confirmPlan: (
@@ -358,6 +377,7 @@ export type PropertySyncStatus =
   | 'FAILED';
 
 function createDefaultRuntime(): SyncContentTypesRuntime {
+  let sourceService: AmplienceService | undefined;
   let targetService: AmplienceService | undefined;
 
   return {
@@ -369,7 +389,9 @@ function createDefaultRuntime(): SyncContentTypesRuntime {
         selectHub: async (hubs, role) => {
           console.log(`Select the ${role.toUpperCase()} hub:`);
           const hub = await promptForHub(hubs);
-          if (role === 'target') {
+          if (role === 'source') {
+            sourceService = new AmplienceService(hub);
+          } else {
             targetService = new AmplienceService(hub);
           }
 
@@ -377,6 +399,10 @@ function createDefaultRuntime(): SyncContentTypesRuntime {
         },
         exportDefinitions: (hub, includeArchived) =>
           exportContentTypeDefinitions({ hub, includeArchived }),
+        getActiveSourceSchemaIds: async () =>
+          (await requireHubService(sourceService, 'Source').getAllSchemas(false)).map(
+            schema => schema.schemaId
+          ),
         promptSchemaFilter: promptForSchemaIdFilter,
         selectDefinitions: promptForContentTypeDefinitions,
         promptCopySchemas: () =>
@@ -385,13 +411,23 @@ function createDefaultRuntime(): SyncContentTypesRuntime {
             true
           ),
         getTargetSchemaIds: async () =>
-          (await requireTargetService(targetService).getAllSchemas()).map(
+          (await requireHubService(targetService, 'Target').getAllSchemas()).map(
             schema => schema.schemaId
           ),
-        getTargetRepositories: () => requireTargetService(targetService).getRepositories(),
+        getTargetRepositories: () => requireHubService(targetService, 'Target').getRepositories(),
         promptRepositoryMode: promptForContentTypeRepositoryMode,
         promptRepositoryStrategy: promptForContentTypeRepositoryStrategy,
         selectRepositories: promptForContentTypeRepositories,
+        confirmUnresolvedRepositories: async unresolved => {
+          console.log(
+            `\nWarning: ${unresolved.length} source repository name(s) not found on the target hub:`
+          );
+          for (const name of unresolved) {
+            console.log(`  - ${name}`);
+          }
+
+          return promptForConfirmation('Continue and skip these repository assignments?', false);
+        },
         promptDryRun: promptForDryRun,
         promptPropertySync: () =>
           promptForConfirmation(
@@ -428,9 +464,12 @@ function createDefaultRuntime(): SyncContentTypesRuntime {
   };
 }
 
-function requireTargetService(service: AmplienceService | undefined): AmplienceService {
+function requireHubService(
+  service: AmplienceService | undefined,
+  hubRole: 'Source' | 'Target'
+): AmplienceService {
   if (!service) {
-    throw new Error('Target hub service is not initialized.');
+    throw new Error(`${hubRole} hub service is not initialized.`);
   }
 
   return service;
@@ -553,22 +592,28 @@ async function mapDefinitionRepositories(
   }
 
   const targetRepositoryNames = new Set(targetRepositories.map(repository => repository.name));
-  const unresolvedNames = [
+
+  return definitions.map(definition => ({
+    ...definition,
+    repositories: [
+      ...new Set((definition.repositories ?? []).filter(name => targetRepositoryNames.has(name))),
+    ],
+  }));
+}
+
+function getUnresolvedSourceRepositories(
+  definitions: Amplience.ContentTypeExportDefinition[],
+  targetRepositories: Amplience.ContentRepository[]
+): string[] {
+  const targetRepositoryNames = new Set(targetRepositories.map(repository => repository.name));
+
+  return [
     ...new Set(
       definitions
         .flatMap(definition => definition.repositories ?? [])
         .filter(repositoryName => !targetRepositoryNames.has(repositoryName))
     ),
   ].sort((left, right) => left.localeCompare(right));
-
-  if (unresolvedNames.length > 0) {
-    throw new Error(`No target repository mapping found for: ${unresolvedNames.join(', ')}`);
-  }
-
-  return definitions.map(definition => ({
-    ...definition,
-    repositories: [...(definition.repositories ?? [])],
-  }));
 }
 
 function rewriteSelectedVisualizations(

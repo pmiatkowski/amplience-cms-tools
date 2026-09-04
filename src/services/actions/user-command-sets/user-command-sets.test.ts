@@ -206,9 +206,17 @@ describe('User Command Sets Action', () => {
         return { success: true };
       });
 
-      const result = await executeCommand(entry, mockExecutor);
+      // Fake timers keep the elapsed-time assertion off the real clock, which can fire early.
+      vi.useFakeTimers();
+      try {
+        const resultPromise = executeCommand(entry, mockExecutor);
+        await vi.advanceTimersByTimeAsync(50);
+        const result = await resultPromise;
 
-      expect(result.durationMs).toBeGreaterThanOrEqual(50);
+        expect(result.durationMs).toBeGreaterThanOrEqual(50);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('should pass parameters to executor', async () => {
